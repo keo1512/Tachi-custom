@@ -1,7 +1,7 @@
 name: tachi_books
 description: "Manga, truyện chữ và ebook với hai hệ extension."
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: ^3.13.3

@@ -9,7 +9,7 @@
 Trên macOS có Xcode và CocoaPods, dùng Flutter 3.47.4 đúng commit đã pin trong script:
 
 ```bash
-bash tools/build_ios.sh 2
+bash tools/build_ios.sh 3
 ```
 
 Script chạy analyze, tests, compile bản release iOS arm64 rồi đóng gói `build/ios/ipa/TachiBooks-unsigned.ipa`. Đây là IPA **chưa ký**; cần ký và provisioning phù hợp trước khi cài lên iPhone/iPad. Script từ chối chạy trên Windows/Linux, không tạo file IPA giả.

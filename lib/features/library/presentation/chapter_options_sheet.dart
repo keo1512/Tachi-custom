@@ -44,7 +44,6 @@ class _ChapterOptionsSheet extends StatefulWidget {
 }
 
 class _ChapterOptionsSheetState extends State<_ChapterOptionsSheet> {
-  String tab = 'filter';
   late String readingFilter, downloadFilter;
   late bool newestFirst;
 
@@ -62,25 +61,50 @@ class _ChapterOptionsSheetState extends State<_ChapterOptionsSheet> {
     Map<String, Widget> options,
     ValueChanged<String> onChanged,
   ) {
-    final secondary = CupertinoDynamicColor.resolve(
-      CupertinoColors.secondaryLabel,
-      context,
-    );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontSize: 13, color: secondary)),
+          Text(title, style: const TextStyle(fontSize: 14)),
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
-            child: CupertinoSlidingSegmentedControl<String>(
-              groupValue: selected,
-              children: options,
-              onValueChanged: (value) {
-                if (value != null) onChanged(value);
-              },
+            child: SegmentedButton<String>(
+              segments: options.entries
+                  .map(
+                    (option) => ButtonSegment<String>(
+                      value: option.key,
+                      label: option.value,
+                    ),
+                  )
+                  .toList(),
+              selected: {selected},
+              selectedIcon: const Icon(Icons.check, size: 16),
+              expandedInsets: EdgeInsets.zero,
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.resolveWith(
+                  (states) => states.contains(WidgetState.selected)
+                      ? Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF24456D)
+                            : const Color(0xFFCFE4FF)
+                      : Colors.transparent,
+                ),
+                foregroundColor: WidgetStatePropertyAll(
+                  Theme.of(context).colorScheme.onSurface,
+                ),
+                side: const WidgetStatePropertyAll(
+                  BorderSide(color: Color(0xFF96969A)),
+                ),
+                padding: const WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                ),
+                textStyle: const WidgetStatePropertyAll(
+                  TextStyle(fontSize: 13),
+                ),
+                shape: const WidgetStatePropertyAll(StadiumBorder()),
+              ),
+              onSelectionChanged: (values) => onChanged(values.first),
             ),
           ),
         ],
@@ -104,52 +128,84 @@ class _ChapterOptionsSheetState extends State<_ChapterOptionsSheet> {
     },
   );
 
+  void resetOptions() {
+    setState(() {
+      readingFilter = 'all';
+      downloadFilter = 'all';
+      newestFirst = false;
+    });
+    widget.onReadFilter('all');
+    widget.onDownloadFilter('all');
+    widget.onSort(false);
+  }
+
   @override
-  Widget build(BuildContext context) => SafeArea(
-    child: SizedBox(
-      height: 320,
-      child: Column(
-        children: [
-          SizedBox(
-            height: 44,
-            child: Row(
-              children: [
-                const SizedBox(width: 16),
-                const Text(
-                  'Tùy chọn chương',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-                ),
-                const Spacer(),
-                CupertinoButton(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Xong', style: TextStyle(fontSize: 17)),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: SizedBox(
-              width: double.infinity,
-              child: CupertinoSlidingSegmentedControl<String>(
-                groupValue: tab,
-                children: const {
-                  'filter': Text('Lọc'),
-                  'sort': Text('Sắp xếp'),
-                },
-                onValueChanged: (value) {
-                  if (value != null) setState(() => tab = value);
-                },
+  Widget build(BuildContext context) => DefaultTabController(
+    length: 2,
+    child: SafeArea(
+      child: SizedBox(
+        height: 320,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 44,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TabBar(
+                      tabs: const [
+                        Tab(text: 'Lọc'),
+                        Tab(text: 'Sắp xếp'),
+                      ],
+                      indicatorSize: TabBarIndicatorSize.label,
+                      indicatorWeight: 3,
+                      indicator: UnderlineTabIndicator(
+                        borderSide: BorderSide(
+                          width: 3,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      labelStyle: const TextStyle(fontSize: 14),
+                      labelColor: Theme.of(context).colorScheme.primary,
+                      unselectedLabelColor: Theme.of(context)
+                          .colorScheme
+                          .onSurface,
+                      dividerHeight: 0,
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    tooltip: 'Tùy chọn chương',
+                    icon: const Icon(
+                      Icons.more_vert,
+                      size: 21,
+                      color: Color(0xFF929296),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'reset') {
+                        resetOptions();
+                      } else {
+                        Navigator.pop(context);
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                        value: 'reset',
+                        child: Text('Đặt lại bộ lọc và sắp xếp'),
+                      ),
+                      PopupMenuItem(value: 'close', child: Text('Đóng')),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: tab == 'filter'
-                  ? Column(
+            const Divider(height: 1),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
                       children: [
                         filterRow(
                           'Đã đọc',
@@ -178,17 +234,23 @@ class _ChapterOptionsSheetState extends State<_ChapterOptionsSheet> {
                           },
                         ),
                       ],
-                    )
-                  : Column(
+                    ),
+                  ),
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
                       children: [
                         sortRow('Chương cũ trước', false),
                         const Divider(height: .5),
                         sortRow('Chương mới trước', true),
                       ],
                     ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   );

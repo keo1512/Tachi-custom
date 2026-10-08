@@ -163,29 +163,33 @@ class _Shell extends StatelessWidget {
       );
     }
     return Scaffold(
-      body: child,
-      bottomNavigationBar: CupertinoTabBar(
-        currentIndex: selected,
-        onTap: (i) => context.go(routes[i]),
-        height: 49,
-        iconSize: 23,
-        activeColor: accent,
-        inactiveColor: const Color(0xFF85858B),
-        backgroundColor: navigationColor,
-        border: Border(
-          top: BorderSide(
-            color: dark ? Colors.white12 : const Color(0xFFE5E5EA),
-            width: .5,
-          ),
-        ),
-        items: [
-          for (var i = 0; i < routes.length; i++)
-            BottomNavigationBarItem(
-              icon: Icon(icons[i]),
-              activeIcon: Icon(selectedIcons[i]),
-              label: labels[i],
+      body: SafeArea(top: false, bottom: false, child: child),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        bottom: false,
+        child: CupertinoTabBar(
+          currentIndex: selected,
+          onTap: (i) => context.go(routes[i]),
+          height: 49,
+          iconSize: 23,
+          activeColor: accent,
+          inactiveColor: const Color(0xFF85858B),
+          backgroundColor: navigationColor,
+          border: Border(
+            top: BorderSide(
+              color: dark ? Colors.white12 : const Color(0xFFE5E5EA),
+              width: .5,
             ),
-        ],
+          ),
+          items: [
+            for (var i = 0; i < routes.length; i++)
+              BottomNavigationBarItem(
+                icon: Icon(icons[i]),
+                activeIcon: Icon(selectedIcons[i]),
+                label: labels[i],
+              ),
+          ],
+        ),
       ),
     );
   }

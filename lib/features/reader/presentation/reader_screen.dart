@@ -701,100 +701,104 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                 ],
               )
             : null,
-        body: loading
-            ? const Center(child: CupertinoActivityIndicator())
-            : error != null
-            ? EmptyPanel(
-                icon: Icons.wifi_off_rounded,
-                title: 'Chưa mở được chương',
-                description: error!,
-                action: CupertinoButton.filled(
-                  onPressed: () => load(
-                    requestedChapter,
-                    resume: true,
-                    offset: requestedPosition,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: loading
+              ? const Center(child: CupertinoActivityIndicator())
+              : error != null
+              ? EmptyPanel(
+                  icon: Icons.wifi_off_rounded,
+                  title: 'Chưa mở được chương',
+                  description: error!,
+                  action: CupertinoButton.filled(
+                    onPressed: () => load(
+                      requestedChapter,
+                      resume: true,
+                      offset: requestedPosition,
+                    ),
+                    child: const Text('Thử lại'),
                   ),
-                  child: const Text('Thử lại'),
-                ),
-              )
-            : GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: () {
-                  setState(() {
-                    chrome = !chrome;
-                    restoring = true;
-                  });
-                  restoreLocation(generation);
-                },
-                child: manga && settings.mangaMode != 'vertical'
-                    ? PageView.builder(
-                        key: ValueKey('$current:${settings.mangaMode}'),
-                        reverse: settings.mangaMode == 'rtl',
-                        controller: pages,
-                        itemCount: content!.images.length,
-                        onPageChanged: (p) {
-                          if (restoring) return;
-                          page = p;
-                          position = p / content!.images.length;
-                          unawaited(persist());
-                        },
-                        itemBuilder: (_, i) => InteractiveViewer(
-                          minScale: 1,
-                          maxScale: 4,
-                          child: Center(child: image(content!.images[i], i)),
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        key: viewport,
-                        controller: scroll,
-                        padding: manga
-                            ? EdgeInsets.zero
-                            : const EdgeInsets.fromLTRB(26, 24, 26, 80),
-                        child: manga
-                            ? Column(
-                                children: List.generate(
-                                  content!.images.length,
-                                  (i) => Padding(
-                                    key: imageKeys[i],
-                                    padding: EdgeInsets.zero,
-                                    child: image(content!.images[i], i),
+                )
+              : GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () {
+                    setState(() {
+                      chrome = !chrome;
+                      restoring = true;
+                    });
+                    restoreLocation(generation);
+                  },
+                  child: manga && settings.mangaMode != 'vertical'
+                      ? PageView.builder(
+                          key: ValueKey('$current:${settings.mangaMode}'),
+                          reverse: settings.mangaMode == 'rtl',
+                          controller: pages,
+                          itemCount: content!.images.length,
+                          onPageChanged: (p) {
+                            if (restoring) return;
+                            page = p;
+                            position = p / content!.images.length;
+                            unawaited(persist());
+                          },
+                          itemBuilder: (_, i) => InteractiveViewer(
+                            minScale: 1,
+                            maxScale: 4,
+                            child: Center(child: image(content!.images[i], i)),
+                          ),
+                        )
+                      : SingleChildScrollView(
+                          key: viewport,
+                          controller: scroll,
+                          padding: manga
+                              ? EdgeInsets.zero
+                              : const EdgeInsets.fromLTRB(26, 24, 26, 80),
+                          child: manga
+                              ? Column(
+                                  children: List.generate(
+                                    content!.images.length,
+                                    (i) => Padding(
+                                      key: imageKeys[i],
+                                      padding: EdgeInsets.zero,
+                                      child: image(content!.images[i], i),
+                                    ),
                                   ),
-                                ),
-                              )
-                            : Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 720,
-                                  ),
-                                  child: SelectionArea(
-                                    child: HtmlWidget(
-                                      content!.html,
-                                      customWidgetBuilder: (element) {
-                                        if (element.localName == 'img') {
-                                          final source =
-                                              element.attributes['src'];
-                                          if (source != null) {
-                                            return image(source, -1);
+                                )
+                              : Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 720,
+                                    ),
+                                    child: SelectionArea(
+                                      child: HtmlWidget(
+                                        content!.html,
+                                        customWidgetBuilder: (element) {
+                                          if (element.localName == 'img') {
+                                            final source =
+                                                element.attributes['src'];
+                                            if (source != null) {
+                                              return image(source, -1);
+                                            }
                                           }
-                                        }
-                                        return null;
-                                      },
-                                      textStyle: TextStyle(
-                                        fontFamily:
-                                            settings.font == 'Arial' ||
-                                                settings.font == 'NotoSans'
-                                            ? 'NotoSans'
-                                            : 'NotoSerif',
-                                        fontSize: settings.fontSize,
-                                        height: settings.lineHeight,
-                                        color: foreground,
+                                          return null;
+                                        },
+                                        textStyle: TextStyle(
+                                          fontFamily:
+                                              settings.font == 'Arial' ||
+                                                  settings.font == 'NotoSans'
+                                              ? 'NotoSans'
+                                              : 'NotoSerif',
+                                          fontSize: settings.fontSize,
+                                          height: settings.lineHeight,
+                                          color: foreground,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                      ),
-              ),
+                        ),
+                ),
+        ),
         bottomNavigationBar: chrome && book != null
             ? SafeArea(
                 child: Container(

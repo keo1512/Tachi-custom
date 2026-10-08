@@ -34,9 +34,24 @@ void main() {
       (tester) async {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = viewport.size;
+        final landscape = viewport.name == 'landscape iPhone';
+        if (landscape) {
+          tester.view.padding = const FakeViewPadding(
+            left: 44,
+            right: 44,
+            bottom: 21,
+          );
+          tester.view.viewPadding = const FakeViewPadding(
+            left: 44,
+            right: 44,
+            bottom: 21,
+          );
+        }
         addTearDown(() {
           tester.view.resetPhysicalSize();
           tester.view.resetDevicePixelRatio();
+          tester.view.resetPadding();
+          tester.view.resetViewPadding();
         });
         final prefs = await SharedPreferences.getInstance();
         final repository = MemoryLibraryRepository();
@@ -83,6 +98,11 @@ void main() {
         expect(sidebar, viewport.tablet ? findsOneWidget : findsNothing);
         expect(tabs, viewport.tablet ? findsNothing : findsOneWidget);
         expect(find.byType(BookCover), findsNWidgets(3));
+        if (landscape) {
+          final cover = tester.getRect(find.byType(BookCover).first);
+          expect(cover.left, greaterThanOrEqualTo(44));
+          expect(cover.right, lessThanOrEqualTo(viewport.size.width - 44));
+        }
         expect(
           tester.takeException(),
           isNull,
