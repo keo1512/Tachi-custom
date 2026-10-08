@@ -83,19 +83,39 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: Text(
-                  'Nội dung đã tải',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+              SizedBox(
+                height: 44,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Text(
+                      'Nội dung đã tải',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: CupertinoButton(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text(
+                          'Xong',
+                          style: TextStyle(fontSize: 15),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const Divider(height: 1),
               Expanded(
                 child: ref
                     .watch(libraryProvider)
                     .when(
                       loading: () =>
-                          const Center(child: CircularProgressIndicator()),
+                          const Center(child: CupertinoActivityIndicator()),
                       error: (error, _) => Center(child: Text('$error')),
                       data: (books) {
                         final downloaded = books
@@ -122,6 +142,14 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
                                 .where((chapter) => chapter.downloaded)
                                 .length;
                             return ListTile(
+                              minTileHeight: 60,
+                              minVerticalPadding: 6,
+                              titleTextStyle: const TextStyle(fontSize: 16),
+                              subtitleTextStyle: TextStyle(
+                                fontSize: 12,
+                                color: CupertinoColors.secondaryLabel
+                                    .resolveFrom(ctx),
+                              ),
                               leading: const Icon(
                                 CupertinoIcons.arrow_down_circle_fill,
                               ),
@@ -160,40 +188,48 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
       backgroundColor: background,
       appBar: AppBar(backgroundColor: background, title: const Text('Thêm')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
           _Section(
             children: [
               ListTile(
+                minTileHeight: 60,
+                minVerticalPadding: 6,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
+                  vertical: 0,
                 ),
                 leading: Container(
-                  width: 48,
-                  height: 48,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
                     color: const Color(0xFF007AFF),
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(7),
                   ),
                   child: const Icon(
                     CupertinoIcons.book_fill,
                     color: Colors.white,
-                    size: 28,
+                    size: 20,
                   ),
                 ),
                 title: const Text(
                   'TachiBooks',
-                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                 ),
-                subtitle: const Text('Truyện tranh · Truyện chữ · Ebook'),
+                subtitle: Text(
+                  'Truyện tranh · Truyện chữ · Ebook',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                  ),
+                ),
               ),
             ],
           ),
           if (busy)
             const Padding(
               padding: EdgeInsets.only(top: 12),
-              child: LinearProgressIndicator(),
+              child: LinearProgressIndicator(minHeight: 2),
             ),
           const _SectionTitle('THƯ VIỆN'),
           _Section(
@@ -219,17 +255,19 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
           const _SectionTitle('GIAO DIỆN & ĐỌC SÁCH'),
           _Section(
             children: [
-              SwitchListTile.adaptive(
-                secondary: const Icon(CupertinoIcons.moon),
-                title: const Text('Giao diện tối'),
-                value: settings.dark,
-                onChanged: busy
-                    ? null
-                    : (value) => run(
-                        () => ref
-                            .read(settingsProvider.notifier)
-                            .update(dark: value),
-                      ),
+              _MenuRow(
+                icon: CupertinoIcons.moon,
+                title: 'Giao diện tối',
+                trailing: CupertinoSwitch(
+                  value: settings.dark,
+                  onChanged: busy
+                      ? null
+                      : (value) => run(
+                          () => ref
+                              .read(settingsProvider.notifier)
+                              .update(dark: value),
+                        ),
+                ),
               ),
               _MenuRow(
                 icon: CupertinoIcons.textformat_size,
@@ -254,7 +292,7 @@ class _MoreScreenState extends ConsumerState<MoreScreen> {
             children: [
               _MenuRow(
                 icon: CupertinoIcons.link,
-                title: 'Kết nối runtime nguồn',
+                title: 'Kết nối nguồn',
                 subtitle: 'Tachimanga / Suwayomi và vBook',
                 onTap: busy ? null : () => showConnections(context, ref),
               ),
@@ -312,7 +350,7 @@ class _SectionTitle extends StatelessWidget {
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(14, 24, 14, 7),
+    padding: const EdgeInsets.fromLTRB(14, 20, 14, 7),
     child: Text(
       text,
       style: const TextStyle(
@@ -332,12 +370,12 @@ class _Section extends StatelessWidget {
     color: Theme.of(context).brightness == Brightness.dark
         ? const Color(0xFF1C1C1E)
         : Colors.white,
-    borderRadius: BorderRadius.circular(11),
+    borderRadius: BorderRadius.circular(10),
     clipBehavior: Clip.antiAlias,
     child: Column(
       children: [
         for (var index = 0; index < children.length; index++) ...[
-          if (index > 0) const Divider(height: 1, indent: 56),
+          if (index > 0) const Divider(height: 1, indent: 52),
           children[index],
         ],
       ],
@@ -351,24 +389,62 @@ class _MenuRow extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.onTap,
+    this.trailing,
   });
   final IconData icon;
   final String title;
   final String? subtitle;
   final VoidCallback? onTap;
+  final Widget? trailing;
   @override
-  Widget build(BuildContext context) => ListTile(
-    leading: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 23),
-    title: Text(title, style: const TextStyle(fontSize: 16)),
-    subtitle: subtitle == null
-        ? null
-        : Text(subtitle!, style: const TextStyle(fontSize: 12)),
-    trailing: const Icon(
-      CupertinoIcons.chevron_right,
-      size: 14,
-      color: Colors.grey,
-    ),
-    enabled: onTap != null,
+  Widget build(BuildContext context) => InkWell(
     onTap: onTap,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(minHeight: subtitle == null ? 44 : 58),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              child: Icon(
+                icon,
+                color: Theme.of(context).colorScheme.primary,
+                size: 21,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 16)),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(
+                          context,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            trailing ??
+                const Icon(
+                  CupertinoIcons.chevron_right,
+                  size: 13,
+                  color: CupertinoColors.systemGrey3,
+                ),
+          ],
+        ),
+      ),
+    ),
   );
 }

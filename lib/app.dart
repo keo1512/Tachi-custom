@@ -83,39 +83,110 @@ class _Shell extends StatelessWidget {
   final String path;
   final Widget child;
   static const routes = ['/', '/updates', '/browse', '/history', '/more'];
+  static const labels = ['Thư viện', 'Cập nhật', 'Duyệt', 'Lịch sử', 'Thêm'];
+  static const icons = [
+    CupertinoIcons.book,
+    CupertinoIcons.arrow_down_circle,
+    CupertinoIcons.compass,
+    CupertinoIcons.clock,
+    CupertinoIcons.ellipsis,
+  ];
+  static const selectedIcons = [
+    CupertinoIcons.book_fill,
+    CupertinoIcons.arrow_down_circle_fill,
+    CupertinoIcons.compass_fill,
+    CupertinoIcons.clock_fill,
+    CupertinoIcons.ellipsis,
+  ];
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: child,
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: routes.indexOf(path).clamp(0, 4),
-      onDestinationSelected: (i) => context.go(routes[i]),
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(CupertinoIcons.book),
-          selectedIcon: Icon(CupertinoIcons.book_fill),
-          label: 'Thư viện',
+  Widget build(BuildContext context) {
+    final selected = routes.indexOf(path).clamp(0, 4);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final navigationColor = dark
+        ? const Color(0xFF151517)
+        : const Color(0xFFFAFAFC);
+    if (MediaQuery.sizeOf(context).shortestSide >= 600) {
+      return Scaffold(
+        body: Row(
+          children: [
+            Semantics(
+              label: 'Điều hướng chính',
+              child: Container(
+                key: const ValueKey('tablet-navigation'),
+                width: 56,
+                color: navigationColor,
+                child: SafeArea(
+                  right: false,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 44),
+                      for (var i = 0; i < routes.length; i++)
+                        Semantics(
+                          selected: selected == i,
+                          button: true,
+                          child: InkWell(
+                            onTap: () => context.go(routes[i]),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 9),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    selected == i ? selectedIcons[i] : icons[i],
+                                    size: 21,
+                                    color: selected == i ? accent : Colors.grey,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    labels[i],
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: selected == i
+                                          ? accent
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const VerticalDivider(width: .5, thickness: .5),
+            Expanded(child: child),
+          ],
         ),
-        NavigationDestination(
-          icon: Icon(CupertinoIcons.arrow_down_circle),
-          selectedIcon: Icon(CupertinoIcons.arrow_down_circle_fill),
-          label: 'Cập nhật',
+      );
+    }
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: CupertinoTabBar(
+        currentIndex: selected,
+        onTap: (i) => context.go(routes[i]),
+        height: 49,
+        iconSize: 23,
+        activeColor: accent,
+        inactiveColor: const Color(0xFF85858B),
+        backgroundColor: navigationColor,
+        border: Border(
+          top: BorderSide(
+            color: dark ? Colors.white12 : const Color(0xFFE5E5EA),
+            width: .5,
+          ),
         ),
-        NavigationDestination(
-          icon: Icon(CupertinoIcons.compass),
-          selectedIcon: Icon(CupertinoIcons.compass_fill),
-          label: 'Duyệt',
-        ),
-        NavigationDestination(
-          icon: Icon(CupertinoIcons.clock),
-          selectedIcon: Icon(CupertinoIcons.clock_fill),
-          label: 'Lịch sử',
-        ),
-        NavigationDestination(
-          icon: Icon(CupertinoIcons.ellipsis_circle),
-          selectedIcon: Icon(CupertinoIcons.ellipsis_circle_fill),
-          label: 'Thêm',
-        ),
-      ],
-    ),
-  );
+        items: [
+          for (var i = 0; i < routes.length; i++)
+            BottomNavigationBarItem(
+              icon: Icon(icons[i]),
+              activeIcon: Icon(selectedIcons[i]),
+              label: labels[i],
+            ),
+        ],
+      ),
+    );
+  }
 }

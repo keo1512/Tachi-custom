@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/book_cover.dart';
 import '../../../core/widgets/feedback.dart';
+import '../domain/library_book.dart';
+import 'chapter_options_sheet.dart';
 import 'library_view_model.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget {
@@ -15,15 +17,178 @@ class BookDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _BookDetailState extends ConsumerState<BookDetailScreen> {
-  bool downloading = false;
+  final search = TextEditingController();
+  bool downloading = false, searching = false, newestFirst = false;
+  String readingFilter = 'all', downloadFilter = 'all';
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
+
+  bool isRead(LibraryBook book, int index) =>
+      book.completed ||
+      (book.lastRead != null &&
+          (index < book.currentChapter ||
+              (index == book.currentChapter &&
+                  book.progress * book.chapters.length - index >= .999)));
+
+  Future<void> bookActions(LibraryBook book) async {
+    final action = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'collection'),
+            child: const Text('Đổi bộ sưu tập'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'completed'),
+            child: Text(
+              book.completed
+                  ? 'Đánh dấu chưa hoàn thành'
+                  : 'Đánh dấu hoàn thành',
+            ),
+          ),
+          CupertinoActionSheetAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(ctx, 'remove'),
+            child: const Text('Xóa khỏi thư viện'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Hủy'),
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    final vm = ref.read(libraryProvider.notifier);
+    if (action == 'collection') {
+      var collection = book.collection;
+      final name = await showCupertinoDialog<String>(
+        context: context,
+        builder: (ctx) => CupertinoAlertDialog(
+          title: const Text('Bộ sưu tập'),
+          content: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: CupertinoTextFormFieldRow(
+              initialValue: collection,
+              padding: EdgeInsets.zero,
+              placeholder: 'Tên bộ sưu tập',
+              onChanged: (value) => collection = value,
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Hủy'),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.pop(ctx, collection.trim()),
+              child: const Text('Lưu'),
+            ),
+          ],
+        ),
+      );
+      if (name != null && mounted) {
+        await perform(
+          context,
+          () => vm.updateMetadata(book.id, collection: name),
+        );
+      }
+    } else if (action == 'completed') {
+      await perform(
+        context,
+        () => vm.updateMetadata(book.id, completed: !book.completed),
+      );
+    } else {
+      final yes = await showCupertinoDialog<bool>(
+        context: context,
+        builder: (ctx) => CupertinoAlertDialog(
+          title: const Text('Xóa khỏi thư viện?'),
+          content: const Text('Nội dung đã tải của sách này cũng sẽ được xóa.'),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Hủy'),
+            ),
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Xóa'),
+            ),
+          ],
+        ),
+      );
+      if (yes == true && mounted) {
+        await perform(context, () async {
+          await vm.remove(book.id);
+          if (mounted) context.pop();
+        });
+      }
+    }
+  }
+
+  Future<void> downloadChapters(LibraryBook book) async {
+    final count = await showCupertinoModalPopup<int>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        title: const Text('Tải chương'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 10),
+            child: const Text('10 chương tiếp theo'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, -1),
+            child: const Text('Tất cả chương chưa tải'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Hủy'),
+        ),
+      ),
+    );
+    if (count == null || !mounted) return;
+    setState(() => downloading = true);
+    await perform(context, () async {
+      final vm = ref.read(libraryProvider.notifier);
+      final start = count == 10
+          ? book.currentChapter.clamp(0, book.chapters.length)
+          : 0;
+      final end = count == 10
+          ? (start + count).clamp(0, book.chapters.length)
+          : book.chapters.length;
+      for (var i = start; i < end; i++) {
+        if (!book.chapters[i].downloaded) {
+          await vm.getContent(book, i, download: true);
+        }
+      }
+    }, success: 'Đã tải chương');
+    if (mounted) setState(() => downloading = false);
+  }
+
+  Future<void> chapterOptions() => showChapterOptions(
+    context,
+    readingFilter: readingFilter,
+    downloadFilter: downloadFilter,
+    newestFirst: newestFirst,
+    onReadFilter: (value) => setState(() => readingFilter = value),
+    onDownloadFilter: (value) => setState(() => downloadFilter = value),
+    onSort: (value) => setState(() => newestFirst = value),
+  );
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(libraryProvider);
     return state.when(
       loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+          const Scaffold(body: Center(child: CupertinoActivityIndicator())),
       error: (e, _) => Scaffold(
-        appBar: AppBar(),
+        appBar: AppBar(title: const Text('Chi tiết')),
         body: Center(child: Text('$e')),
       ),
       data: (books) {
@@ -35,268 +200,320 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
           );
         }
         final book = matches.first;
-        final vm = ref.read(libraryProvider.notifier);
+        final primary = Theme.of(context).colorScheme.primary;
+        final secondary = CupertinoDynamicColor.resolve(
+          CupertinoColors.secondaryLabel,
+          context,
+        );
+        final separator = CupertinoDynamicColor.resolve(
+          CupertinoColors.separator,
+          context,
+        );
+        final query = search.text.trim().toLowerCase();
+        final indices = [
+          for (var i = 0; i < book.chapters.length; i++)
+            if ((query.isEmpty ||
+                    book.chapters[i].title.toLowerCase().contains(query)) &&
+                (readingFilter == 'all' ||
+                    (readingFilter == 'read') == isRead(book, i)) &&
+                (downloadFilter == 'all' ||
+                    (downloadFilter == 'downloaded') ==
+                        book.chapters[i].downloaded))
+              i,
+        ];
+        if (newestFirst) indices.sort((a, b) => b.compareTo(a));
+        final headerCount = searching ? 3 : 2;
         return Scaffold(
           appBar: AppBar(
             title: const Text('Chi tiết'),
             actions: [
-              PopupMenuButton<String>(
-                onSelected: (v) async {
-                  if (v == 'collection') {
-                    var collection = book.collection;
-                    final name = await showDialog<String>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Bộ sưu tập'),
-                        content: TextFormField(
-                          initialValue: collection,
-                          onChanged: (value) => collection = value,
-                          decoration: const InputDecoration(
-                            hintText: 'Tên kệ sách',
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            child: const Text('Hủy'),
-                          ),
-                          TextButton(
-                            onPressed: () =>
-                                Navigator.pop(ctx, collection.trim()),
-                            child: const Text('Lưu'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (name != null) {
-                      await vm.updateMetadata(book.id, collection: name);
-                    }
-                  } else if (v == 'completed') {
-                    await vm.updateMetadata(
-                      book.id,
-                      completed: !book.completed,
-                    );
-                  } else {
-                    if (!context.mounted) return;
-                    final yes = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Xóa khỏi thư viện?'),
-                        content: const Text(
-                          'Nội dung đã tải của sách này cũng sẽ được xóa.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('Hủy'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Xóa'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (yes == true && context.mounted) {
-                      await vm.remove(book.id);
-                      if (context.mounted) context.pop();
-                    }
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: 'collection',
-                    child: Text('Đổi bộ sưu tập'),
-                  ),
-                  PopupMenuItem(
-                    value: 'completed',
-                    child: Text(
-                      book.completed
-                          ? 'Đánh dấu chưa hoàn thành'
-                          : 'Đánh dấu hoàn thành',
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'remove',
-                    child: Text('Xóa khỏi thư viện'),
-                  ),
-                ],
+              IconButton(
+                tooltip: 'Tùy chọn',
+                icon: const Icon(CupertinoIcons.ellipsis),
+                onPressed: () => bookActions(book),
               ),
             ],
           ),
-          body: ListView(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 112,
-                      height: 165,
-                      child: BookCover(
-                        title: book.title,
-                        cover: book.cover,
-                        kind: book.kind,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
+          body: ListView.builder(
+            itemCount: headerCount + (indices.isEmpty ? 1 : indices.length),
+            itemBuilder: (context, row) {
+              if (row == 0) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            book.title,
-                            style: const TextStyle(
-                              fontSize: 23,
-                              fontWeight: FontWeight.w700,
+                          SizedBox(
+                            width: 106,
+                            height: 156,
+                            child: BookCover(
+                              title: book.title,
+                              cover: book.cover,
+                              kind: book.kind,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          if (book.author.isNotEmpty)
-                            Text(
-                              book.author,
-                              style: const TextStyle(color: Colors.grey),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  book.title,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (book.author.isNotEmpty) ...[
+                                  const SizedBox(height: 7),
+                                  Text(
+                                    book.author,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: secondary,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 12),
+                                Text(
+                                  book.kind == 'manga'
+                                      ? 'Truyện tranh'
+                                      : 'Truyện chữ / Ebook',
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  book.engine == 'local'
+                                      ? 'Trong thiết bị'
+                                      : book.engine == 'vbook'
+                                      ? 'vBook'
+                                      : 'Tachimanga',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: secondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  '${(book.progress * 100).round()}% đã đọc',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: secondary,
+                                  ),
+                                ),
+                              ],
                             ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '${book.kind == 'manga' ? 'Truyện tranh' : 'Truyện chữ / Ebook'} · ${book.chapters.length} chương',
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            book.engine == 'local'
-                                ? 'Trong thiết bị'
-                                : book.engine == 'vbook'
-                                ? 'vBook'
-                                : 'Tachimanga',
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            '${(book.progress * 100).round()}% đã đọc',
-                            style: const TextStyle(color: Colors.grey),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: book.chapters.isEmpty
-                            ? null
-                            : () => context.push(
-                                '/read/${book.id}?chapter=${book.currentChapter}',
-                              ),
-                        icon: const Icon(CupertinoIcons.book),
-                        label: Text(
-                          book.lastRead == null ? 'Bắt đầu đọc' : 'Đọc tiếp',
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Yêu thích',
-                      onPressed: () =>
-                          vm.updateMetadata(book.id, favorite: !book.favorite),
-                      icon: Icon(
-                        book.favorite
-                            ? CupertinoIcons.heart_fill
-                            : CupertinoIcons.heart,
-                        color: book.favorite ? Colors.red : null,
-                      ),
-                    ),
-                    if (book.engine != 'local')
-                      IconButton(
-                        tooltip: 'Tải 10 chương tiếp theo',
-                        onPressed: downloading
-                            ? null
-                            : () async {
-                                setState(() => downloading = true);
-                                await perform(context, () async {
-                                  for (
-                                    var i = book.currentChapter;
-                                    i < book.chapters.length &&
-                                        i < book.currentChapter + 10;
-                                    i++
-                                  ) {
-                                    await vm.getContent(
-                                      book,
-                                      i,
-                                      download: true,
-                                    );
-                                  }
-                                }, success: 'Đã tải các chương tiếp theo');
-                                if (mounted) {
-                                  setState(() => downloading = false);
-                                }
-                              },
-                        icon: downloading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CupertinoButton.filled(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              borderRadius: BorderRadius.circular(8),
+                              onPressed: book.chapters.isEmpty
+                                  ? null
+                                  : () => context.push(
+                                      '/read/${book.id}?chapter=${book.currentChapter}',
+                                    ),
+                              child: Text(
+                                book.lastRead == null
+                                    ? 'Bắt đầu đọc'
+                                    : 'Đọc tiếp',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                              )
-                            : const Icon(CupertinoIcons.arrow_down_circle),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            tooltip: 'Yêu thích',
+                            color: primary,
+                            icon: Icon(
+                              book.favorite
+                                  ? CupertinoIcons.heart_fill
+                                  : CupertinoIcons.heart,
+                            ),
+                            onPressed: () => perform(
+                              context,
+                              () => ref
+                                  .read(libraryProvider.notifier)
+                                  .updateMetadata(
+                                    book.id,
+                                    favorite: !book.favorite,
+                                  ),
+                            ),
+                          ),
+                        ],
                       ),
-                  ],
-                ),
-              ),
-              if (book.description.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    book.description,
-                    style: const TextStyle(height: 1.5),
+                      if (book.description.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          book.description,
+                          style: const TextStyle(fontSize: 15, height: 1.4),
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-              const Divider(),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Text(
-                  'Chương (${book.chapters.length})',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                );
+              }
+              if (row == 1) {
+                return Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: separator, width: .5),
+                      bottom: BorderSide(color: separator, width: .5),
+                    ),
                   ),
-                ),
-              ),
-              ...List.generate(
-                book.chapters.length,
-                (i) => ListTile(
-                  dense: true,
-                  title: Text(book.chapters[i].title),
-                  leading: Icon(
-                    i < book.currentChapter || book.completed
-                        ? CupertinoIcons.checkmark_circle_fill
-                        : CupertinoIcons.circle,
-                    size: 20,
-                    color: i < book.currentChapter || book.completed
-                        ? Colors.grey
-                        : Theme.of(context).colorScheme.primary,
+                  padding: const EdgeInsets.only(left: 16, right: 4),
+                  child: SizedBox(
+                    height: 44,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${book.chapters.length} chương',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Tìm chương',
+                          icon: const Icon(CupertinoIcons.search, size: 20),
+                          color: primary,
+                          onPressed: () => setState(() {
+                            searching = !searching;
+                            if (!searching) search.clear();
+                          }),
+                        ),
+                        IconButton(
+                          tooltip: 'Tải chương',
+                          color: primary,
+                          onPressed:
+                              book.engine == 'local' ||
+                                  downloading ||
+                                  book.chapters.isEmpty
+                              ? null
+                              : () => downloadChapters(book),
+                          icon: downloading
+                              ? const CupertinoActivityIndicator(radius: 9)
+                              : const Icon(CupertinoIcons.arrow_down, size: 22),
+                        ),
+                        IconButton(
+                          tooltip: 'Lọc và sắp xếp chương',
+                          color: primary,
+                          onPressed: chapterOptions,
+                          icon: const Icon(
+                            CupertinoIcons.line_horizontal_3_decrease,
+                            size: 22,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  trailing: Icon(
-                    book.chapters[i].downloaded
-                        ? CupertinoIcons.arrow_down_circle_fill
-                        : CupertinoIcons.chevron_right,
-                    size: 18,
-                    color: book.chapters[i].downloaded
-                        ? Colors.green
-                        : Colors.grey,
+                );
+              }
+              if (searching && row == 2) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                  child: CupertinoSearchTextField(
+                    controller: search,
+                    placeholder: 'Tìm chương',
+                    onChanged: (_) => setState(() {}),
                   ),
-                  onTap: () => context.push('/read/${book.id}?chapter=$i'),
-                ),
-              ),
-              const SizedBox(height: 30),
-            ],
+                );
+              }
+              if (indices.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      'Không có chương phù hợp',
+                      style: TextStyle(color: secondary, fontSize: 15),
+                    ),
+                  ),
+                );
+              }
+              final index = indices[row - headerCount];
+              final chapter = book.chapters[index];
+              final read = isRead(book, index);
+              return Column(
+                children: [
+                  ListTile(
+                    minTileHeight: 54,
+                    contentPadding: const EdgeInsets.only(left: 16, right: 8),
+                    title: Text(
+                      chapter.title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: read ? secondary : null,
+                      ),
+                    ),
+                    subtitle:
+                        book.lastRead != null &&
+                            index == book.currentChapter &&
+                            !read
+                        ? Text(
+                            'Đang đọc',
+                            style: TextStyle(fontSize: 12, color: secondary),
+                          )
+                        : null,
+                    trailing: chapter.downloaded
+                        ? Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Icon(
+                              CupertinoIcons.checkmark_circle_fill,
+                              size: 20,
+                              color: secondary,
+                            ),
+                          )
+                        : book.engine == 'local'
+                        ? null
+                        : IconButton(
+                            tooltip: 'Tải ${chapter.title}',
+                            icon: const Icon(
+                              CupertinoIcons.arrow_down_circle,
+                              size: 22,
+                            ),
+                            color: primary,
+                            onPressed: downloading
+                                ? null
+                                : () async {
+                                    setState(() => downloading = true);
+                                    await perform(
+                                      context,
+                                      () => ref
+                                          .read(libraryProvider.notifier)
+                                          .getContent(
+                                            book,
+                                            index,
+                                            download: true,
+                                          ),
+                                    );
+                                    if (mounted) {
+                                      setState(() => downloading = false);
+                                    }
+                                  },
+                          ),
+                    onTap: () =>
+                        context.push('/read/${book.id}?chapter=$index'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Divider(height: .5, thickness: .5, color: separator),
+                  ),
+                ],
+              );
+            },
           ),
         );
       },

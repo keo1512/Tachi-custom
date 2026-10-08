@@ -327,95 +327,173 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   Future<void> contents() async {
     final b = await repository.find(widget.id);
     if (b == null || !mounted) return;
+    var tab = 'chapters';
+    final marks = b.bookmarks
+        .where(
+          (mark) => _ReadingLocation.parse(mark, b.chapters.length) != null,
+        )
+        .toList();
     final location = await showModalBottomSheet<_ReadingLocation>(
       context: context,
-      showDragHandle: true,
       isScrollControlled: true,
-      builder: (ctx) => DefaultTabController(
-        length: 2,
-        child: SafeArea(
-          child: SizedBox(
-            height: MediaQuery.sizeOf(ctx).height * .7,
-            child: Column(
-              children: [
-                const TabBar(
-                  tabs: [
-                    Tab(text: 'Mục lục'),
-                    Tab(text: 'Dấu trang'),
-                  ],
-                ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      ListView.builder(
-                        itemCount: b.chapters.length,
-                        itemBuilder: (_, i) => ListTile(
-                          selected:
-                              b.chapters[i].id == book?.chapters[current].id,
-                          title: Text(b.chapters[i].title),
-                          leading: Icon(
-                            b.chapters[i].downloaded
-                                ? Icons.download_done
-                                : Icons.article_outlined,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, updateSheet) {
+          final separator = CupertinoDynamicColor.resolve(
+            CupertinoColors.separator,
+            ctx,
+          );
+          final secondary = CupertinoDynamicColor.resolve(
+            CupertinoColors.secondaryLabel,
+            ctx,
+          );
+          return SafeArea(
+            child: SizedBox(
+              height: MediaQuery.sizeOf(ctx).height * .7,
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: 44,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 16),
+                        const Text(
+                          'Mục lục',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
                           ),
-                          onTap: () =>
-                              Navigator.pop(ctx, _ReadingLocation(i, 0)),
                         ),
-                      ),
-                      StatefulBuilder(
-                        builder: (context, updateSheet) {
-                          final marks = b.bookmarks
-                              .where(
-                                (m) =>
-                                    _ReadingLocation.parse(
-                                      m,
-                                      b.chapters.length,
-                                    ) !=
-                                    null,
-                              )
-                              .toList();
-                          return marks.isEmpty
-                              ? const Center(child: Text('Chưa có dấu trang'))
-                              : ListView(
-                                  children: marks.map((mark) {
-                                    final markLocation = _ReadingLocation.parse(
-                                      mark,
-                                      b.chapters.length,
-                                    )!;
-                                    return ListTile(
-                                      title: Text(
-                                        b.chapters[markLocation.chapter].title,
-                                      ),
-                                      subtitle: Text(
-                                        '${(markLocation.position * 100).round()}% trong chương',
-                                      ),
-                                      leading: const Icon(
-                                        CupertinoIcons.bookmark_fill,
-                                      ),
-                                      onTap: () =>
-                                          Navigator.pop(ctx, markLocation),
-                                      trailing: IconButton(
-                                        tooltip: 'Xóa dấu trang',
-                                        icon: const Icon(Icons.close),
-                                        onPressed: () async {
-                                          await vm.removeBookmark(b.id, mark);
-                                          if (context.mounted) {
-                                            Navigator.pop(ctx);
-                                          }
-                                        },
-                                      ),
-                                    );
-                                  }).toList(),
-                                );
+                        const Spacer(),
+                        CupertinoButton(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text(
+                            'Xong',
+                            style: TextStyle(fontSize: 17),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: .5, thickness: .5, color: separator),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: CupertinoSlidingSegmentedControl<String>(
+                        groupValue: tab,
+                        children: const {
+                          'chapters': Text('Chương'),
+                          'bookmarks': Text('Dấu trang'),
+                        },
+                        onValueChanged: (value) {
+                          if (value != null) updateSheet(() => tab = value);
                         },
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: tab == 'chapters'
+                        ? ListView.separated(
+                            itemCount: b.chapters.length,
+                            separatorBuilder: (_, _) => Divider(
+                              height: .5,
+                              thickness: .5,
+                              indent: 16,
+                              color: separator,
+                            ),
+                            itemBuilder: (_, i) => ListTile(
+                              minTileHeight: 52,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              title: Text(
+                                b.chapters[i].title,
+                                style: const TextStyle(fontSize: 15),
+                              ),
+                              trailing:
+                                  b.chapters[i].id == book?.chapters[current].id
+                                  ? const Icon(
+                                      CupertinoIcons.checkmark,
+                                      size: 19,
+                                      color: CupertinoColors.activeBlue,
+                                    )
+                                  : b.chapters[i].downloaded
+                                  ? Icon(
+                                      CupertinoIcons.checkmark_circle_fill,
+                                      size: 19,
+                                      color: secondary,
+                                    )
+                                  : null,
+                              onTap: () =>
+                                  Navigator.pop(ctx, _ReadingLocation(i, 0)),
+                            ),
+                          )
+                        : marks.isEmpty
+                        ? Center(
+                            child: Text(
+                              'Chưa có dấu trang',
+                              style: TextStyle(color: secondary, fontSize: 15),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: marks.length,
+                            separatorBuilder: (_, _) => Divider(
+                              height: .5,
+                              thickness: .5,
+                              indent: 16,
+                              color: separator,
+                            ),
+                            itemBuilder: (_, i) {
+                              final mark = marks[i];
+                              final markLocation = _ReadingLocation.parse(
+                                mark,
+                                b.chapters.length,
+                              )!;
+                              return ListTile(
+                                minTileHeight: 54,
+                                contentPadding: const EdgeInsets.only(
+                                  left: 16,
+                                  right: 4,
+                                ),
+                                title: Text(
+                                  b.chapters[markLocation.chapter].title,
+                                  style: const TextStyle(fontSize: 15),
+                                ),
+                                subtitle: Text(
+                                  '${(markLocation.position * 100).round()}% trong chương',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: secondary,
+                                  ),
+                                ),
+                                onTap: () => Navigator.pop(ctx, markLocation),
+                                trailing: IconButton(
+                                  tooltip: 'Xóa dấu trang',
+                                  icon: const Icon(
+                                    CupertinoIcons.clear,
+                                    size: 19,
+                                  ),
+                                  onPressed: () async {
+                                    await vm.removeBookmark(b.id, mark);
+                                    if (ctx.mounted) {
+                                      updateSheet(() => marks.remove(mark));
+                                    }
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
     if (location != null && mounted) {
@@ -547,17 +625,29 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         ? const Color(0xFF161616)
         : settings.readerTheme == 'sepia'
         ? const Color(0xFFF5EBDC)
-        : const Color(0xFFFAFAF8);
+        : Colors.white;
     final foreground = night
         ? const Color(0xFFD8D8D8)
-        : const Color(0xFF292524);
+        : const Color(0xFF1C1C1E);
+    final toolbar = night ? const Color(0xFF1C1C1E) : const Color(0xFFF9F9F9);
+    final separator = night ? const Color(0xFF38383A) : const Color(0xFFC6C6C8);
+    const blue = Color(0xFF007AFF);
     final manga = content?.kind == 'manga';
     return Theme(
       data: Theme.of(context).copyWith(
         brightness: night ? Brightness.dark : Brightness.light,
         appBarTheme: AppBarTheme(
-          backgroundColor: background,
+          backgroundColor: toolbar,
           foregroundColor: foreground,
+          toolbarHeight: 44,
+          centerTitle: true,
+          titleTextStyle: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+            color: foreground,
+          ),
+          iconTheme: const IconThemeData(color: blue, size: 22),
+          actionsIconTheme: const IconThemeData(color: blue, size: 22),
           surfaceTintColor: Colors.transparent,
         ),
       ),
@@ -565,10 +655,25 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         backgroundColor: background,
         appBar: chrome
             ? AppBar(
+                toolbarHeight: 44,
+                centerTitle: true,
+                leadingWidth: 44,
+                leading: IconButton(
+                  tooltip: 'Quay lại',
+                  icon: const Icon(CupertinoIcons.back),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(.5),
+                  child: Divider(height: .5, thickness: .5, color: separator),
+                ),
                 title: Text(
                   book == null ? 'Đang mở' : book!.chapters[current].title,
-                  style: const TextStyle(
-                    fontSize: 15,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: foreground,
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -597,13 +702,13 @@ class _ReaderState extends ConsumerState<ReaderScreen>
               )
             : null,
         body: loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CupertinoActivityIndicator())
             : error != null
             ? EmptyPanel(
                 icon: Icons.wifi_off_rounded,
                 title: 'Chưa mở được chương',
                 description: error!,
-                action: FilledButton(
+                action: CupertinoButton.filled(
                   onPressed: () => load(
                     requestedChapter,
                     resume: true,
@@ -693,15 +798,19 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         bottomNavigationBar: chrome && book != null
             ? SafeArea(
                 child: Container(
-                  color: background,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
+                  decoration: BoxDecoration(
+                    color: toolbar,
+                    border: Border(
+                      top: BorderSide(color: separator, width: .5),
+                    ),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Row(
                     children: [
                       IconButton(
                         tooltip: 'Chương trước',
+                        color: blue,
+                        iconSize: 20,
                         onPressed: loading || current <= 0
                             ? null
                             : () async {
@@ -715,11 +824,14 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                           onPressed: loading ? null : contents,
                           child: Text(
                             '${current + 1} / ${book!.chapters.length}  ·  Mục lục',
+                            style: const TextStyle(fontSize: 15, color: blue),
                           ),
                         ),
                       ),
                       IconButton(
                         tooltip: 'Chương tiếp theo',
+                        color: blue,
+                        iconSize: 20,
                         onPressed:
                             loading || current >= book!.chapters.length - 1
                             ? null

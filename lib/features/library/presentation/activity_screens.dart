@@ -40,26 +40,26 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
       actions: [
         if (updating)
           const Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(12),
             child: SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: CupertinoActivityIndicator(),
             ),
           )
         else
           IconButton(
             tooltip: 'Kiểm tra chương mới',
             onPressed: update,
-            icon: const Icon(CupertinoIcons.arrow_clockwise),
+            icon: const Icon(CupertinoIcons.arrow_clockwise, size: 21),
           ),
       ],
     ),
     body: ref
         .watch(libraryProvider)
         .when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => EmptyPanel(
+          loading: () => const Center(child: CupertinoActivityIndicator()),
+          error: (error, _) => _ActivityEmpty(
             icon: CupertinoIcons.exclamationmark_circle,
             title: 'Không mở được cập nhật',
             description: '$error',
@@ -88,11 +88,11 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
               }
             }
             if (entries.isEmpty) {
-              return EmptyPanel(
+              return _ActivityEmpty(
                 icon: CupertinoIcons.arrow_down_circle,
                 title: 'Chưa có chương chờ đọc',
                 description: 'Kiểm tra chương mới của truyện đã thêm từ nguồn. Sách nhập từ file nằm trong Thư viện.',
-                action: FilledButton.icon(
+                action: TextButton.icon(
                   onPressed: updating ? null : update,
                   icon: const Icon(CupertinoIcons.arrow_clockwise),
                   label: const Text('Kiểm tra cập nhật'),
@@ -105,11 +105,11 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 itemCount: entries.length + 1,
                 separatorBuilder: (_, _) =>
-                    const Divider(height: 1, indent: 82),
+                    const Divider(height: 1, indent: 68),
                 itemBuilder: (context, index) {
                   if (index == 0) {
                     return Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                       child: Text(
                         '${entries.length} chương chưa đọc · ${online.length} truyện đang theo dõi',
                         style: const TextStyle(
@@ -121,26 +121,39 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                   }
                   final entry = entries[index - 1];
                   return ListTile(
+                    minTileHeight: 64,
+                    minVerticalPadding: 4,
+                    horizontalTitleGap: 12,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
-                      vertical: 5,
+                      vertical: 2,
                     ),
                     leading: _ActivityCover(entry.book),
                     title: Text(
                       entry.book.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     subtitle: Text(
                       entry.chapter.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: CupertinoColors.secondaryLabel.resolveFrom(
+                          context,
+                        ),
+                      ),
                     ),
                     trailing: Icon(
                       entry.chapter.downloaded
                           ? CupertinoIcons.arrow_down_circle_fill
                           : CupertinoIcons.chevron_right,
-                      size: 18,
+                      size: 15,
                       color: entry.chapter.downloaded
                           ? Theme.of(context).colorScheme.primary
                           : Colors.grey,
@@ -175,19 +188,20 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   Future<void> clear(List<LibraryBook> books) async {
     if (clearing || books.isEmpty) return;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showCupertinoDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => CupertinoAlertDialog(
         title: const Text('Xóa lịch sử đọc?'),
         content: const Text(
           'Xóa danh sách đọc gần đây. Vị trí đang đọc, dấu trang và nội dung đã tải vẫn được giữ.',
         ),
         actions: [
-          TextButton(
+          CupertinoDialogAction(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Hủy'),
           ),
-          TextButton(
+          CupertinoDialogAction(
+            isDestructiveAction: true,
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Xóa lịch sử'),
           ),
@@ -232,13 +246,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             .toList() ??
                         [],
                   ),
-            icon: const Icon(CupertinoIcons.trash),
+            icon: const Icon(CupertinoIcons.trash, size: 21),
           ),
         ],
       ),
       body: library.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => EmptyPanel(
+        loading: () => const Center(child: CupertinoActivityIndicator()),
+        error: (error, _) => _ActivityEmpty(
           icon: CupertinoIcons.exclamationmark_circle,
           title: 'Không mở được lịch sử',
           description: '$error',
@@ -251,7 +265,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           final history = books.where((book) => book.lastRead != null).toList()
             ..sort((a, b) => b.lastRead!.compareTo(a.lastRead!));
           if (history.isEmpty) {
-            return const EmptyPanel(
+            return const _ActivityEmpty(
               icon: CupertinoIcons.clock,
               title: 'Những trang vừa đọc',
               description: 'Manga, truyện chữ và ebook bạn mở sẽ xuất hiện ở đây để đọc tiếp.',
@@ -277,7 +291,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     if (index == 0 ||
                         dateLabel(history[index - 1].lastRead!) != label)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 7),
                         child: Text(
                           label,
                           style: const TextStyle(
@@ -288,24 +302,37 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         ),
                       ),
                     ListTile(
+                      minTileHeight: 64,
+                      minVerticalPadding: 4,
+                      horizontalTitleGap: 12,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 6,
+                        vertical: 2,
                       ),
                       leading: _ActivityCover(book),
                       title: Text(
                         book.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       subtitle: Text(
                         '${chapter?.title ?? 'Chưa có chương'} · ${(book.progress * 100).round()}%',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: CupertinoColors.secondaryLabel.resolveFrom(
+                            context,
+                          ),
+                        ),
                       ),
                       trailing: IconButton(
                         tooltip: 'Chi tiết sách',
-                        icon: const Icon(CupertinoIcons.ellipsis, size: 22),
+                        icon: const Icon(CupertinoIcons.ellipsis, size: 21),
                         onPressed: () => context.push('/book/${book.id}'),
                       ),
                       onTap: () => context.push(
@@ -314,7 +341,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             : '/read/${book.id}?chapter=${chapter.index}',
                       ),
                     ),
-                    const Divider(height: 1, indent: 82),
+                    const Divider(height: 1, indent: 68),
                   ],
                 );
               },
@@ -337,15 +364,15 @@ class _ActivityCover extends StatelessWidget {
         child: Icon(
           book.kind == 'manga' ? CupertinoIcons.book : CupertinoIcons.doc_text,
           color: Theme.of(context).colorScheme.primary,
-          size: 24,
+          size: 20,
         ),
       ),
     );
     return SizedBox(
-      width: 48,
-      height: 64,
+      width: 38,
+      height: 52,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(3),
         child: book.cover.startsWith('data:image/')
             ? Image.memory(
                 UriData.parse(book.cover).contentAsBytes(),
@@ -362,4 +389,58 @@ class _ActivityCover extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ActivityEmpty extends StatelessWidget {
+  const _ActivityEmpty({
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.action,
+  });
+  final IconData icon;
+  final String title, description;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 340),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 36,
+                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
+                ),
+              ),
+              if (action != null) ...[const SizedBox(height: 8), action!],
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }

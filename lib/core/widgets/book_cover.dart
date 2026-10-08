@@ -9,9 +9,10 @@ class BookCover extends StatelessWidget {
     this.cover = '',
     this.kind = 'novel',
     this.unread = 0,
+    this.downloaded = 0,
   });
   final String title, cover, kind;
-  final int unread;
+  final int unread, downloaded;
 
   @override
   Widget build(BuildContext context) {
@@ -23,89 +24,93 @@ class BookCover extends StatelessWidget {
     ];
     final palette =
         colors[title.codeUnits.fold<int>(0, (a, b) => a + b) % colors.length];
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(5),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: palette,
-              ),
-            ),
-          ),
-          if (cover.startsWith('data:'))
-            Image.memory(
-              base64Decode(cover.substring(cover.indexOf(',') + 1)),
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => const SizedBox.shrink(),
-            )
-          else if (cover.isNotEmpty)
-            Image.network(
-              cover,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => const SizedBox.shrink(),
-            ),
-          if (cover.isEmpty)
-            LayoutBuilder(
-              builder: (_, constraints) => Padding(
-                padding: EdgeInsets.all(constraints.maxWidth * .12),
-                child: Center(
-                  child: Text(
-                    title,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'NotoSerif',
-                      fontSize: (constraints.maxWidth * .13).clamp(13, 24),
-                      height: 1.2,
-                      color: Colors.white,
-                    ),
+    return Semantics(
+      label: title,
+      image: true,
+      child: ExcludeSemantics(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(5),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: palette,
                   ),
                 ),
               ),
-            ),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.center,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Color(0xCC000000)],
-              ),
-            ),
-          ),
-          Positioned(
-            left: 8,
-            right: 8,
-            bottom: 8,
-            child: Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Positioned(
-            left: 6,
-            top: 6,
-            child: Row(
-              children: [
-                _Badge(
-                  kind == 'manga' ? 'MANGA' : 'SÁCH',
-                  const Color(0xCC007AFF),
+              if (cover.startsWith('data:'))
+                Image.memory(
+                  base64Decode(cover.substring(cover.indexOf(',') + 1)),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                )
+              else if (cover.isNotEmpty)
+                Image.network(
+                  cover,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
-                if (unread > 0) _Badge('$unread', const Color(0xDD333333)),
-              ],
-            ),
+              if (cover.isEmpty)
+                LayoutBuilder(
+                  builder: (_, constraints) => Padding(
+                    padding: EdgeInsets.all(constraints.maxWidth * .12),
+                    child: Center(
+                      child: Text(
+                        title,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'NotoSerif',
+                          fontSize: (constraints.maxWidth * .13).clamp(13, 24),
+                          height: 1.2,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.center,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xCC000000)],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 5,
+                right: 5,
+                bottom: 5,
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 4,
+                top: 4,
+                child: Row(
+                  children: [
+                    if (unread > 0) _Badge('$unread', const Color(0xFF007AFF)),
+                    if (downloaded > 0)
+                      _Badge('$downloaded', const Color(0xFF34835C)),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -117,7 +122,7 @@ class _Badge extends StatelessWidget {
   final Color color;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
     decoration: BoxDecoration(
       color: color,
       borderRadius: BorderRadius.circular(3),

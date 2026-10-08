@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,104 +9,189 @@ Future<void> showReaderSettings(
   required bool manga,
 }) => showModalBottomSheet(
   context: context,
-  showDragHandle: true,
   isScrollControlled: true,
+  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+  shape: const RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+  ),
   builder: (context) => Consumer(
     builder: (context, ref, _) {
       final s = ref.watch(settingsProvider);
       final update = ref.read(settingsProvider.notifier);
+      final divider = CupertinoDynamicColor.resolve(
+        CupertinoColors.separator,
+        context,
+      );
+      final secondary = CupertinoDynamicColor.resolve(
+        CupertinoColors.secondaryLabel,
+        context,
+      );
+      Widget section(String title, Widget child) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: TextStyle(fontSize: 13, color: secondary)),
+            const SizedBox(height: 10),
+            child,
+          ],
+        ),
+      );
       return SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Giao diện đọc',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 20),
-              if (manga) ...[
-                const Text('Hướng đọc'),
-                const SizedBox(height: 8),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'vertical', label: Text('Cuộn dọc')),
-                      ButtonSegment(value: 'paged', label: Text('Lật trang')),
-                      ButtonSegment(value: 'rtl', label: Text('Phải → trái')),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * .8,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 44,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16),
+                      const Text(
+                        'Giao diện đọc',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      CupertinoButton(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Xong',
+                          style: TextStyle(fontSize: 17),
+                        ),
+                      ),
                     ],
-                    selected: {s.mangaMode},
-                    onSelectionChanged: (v) =>
-                        update.update(mangaMode: v.first),
                   ),
                 ),
-              ] else ...[
-                Row(
-                  children: [
-                    const Text('Cỡ chữ'),
-                    const Spacer(),
-                    Text('${s.fontSize.round()}'),
-                  ],
-                ),
-                Slider(
-                  value: s.fontSize.clamp(14, 32),
-                  min: 14,
-                  max: 32,
-                  divisions: 18,
-                  onChanged: (v) => update.update(fontSize: v),
-                ),
-                Row(
-                  children: [
-                    const Text('Khoảng cách dòng'),
-                    const Spacer(),
-                    Text(s.lineHeight.toStringAsFixed(1)),
-                  ],
-                ),
-                Slider(
-                  value: s.lineHeight.clamp(1.2, 2.4),
-                  min: 1.2,
-                  max: 2.4,
-                  divisions: 12,
-                  onChanged: (v) => update.update(lineHeight: v),
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: s.font == 'Arial' || s.font == 'NotoSans'
-                      ? 'NotoSans'
-                      : 'NotoSerif',
-                  decoration: const InputDecoration(labelText: 'Phông chữ'),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'NotoSerif',
-                      child: Text('Có chân · Noto Serif'),
+                Divider(height: .5, thickness: .5, color: divider),
+                if (manga)
+                  section(
+                    'Hướng đọc',
+                    SizedBox(
+                      width: double.infinity,
+                      child: CupertinoSlidingSegmentedControl<String>(
+                        groupValue: s.mangaMode,
+                        children: const {
+                          'vertical': Text('Cuộn dọc'),
+                          'paged': Text('Lật trang'),
+                          'rtl': Text('Phải → trái'),
+                        },
+                        onValueChanged: (value) {
+                          if (value != null) update.update(mangaMode: value);
+                        },
+                      ),
                     ),
-                    DropdownMenuItem(
-                      value: 'NotoSans',
-                      child: Text('Không chân · Noto Sans'),
+                  )
+                else ...[
+                  section(
+                    'Cỡ chữ',
+                    Row(
+                      children: [
+                        const Text('A', style: TextStyle(fontSize: 14)),
+                        Expanded(
+                          child: CupertinoSlider(
+                            value: s.fontSize.clamp(14, 32),
+                            min: 14,
+                            max: 32,
+                            divisions: 18,
+                            onChanged: (value) =>
+                                update.update(fontSize: value),
+                          ),
+                        ),
+                        const Text('A', style: TextStyle(fontSize: 24)),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 25,
+                          child: Text(
+                            '${s.fontSize.round()}',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(fontSize: 13, color: secondary),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                  onChanged: (v) => update.update(font: v),
+                  ),
+                  Divider(
+                    height: .5,
+                    thickness: .5,
+                    color: divider,
+                    indent: 16,
+                  ),
+                  section(
+                    'Khoảng cách dòng',
+                    Row(
+                      children: [
+                        const Icon(CupertinoIcons.text_alignleft, size: 18),
+                        Expanded(
+                          child: CupertinoSlider(
+                            value: s.lineHeight.clamp(1.2, 2.4),
+                            min: 1.2,
+                            max: 2.4,
+                            divisions: 12,
+                            onChanged: (value) =>
+                                update.update(lineHeight: value),
+                          ),
+                        ),
+                        Text(
+                          s.lineHeight.toStringAsFixed(1),
+                          style: TextStyle(fontSize: 13, color: secondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(
+                    height: .5,
+                    thickness: .5,
+                    color: divider,
+                    indent: 16,
+                  ),
+                  section(
+                    'Phông chữ',
+                    SizedBox(
+                      width: double.infinity,
+                      child: CupertinoSlidingSegmentedControl<String>(
+                        groupValue: s.font == 'Arial' || s.font == 'NotoSans'
+                            ? 'NotoSans'
+                            : 'NotoSerif',
+                        children: const {
+                          'NotoSerif': Text('Noto Serif'),
+                          'NotoSans': Text('Noto Sans'),
+                        },
+                        onValueChanged: (value) {
+                          if (value != null) update.update(font: value);
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+                Divider(height: .5, thickness: .5, color: divider, indent: 16),
+                section(
+                  'Nền trang',
+                  SizedBox(
+                    width: double.infinity,
+                    child: CupertinoSlidingSegmentedControl<String>(
+                      groupValue: s.readerTheme,
+                      children: const {
+                        'paper': Text('Sáng'),
+                        'sepia': Text('Giấy'),
+                        'night': Text('Tối'),
+                      },
+                      onValueChanged: (value) {
+                        if (value != null) update.update(readerTheme: value);
+                      },
+                    ),
+                  ),
                 ),
+                const SizedBox(height: 10),
               ],
-              const SizedBox(height: 20),
-              const Text('Nền trang'),
-              const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'paper', label: Text('Sáng')),
-                    ButtonSegment(value: 'sepia', label: Text('Giấy')),
-                    ButtonSegment(value: 'night', label: Text('Tối')),
-                  ],
-                  selected: {s.readerTheme},
-                  onSelectionChanged: (v) =>
-                      update.update(readerTheme: v.first),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       );

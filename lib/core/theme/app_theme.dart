@@ -12,18 +12,40 @@ ThemeData appTheme(Brightness brightness) {
     colorScheme: ColorScheme.fromSeed(
       seedColor: accent,
       brightness: brightness,
-    ),
-    scaffoldBackgroundColor: dark ? const Color(0xFF000000) : Colors.white,
-    fontFamily: 'NotoSans',
+    ).copyWith(primary: accent, onPrimary: Colors.white),
+    scaffoldBackgroundColor: dark
+        ? const Color(0xFF000000)
+        : const Color(0xFFFBFBFD),
     appBarTheme: AppBarTheme(
-      backgroundColor: dark ? const Color(0xFF000000) : Colors.white,
+      backgroundColor: dark ? const Color(0xFF000000) : const Color(0xFFFBFBFD),
       surfaceTintColor: Colors.transparent,
-      centerTitle: false,
+      centerTitle: true,
+      toolbarHeight: 44,
+      scrolledUnderElevation: 0,
+      elevation: 0,
+      iconTheme: IconThemeData(
+        size: 21,
+        color: dark ? Colors.white : const Color(0xFF343438),
+      ),
       titleTextStyle: TextStyle(
-        fontSize: 27,
-        fontWeight: FontWeight.w700,
+        fontSize: 17,
+        fontWeight: FontWeight.w600,
         color: dark ? Colors.white : const Color(0xFF171719),
       ),
+    ),
+    tabBarTheme: const TabBarThemeData(
+      labelColor: accent,
+      unselectedLabelColor: Colors.grey,
+      indicatorColor: accent,
+      indicatorSize: TabBarIndicatorSize.tab,
+      dividerHeight: .5,
+      labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+    ),
+    listTileTheme: const ListTileThemeData(
+      minLeadingWidth: 24,
+      horizontalTitleGap: 12,
+      minVerticalPadding: 8,
+      titleTextStyle: TextStyle(fontSize: 16),
     ),
     dividerTheme: DividerThemeData(
       color: dark ? Colors.white12 : const Color(0xFFE5E5EA),
