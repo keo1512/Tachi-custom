@@ -10,9 +10,11 @@ class BookCover extends StatelessWidget {
     this.kind = 'novel',
     this.unread = 0,
     this.downloaded = 0,
+    this.showDownloadedBadge = false,
   });
   final String title, cover, kind;
   final int unread, downloaded;
+  final bool showDownloadedBadge;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,7 @@ class BookCover extends StatelessWidget {
       image: true,
       child: ExcludeSemantics(
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(5),
+          borderRadius: BorderRadius.circular(12),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -92,18 +94,25 @@ class BookCover extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
               Positioned(
-                left: 4,
-                top: 4,
+                left: 8,
+                right: 8,
+                top: 8,
                 child: Row(
                   children: [
-                    if (unread > 0) _Badge('$unread', const Color(0xFF007AFF)),
-                    if (downloaded > 0)
+                    if (unread > 0)
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: _Badge('$unread', const Color(0xFFAFC4FF)),
+                        ),
+                      ),
+                    if (showDownloadedBadge && downloaded > 0)
                       _Badge('$downloaded', const Color(0xFF34835C)),
                   ],
                 ),
@@ -122,17 +131,17 @@ class _Badge extends StatelessWidget {
   final Color color;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
     decoration: BoxDecoration(
       color: color,
-      borderRadius: BorderRadius.circular(3),
+      borderRadius: BorderRadius.circular(8),
     ),
     child: Text(
       text,
       style: const TextStyle(
-        fontSize: 9,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        color: Colors.black,
       ),
     ),
   );

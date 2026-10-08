@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-const accent = Color(0xFF007AFF);
+const accent = Color(0xFFAFC4FF);
 
 ThemeData appTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;
@@ -9,10 +9,12 @@ ThemeData appTheme(Brightness brightness) {
     platform: TargetPlatform.iOS,
     useMaterial3: true,
     brightness: brightness,
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: accent,
-      brightness: brightness,
-    ).copyWith(primary: accent, onPrimary: Colors.white),
+    colorScheme: ColorScheme.fromSeed(seedColor: accent, brightness: brightness)
+        .copyWith(
+          primary: accent,
+          onPrimary: Colors.black,
+          onSurface: dark ? const Color(0xFFC5C6CE) : const Color(0xFF292A30),
+        ),
     scaffoldBackgroundColor: dark
         ? const Color(0xFF000000)
         : const Color(0xFFFBFBFD),
@@ -20,17 +22,17 @@ ThemeData appTheme(Brightness brightness) {
       backgroundColor: dark ? const Color(0xFF000000) : const Color(0xFFFBFBFD),
       surfaceTintColor: Colors.transparent,
       centerTitle: true,
-      toolbarHeight: 44,
+      toolbarHeight: 56,
       scrolledUnderElevation: 0,
       elevation: 0,
       iconTheme: IconThemeData(
-        size: 21,
-        color: dark ? Colors.white : const Color(0xFF343438),
+        size: 24,
+        color: dark ? const Color(0xFFC5C6CE) : const Color(0xFF343438),
       ),
       titleTextStyle: TextStyle(
-        fontSize: 17,
-        fontWeight: FontWeight.w600,
-        color: dark ? Colors.white : const Color(0xFF171719),
+        fontSize: 20,
+        fontWeight: FontWeight.w400,
+        color: dark ? const Color(0xFFD7D8E0) : const Color(0xFF171719),
       ),
     ),
     tabBarTheme: const TabBarThemeData(

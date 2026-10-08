@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/feedback.dart';
+import '../../downloads/presentation/download_queue_controller.dart';
 import '../domain/library_book.dart';
+import 'activity_book_cover.dart';
 import 'library_view_model.dart';
 
 class UpdatesScreen extends ConsumerStatefulWidget {
@@ -33,148 +35,213 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
     }
   }
 
+  List<_UnreadChapter> entries(List<LibraryBook> books) {
+    final result = <_UnreadChapter>[];
+    for (final book in books.where(
+      (book) => book.engine != 'local' && !book.completed,
+    )) {
+      final first = (book.progress * book.chapters.length).floor().clamp(
+        0,
+        book.chapters.length,
+      );
+      for (var index = book.chapters.length - 1; index >= first; index--) {
+        result.add(_UnreadChapter(book, book.chapters[index], index));
+      }
+    }
+    return result;
+  }
+
+  Future<void> download(Iterable<_UnreadChapter> chapters) =>
+      perform(context, () async {
+        final queue = ref.read(downloadQueueProvider.notifier);
+        for (final entry in chapters.where(
+          (entry) => !entry.chapter.downloaded,
+        )) {
+          await queue.enqueue(entry.book.id, [entry.chapter.id]);
+        }
+        await queue.start();
+      });
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Cập nhật'),
-      actions: [
-        if (updating)
-          const Padding(
-            padding: EdgeInsets.all(12),
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CupertinoActivityIndicator(),
-            ),
-          )
-        else
+  Widget build(BuildContext context) {
+    final library = ref.watch(libraryProvider);
+    final queue = ref.watch(downloadQueueProvider);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Cập nhật'),
+        leading: IconButton(
+          tooltip: 'Sao lưu và dữ liệu',
+          icon: const Icon(Icons.cloud_done_outlined),
+          onPressed: () => context.go('/more'),
+        ),
+        actions: [
           IconButton(
-            tooltip: 'Kiểm tra chương mới',
-            onPressed: update,
-            icon: const Icon(CupertinoIcons.arrow_clockwise, size: 21),
+            tooltip: 'Thiết lập',
+            icon: const Icon(CupertinoIcons.gear_solid),
+            onPressed: () => context.go('/more'),
           ),
-      ],
-    ),
-    body: ref
-        .watch(libraryProvider)
-        .when(
-          loading: () => const Center(child: CupertinoActivityIndicator()),
-          error: (error, _) => _ActivityEmpty(
-            icon: CupertinoIcons.exclamationmark_circle,
-            title: 'Không mở được cập nhật',
-            description: '$error',
-            action: TextButton(
-              onPressed: () => ref.invalidate(libraryProvider),
-              child: const Text('Thử lại'),
-            ),
-          ),
-          data: (books) {
-            final entries = <_UnreadChapter>[];
-            final online =
-                books
-                    .where((book) => book.engine != 'local' && !book.completed)
-                    .toList()
-                  ..sort(
-                    (a, b) => (b.lastRead ?? DateTime(1970)).compareTo(
-                      a.lastRead ?? DateTime(1970),
-                    ),
-                  );
-            for (final book in online) {
-              final first = (book.progress * book.chapters.length)
-                  .floor()
-                  .clamp(0, book.chapters.length);
-              for (final chapter in book.chapters.skip(first)) {
-                entries.add(_UnreadChapter(book, chapter));
-              }
-            }
-            if (entries.isEmpty) {
-              return _ActivityEmpty(
-                icon: CupertinoIcons.arrow_down_circle,
-                title: 'Chưa có chương chờ đọc',
-                description: 'Kiểm tra chương mới của truyện đã thêm từ nguồn. Sách nhập từ file nằm trong Thư viện.',
-                action: TextButton.icon(
-                  onPressed: updating ? null : update,
-                  icon: const Icon(CupertinoIcons.arrow_clockwise),
-                  label: const Text('Kiểm tra cập nhật'),
+          if (updating)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: CupertinoActivityIndicator(),
+            )
+          else
+            PopupMenuButton<String>(
+              tooltip: 'Tùy chọn cập nhật',
+              icon: const Icon(Icons.more_vert),
+              onSelected: (action) {
+                if (action == 'update') {
+                  update();
+                } else {
+                  download(entries(library.value ?? []));
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'update',
+                  child: Text('Kiểm tra chương mới'),
                 ),
-              );
-            }
-            return RefreshIndicator(
-              onRefresh: update,
-              child: ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                itemCount: entries.length + 1,
-                separatorBuilder: (_, _) =>
-                    const Divider(height: 1, indent: 68),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-                      child: Text(
-                        '${entries.length} chương chưa đọc · ${online.length} truyện đang theo dõi',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    );
-                  }
-                  final entry = entries[index - 1];
-                  return ListTile(
-                    minTileHeight: 64,
-                    minVerticalPadding: 4,
-                    horizontalTitleGap: 12,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 2,
-                    ),
-                    leading: _ActivityCover(entry.book),
-                    title: Text(
-                      entry.book.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: Text(
-                      entry.chapter.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: CupertinoColors.secondaryLabel.resolveFrom(
-                          context,
-                        ),
-                      ),
-                    ),
-                    trailing: Icon(
-                      entry.chapter.downloaded
-                          ? CupertinoIcons.arrow_down_circle_fill
-                          : CupertinoIcons.chevron_right,
-                      size: 15,
-                      color: entry.chapter.downloaded
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey,
-                    ),
-                    onTap: () => context.push(
-                      '/read/${entry.book.id}?chapter=${entry.chapter.index}',
-                    ),
-                    onLongPress: () => context.push('/book/${entry.book.id}'),
-                  );
-                },
+                PopupMenuItem(
+                  value: 'download',
+                  child: Text('Tải chương chưa đọc'),
+                ),
+              ],
+            ),
+        ],
+      ),
+      body: library.when(
+        loading: () => const Center(child: CupertinoActivityIndicator()),
+        error: (error, _) => _ActivityEmpty(
+          title: 'Không mở được cập nhật',
+          description: '$error',
+          action: TextButton(
+            onPressed: () => ref.invalidate(libraryProvider),
+            child: const Text('Thử lại'),
+          ),
+        ),
+        data: (books) {
+          final unread = entries(books);
+          if (unread.isEmpty) {
+            return _ActivityEmpty(
+              title: 'Chưa có chương chờ đọc',
+              description: 'Kiểm tra chương mới của truyện đã thêm từ nguồn.',
+              action: TextButton(
+                onPressed: updating ? null : update,
+                child: const Text('Kiểm tra cập nhật'),
               ),
             );
-          },
-        ),
-  );
+          }
+          // The model does not store chapter update dates. Keep this heading honest
+          // instead of showing invented relative dates from the reference screenshot.
+          return RefreshIndicator(
+            onRefresh: update,
+            child: ListView.builder(
+              padding: const EdgeInsets.only(bottom: 16),
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: unread.length + 1,
+              itemBuilder: (context, row) {
+                if (row == 0) {
+                  return const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 14, 16, 18),
+                    child: Text(
+                      'Chương chưa đọc',
+                      style: TextStyle(fontSize: 15),
+                    ),
+                  );
+                }
+                final entry = unread[row - 1];
+                final active = queue.tasks.any(
+                  (task) =>
+                      task.bookId == entry.book.id &&
+                      task.chapterId == entry.chapter.id &&
+                      task.status == DownloadJobStatus.active,
+                );
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: [
+                      ActivityBookCover(entry.book),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => context.push(
+                            '/read/${entry.book.id}?chapter=${entry.index}',
+                          ),
+                          onLongPress: () =>
+                              context.push('/book/${entry.book.id}'),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  entry.book.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color(0xFF99999B),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  entry.chapter.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF99999B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton(
+                        tooltip: entry.chapter.downloaded
+                            ? 'Đã tải chương'
+                            : 'Tải chương ${entry.chapter.title}',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 44,
+                        ),
+                        icon: active
+                            ? const CupertinoActivityIndicator()
+                            : Icon(
+                                entry.chapter.downloaded
+                                    ? CupertinoIcons.checkmark_circle_fill
+                                    : CupertinoIcons.arrow_down_circle,
+                                size: 23,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                        onPressed: entry.chapter.downloaded || active
+                            ? null
+                            : () => download([entry]),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class _UnreadChapter {
-  const _UnreadChapter(this.book, this.chapter);
+  const _UnreadChapter(this.book, this.chapter, this.index);
   final LibraryBook book;
   final BookChapter chapter;
+  final int index;
 }
 
 class HistoryScreen extends ConsumerStatefulWidget {
@@ -184,7 +251,14 @@ class HistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
-  bool clearing = false;
+  final search = TextEditingController();
+  bool clearing = false, searching = false, hidden = false;
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
 
   Future<void> clear(List<LibraryBook> books) async {
     if (clearing || books.isEmpty) return;
@@ -193,7 +267,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       builder: (ctx) => CupertinoAlertDialog(
         title: const Text('Xóa lịch sử đọc?'),
         content: const Text(
-          'Xóa danh sách đọc gần đây. Vị trí đang đọc, dấu trang và nội dung đã tải vẫn được giữ.',
+          'Vị trí đang đọc, dấu trang và nội dung đã tải vẫn được giữ.',
         ),
         actions: [
           CupertinoDialogAction(
@@ -221,11 +295,15 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   String dateLabel(DateTime date) {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
     final local = date.toLocal();
-    final day = DateTime(local.year, local.month, local.day);
-    if (day == today) return 'Hôm nay';
-    if (day == today.subtract(const Duration(days: 1))) return 'Hôm qua';
+    final days = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).difference(DateTime(local.year, local.month, local.day)).inDays;
+    if (days == 0) return 'Hôm nay';
+    if (days == 1) return 'Hôm qua';
+    if (days > 1 && days < 8) return '$days ngày trước';
     return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
   }
 
@@ -235,9 +313,30 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lịch sử'),
+        leadingWidth: 96,
+        leading: Row(
+          children: [
+            IconButton(
+              tooltip: 'Sao lưu và dữ liệu',
+              icon: const Icon(Icons.cloud_done_outlined),
+              onPressed: () => context.go('/more'),
+            ),
+            IconButton(
+              tooltip: hidden ? 'Hiện lịch sử' : 'Ẩn lịch sử',
+              icon: const Icon(CupertinoIcons.eyeglasses),
+              onPressed: () => setState(() => hidden = !hidden),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
+            tooltip: 'Tìm lịch sử',
+            icon: const Icon(CupertinoIcons.search),
+            onPressed: () => setState(() => searching = !searching),
+          ),
+          IconButton(
             tooltip: 'Xóa lịch sử đọc',
+            icon: const Icon(CupertinoIcons.trash),
             onPressed: clearing
                 ? null
                 : () => clear(
@@ -246,106 +345,168 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             .toList() ??
                         [],
                   ),
-            icon: const Icon(CupertinoIcons.trash, size: 21),
           ),
         ],
       ),
       body: library.when(
         loading: () => const Center(child: CupertinoActivityIndicator()),
         error: (error, _) => _ActivityEmpty(
-          icon: CupertinoIcons.exclamationmark_circle,
           title: 'Không mở được lịch sử',
           description: '$error',
-          action: TextButton(
-            onPressed: () => ref.invalidate(libraryProvider),
-            child: const Text('Thử lại'),
-          ),
         ),
         data: (books) {
-          final history = books.where((book) => book.lastRead != null).toList()
-            ..sort((a, b) => b.lastRead!.compareTo(a.lastRead!));
-          if (history.isEmpty) {
-            return const _ActivityEmpty(
-              icon: CupertinoIcons.clock,
-              title: 'Những trang vừa đọc',
-              description: 'Manga, truyện chữ và ebook bạn mở sẽ xuất hiện ở đây để đọc tiếp.',
-            );
-          }
-          return RefreshIndicator(
-            onRefresh: ref.read(libraryProvider.notifier).refresh,
-            child: ListView.builder(
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: history.length,
-              itemBuilder: (context, index) {
-                final book = history[index];
-                final label = dateLabel(book.lastRead!);
-                final chapter = book.chapters.isEmpty
-                    ? null
-                    : book.chapters[book.currentChapter.clamp(
-                        0,
-                        book.chapters.length - 1,
-                      )];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (index == 0 ||
-                        dateLabel(history[index - 1].lastRead!) != label)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 7),
-                        child: Text(
-                          label,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey,
-                            fontSize: 13,
-                          ),
+          final query = search.text.trim().toLowerCase();
+          final history =
+              books
+                  .where(
+                    (book) =>
+                        book.lastRead != null &&
+                        (query.isEmpty ||
+                            book.title.toLowerCase().contains(query) ||
+                            book.chapters.any(
+                              (chapter) =>
+                                  chapter.title.toLowerCase().contains(query),
+                            )),
+                  )
+                  .toList()
+                ..sort((a, b) => b.lastRead!.compareTo(a.lastRead!));
+          return Column(
+            children: [
+              if (searching)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: CupertinoSearchTextField(
+                    controller: search,
+                    placeholder: 'Tìm lịch sử',
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+              Expanded(
+                child: hidden
+                    ? const _ActivityEmpty(
+                        title: 'Lịch sử đã ẩn',
+                        description: 'Nhấn biểu tượng kính để hiện danh sách.',
+                      )
+                    : history.isEmpty
+                    ? _ActivityEmpty(
+                        title: query.isEmpty
+                            ? 'Không có lịch sử'
+                            : 'Không tìm thấy lịch sử',
+                        description: query.isEmpty
+                            ? 'Sách bạn đọc sẽ xuất hiện ở đây.'
+                            : 'Thử tìm theo tên sách hoặc tên chương.',
+                      )
+                    : RefreshIndicator(
+                        onRefresh: ref.read(libraryProvider.notifier).refresh,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                          itemCount: history.length,
+                          itemBuilder: (context, index) {
+                            final book = history[index];
+                            final chapterIndex = book.chapters.isEmpty
+                                ? null
+                                : book.currentChapter.clamp(
+                                    0,
+                                    book.chapters.length - 1,
+                                  );
+                            final chapter = chapterIndex == null
+                                ? null
+                                : book.chapters[chapterIndex];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  InkWell(
+                                    onTap: () =>
+                                        context.push('/book/${book.id}'),
+                                    child: ActivityBookCover(
+                                      book,
+                                      width: 82,
+                                      height: 120,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => context.push(
+                                        chapterIndex == null
+                                            ? '/book/${book.id}'
+                                            : '/read/${book.id}?chapter=$chapterIndex',
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            book.title,
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Text(
+                                            chapter?.title ?? 'Chưa có chương',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                CupertinoIcons.clock,
+                                                size: 15,
+                                              ),
+                                              const SizedBox(width: 5),
+                                              Expanded(
+                                                child: Text(
+                                                  dateLabel(book.lastRead!),
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Xóa lịch sử ${book.title}',
+                                    icon: const Icon(
+                                      CupertinoIcons.trash,
+                                      size: 22,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 32,
+                                      minHeight: 44,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: clearing
+                                        ? null
+                                        : () => perform(
+                                            context,
+                                            () => ref
+                                                .read(libraryProvider.notifier)
+                                                .clearHistory([book.id]),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ),
-                    ListTile(
-                      minTileHeight: 64,
-                      minVerticalPadding: 4,
-                      horizontalTitleGap: 12,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 2,
-                      ),
-                      leading: _ActivityCover(book),
-                      title: Text(
-                        book.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      subtitle: Text(
-                        '${chapter?.title ?? 'Chưa có chương'} · ${(book.progress * 100).round()}%',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: CupertinoColors.secondaryLabel.resolveFrom(
-                            context,
-                          ),
-                        ),
-                      ),
-                      trailing: IconButton(
-                        tooltip: 'Chi tiết sách',
-                        icon: const Icon(CupertinoIcons.ellipsis, size: 21),
-                        onPressed: () => context.push('/book/${book.id}'),
-                      ),
-                      onTap: () => context.push(
-                        chapter == null
-                            ? '/book/${book.id}'
-                            : '/read/${book.id}?chapter=${chapter.index}',
-                      ),
-                    ),
-                    const Divider(height: 1, indent: 68),
-                  ],
-                );
-              },
-            ),
+              ),
+            ],
           );
         },
       ),
@@ -353,92 +514,35 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   }
 }
 
-class _ActivityCover extends StatelessWidget {
-  const _ActivityCover(this.book);
-  final LibraryBook book;
-  @override
-  Widget build(BuildContext context) {
-    final fallback = ColoredBox(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Center(
-        child: Icon(
-          book.kind == 'manga' ? CupertinoIcons.book : CupertinoIcons.doc_text,
-          color: Theme.of(context).colorScheme.primary,
-          size: 20,
-        ),
-      ),
-    );
-    return SizedBox(
-      width: 38,
-      height: 52,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(3),
-        child: book.cover.startsWith('data:image/')
-            ? Image.memory(
-                UriData.parse(book.cover).contentAsBytes(),
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => fallback,
-              )
-            : book.cover.isNotEmpty
-            ? Image.network(
-                book.cover,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => fallback,
-              )
-            : fallback,
-      ),
-    );
-  }
-}
-
 class _ActivityEmpty extends StatelessWidget {
   const _ActivityEmpty({
-    required this.icon,
     required this.title,
     required this.description,
     this.action,
   });
-  final IconData icon;
   final String title, description;
   final Widget? action;
-
   @override
   Widget build(BuildContext context) => Center(
     child: SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 340),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 36,
-                color: CupertinoColors.secondaryLabel.resolveFrom(context),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                description,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
-                ),
-              ),
-              if (action != null) ...[const SizedBox(height: 8), action!],
-            ],
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 17),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13),
+            ),
+            if (action != null) ...[const SizedBox(height: 8), action!],
+          ],
         ),
       ),
     ),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/book_cover.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../downloads/presentation/download_queue_controller.dart';
 import '../domain/library_book.dart';
 import 'chapter_options_sheet.dart';
 import 'library_view_model.dart';
@@ -156,19 +157,19 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
     if (count == null || !mounted) return;
     setState(() => downloading = true);
     await perform(context, () async {
-      final vm = ref.read(libraryProvider.notifier);
       final start = count == 10
           ? book.currentChapter.clamp(0, book.chapters.length)
           : 0;
       final end = count == 10
           ? (start + count).clamp(0, book.chapters.length)
           : book.chapters.length;
-      for (var i = start; i < end; i++) {
-        if (!book.chapters[i].downloaded) {
-          await vm.getContent(book, i, download: true);
-        }
-      }
-    }, success: 'Đã tải chương');
+      final queue = ref.read(downloadQueueProvider.notifier);
+      await queue.enqueue(book.id, [
+        for (var i = start; i < end; i++)
+          if (!book.chapters[i].downloaded) book.chapters[i].id,
+      ]);
+      await queue.start();
+    }, success: 'Đã thêm vào hàng đợi tải');
     if (mounted) setState(() => downloading = false);
   }
 
@@ -497,16 +498,15 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
                                   ? null
                                   : () async {
                                       setState(() => downloading = true);
-                                      await perform(
-                                        context,
-                                        () => ref
-                                            .read(libraryProvider.notifier)
-                                            .getContent(
-                                              book,
-                                              index,
-                                              download: true,
-                                            ),
-                                      );
+                                      await perform(context, () async {
+                                        final queue = ref.read(
+                                          downloadQueueProvider.notifier,
+                                        );
+                                        await queue.enqueue(book.id, [
+                                          chapter.id,
+                                        ]);
+                                        await queue.start();
+                                      });
                                       if (mounted) {
                                         setState(() => downloading = false);
                                       }

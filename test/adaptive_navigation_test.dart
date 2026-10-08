@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tachi_books/app.dart';
 import 'package:tachi_books/core/widgets/book_cover.dart';
+import 'package:tachi_books/features/downloads/presentation/downloads_screen.dart';
+import 'package:tachi_books/features/library/presentation/activity_screens.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/presentation/library_filter_sheet.dart';
@@ -12,6 +14,7 @@ import 'package:tachi_books/features/library/presentation/library_screen.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/settings/presentation/more_screen.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
+import 'package:tachi_books/features/sources/presentation/browse_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -95,8 +98,11 @@ void main() {
 
         final sidebar = find.byKey(const ValueKey('tablet-navigation'));
         final tabs = find.byType(CupertinoTabBar);
-        expect(sidebar, viewport.tablet ? findsOneWidget : findsNothing);
-        expect(tabs, viewport.tablet ? findsNothing : findsOneWidget);
+        // Widget hosts cannot render UIKit. Their six-tab footer exercises the
+        // same routes without asserting native appearance or device behavior.
+        expect(sidebar, findsNothing);
+        expect(tabs, findsOneWidget);
+        expect(tester.widget<CupertinoTabBar>(tabs).items.length, 6);
         expect(find.byType(BookCover), findsNWidgets(3));
         if (landscape) {
           final cover = tester.getRect(find.byType(BookCover).first);
@@ -108,14 +114,31 @@ void main() {
           isNull,
           reason: 'Initial populated library must fit ${viewport.size}.',
         );
-        final navigation = viewport.tablet ? sidebar : tabs;
-        await tester.tap(
-          find.descendant(of: navigation, matching: find.text('Thêm')),
-        );
-        await tester.pumpAndSettle();
-        expect(find.byType(MoreScreen), findsOneWidget);
-        if (!viewport.tablet) {
-          expect(tester.widget<CupertinoTabBar>(tabs).currentIndex, 4);
+        final navigation = tabs;
+        for (final destination in <({String label, Type screen, int index})>[
+          (label: 'Cập nhật', screen: UpdatesScreen, index: 1),
+          (label: 'Duyệt', screen: BrowseScreen, index: 2),
+          (label: 'Tải xuống', screen: DownloadsScreen, index: 3),
+          (label: 'Lịch sử', screen: HistoryScreen, index: 4),
+          (label: 'Thêm', screen: MoreScreen, index: 5),
+        ]) {
+          await tester.tap(
+            find.descendant(
+              of: navigation,
+              matching: find.text(destination.label),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.byType(destination.screen), findsOneWidget);
+          expect(
+            tester.widget<CupertinoTabBar>(tabs).currentIndex,
+            destination.index,
+          );
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '${destination.label} must fit ${viewport.size}.',
+          );
         }
         expect(find.byTooltip('Lọc thư viện'), findsNothing);
         expect(
@@ -128,9 +151,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byType(LibraryScreen), findsOneWidget);
-        if (!viewport.tablet) {
-          expect(tester.widget<CupertinoTabBar>(tabs).currentIndex, 0);
-        }
+        expect(tester.widget<CupertinoTabBar>(tabs).currentIndex, 0);
         expect(find.byTooltip('Lọc thư viện'), findsOneWidget);
 
         // This checks actionable controls and bounded layout. It does not assert

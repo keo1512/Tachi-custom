@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/book_cover.dart';
 import '../../../core/widgets/feedback.dart';
 import '../domain/library_book.dart';
+import '../../settings/settings_controller.dart';
+import '../../settings/presentation/connection_dialog.dart';
 import 'library_filter_sheet.dart';
 import 'library_view_model.dart';
 
@@ -57,8 +59,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final library = ref.watch(libraryProvider);
+    final settings = ref.watch(settingsProvider);
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: 'Kết nối nguồn',
+          icon: const Icon(Icons.cloud_done_outlined),
+          onPressed: () => showConnections(context, ref),
+        ),
         title: searching
             ? TextField(
                 autofocus: true,
@@ -90,7 +98,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 ? null
                 : () => showFilters(library.value!),
             color: filter.active ? Theme.of(context).colorScheme.primary : null,
-            icon: const Icon(CupertinoIcons.line_horizontal_3_decrease),
+            icon: const Icon(Icons.filter_list),
           ),
           PopupMenuButton<String>(
             tooltip: 'Thao tác thư viện',
@@ -100,7 +108,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(CupertinoIcons.ellipsis_vertical),
+                : const Icon(Icons.more_vert),
             onSelected: (v) {
               if (v == 'import') import();
               if (v == 'refresh') {
@@ -171,9 +179,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 });
           return Column(
             children: [
-              if (collections.isNotEmpty)
+              if (books.isNotEmpty)
                 SizedBox(
-                  height: 38,
+                  height: 42,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -198,13 +206,40 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                   ),
                                 ),
                               ),
-                              child: Text(
-                                c,
-                                style: TextStyle(
-                                  color: filter.category == c
-                                      ? Theme.of(context).colorScheme.primary
-                                      : null,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    c,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: filter.category == c
+                                          ? Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                          : null,
+                                    ),
+                                  ),
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Theme.of(context).brightness ==
+                                              Brightness.dark
+                                          ? const Color(0xFF222224)
+                                          : const Color(0xFFE6E6E9),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${c == 'Tất cả' ? books.length : books.where((b) => b.collection == c).length}',
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -245,22 +280,27 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     : LayoutBuilder(
                         builder: (context, size) {
                           final columns =
-                              (size.maxWidth / (filter.compact ? 128 : 175))
-                                  .floor()
+                              (settings.libraryColumns +
+                                      (filter.compact ? 1 : 0))
                                   .clamp(2, 8);
                           return RefreshIndicator(
                             onRefresh: ref
                                 .read(libraryProvider.notifier)
                                 .refresh,
                             child: GridView.builder(
-                              padding: const EdgeInsets.all(4),
+                              padding: EdgeInsets.fromLTRB(
+                                10,
+                                4,
+                                10,
+                                MediaQuery.viewPaddingOf(context).bottom + 16,
+                              ),
                               itemCount: visible.length,
                               gridDelegate:
                                   SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: columns,
-                                    crossAxisSpacing: 4,
-                                    mainAxisSpacing: 4,
-                                    childAspectRatio: .68,
+                                    crossAxisSpacing: 6,
+                                    mainAxisSpacing: 6,
+                                    childAspectRatio: .74,
                                   ),
                               itemBuilder: (_, i) {
                                 final b = visible[i];

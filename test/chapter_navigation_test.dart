@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tachi_books/app.dart';
 import 'package:tachi_books/core/widgets/book_cover.dart';
+import 'package:tachi_books/features/downloads/presentation/download_queue_controller.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/presentation/book_detail_screen.dart';
@@ -23,6 +26,49 @@ void main() {
           (_) async => 1,
         );
   });
+
+  testWidgets(
+    'detail bulk download uses the durable queue and keeps reading metadata',
+    (tester) async {
+      final pending = Completer<void>();
+      final executed = <String>[];
+      final fixture = await _openDetail(
+        tester,
+        engine: 'vbook',
+        executor: (book, index) async {
+          executed.add(book.chapters[index].id);
+          await pending.future;
+        },
+      );
+      await tester.tap(find.byTooltip('Tải chương'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tất cả chương chưa tải'));
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(BookDetailScreen)),
+      );
+      final queue = container.read(downloadQueueProvider);
+      expect(queue.running, isTrue);
+      expect(queue.tasks.map((task) => task.chapterId), ['original-middle']);
+      expect(executed, ['original-middle']);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('downloadQueueV1'), contains('original-middle'));
+      expect(
+        (await fixture.repository.find(fixture.book.id))!.toJson(),
+        fixture.book.toJson(),
+      );
+      expect(
+        (await fixture.repository.find(fixture.otherBook.id))!.toJson(),
+        fixture.otherBook.toJson(),
+      );
+      pending.complete();
+      await tester.pumpAndSettle();
+      expect(container.read(downloadQueueProvider).tasks, isEmpty);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
 
   testWidgets(
     'download filter and newest sort open the original chapter and save its progress',
@@ -93,7 +139,11 @@ typedef _Fixture = ({
   List<String> bodies,
 });
 
-Future<_Fixture> _openDetail(WidgetTester tester) async {
+Future<_Fixture> _openDetail(
+  WidgetTester tester, {
+  String engine = 'local',
+  Future<void> Function(LibraryBook, int)? executor,
+}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(390, 844);
   addTearDown(() {
@@ -105,6 +155,7 @@ Future<_Fixture> _openDetail(WidgetTester tester) async {
   final book = LibraryBook(
     id: 'chapter-navigation',
     title: 'Kiểm tra điều hướng chương',
+    engine: engine,
     author: 'Tác giả mẫu',
     currentChapter: 0,
     progress: .125,
@@ -162,6 +213,8 @@ Future<_Fixture> _openDetail(WidgetTester tester) async {
       overrides: [
         preferencesProvider.overrideWithValue(prefs),
         libraryRepositoryProvider.overrideWithValue(repository),
+        if (executor != null)
+          downloadJobExecutorProvider.overrideWithValue(executor),
       ],
       child: const TachiBooksApp(),
     ),

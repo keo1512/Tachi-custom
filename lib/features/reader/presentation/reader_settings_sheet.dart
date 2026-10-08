@@ -51,14 +51,17 @@ Future<void> showReaderSettings(
                   child: Row(
                     children: [
                       const SizedBox(width: 16),
-                      const Text(
-                        'Giao diện đọc',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
+                      const Expanded(
+                        child: Text(
+                          'Giao diện đọc',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                      const Spacer(),
                       CupertinoButton(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         onPressed: () => Navigator.pop(context),

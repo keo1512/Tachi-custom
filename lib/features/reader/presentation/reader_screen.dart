@@ -631,7 +631,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         : const Color(0xFF1C1C1E);
     final toolbar = night ? const Color(0xFF1C1C1E) : const Color(0xFFF9F9F9);
     final separator = night ? const Color(0xFF38383A) : const Color(0xFFC6C6C8);
-    const blue = Color(0xFF007AFF);
+    final blue = Theme.of(context).colorScheme.primary;
     final manga = content?.kind == 'manga';
     return Theme(
       data: Theme.of(context).copyWith(
@@ -646,8 +646,8 @@ class _ReaderState extends ConsumerState<ReaderScreen>
             fontWeight: FontWeight.w600,
             color: foreground,
           ),
-          iconTheme: const IconThemeData(color: blue, size: 22),
-          actionsIconTheme: const IconThemeData(color: blue, size: 22),
+          iconTheme: IconThemeData(color: blue, size: 22),
+          actionsIconTheme: IconThemeData(color: blue, size: 22),
           surfaceTintColor: Colors.transparent,
         ),
       ),
@@ -828,7 +828,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                           onPressed: loading ? null : contents,
                           child: Text(
                             '${current + 1} / ${book!.chapters.length}  ·  Mục lục',
-                            style: const TextStyle(fontSize: 15, color: blue),
+                            style: TextStyle(fontSize: 15, color: blue),
                           ),
                         ),
                       ),

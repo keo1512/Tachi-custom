@@ -8,6 +8,9 @@ import '../../library/presentation/library_view_model.dart';
 import '../../settings/presentation/connection_dialog.dart';
 import '../../settings/settings_controller.dart';
 import '../domain/catalogue.dart';
+import 'browse_dialogs.dart';
+import 'browse_widgets.dart';
+import 'source_migration_view.dart';
 import 'source_preferences_dialog.dart';
 
 class BrowseScreen extends ConsumerStatefulWidget {
@@ -17,14 +20,16 @@ class BrowseScreen extends ConsumerStatefulWidget {
 }
 
 class _BrowseState extends ConsumerState<BrowseScreen> {
-  bool extensions = false, loading = false, searching = false;
-  SourceEngine engine = SourceEngine.tachimanga;
-  List<CatalogueSource> sources = [];
-  List<CatalogueExtension> packages = [];
+  int tab = 0, request = 0;
+  bool loading = false, searching = false;
+  String query = '';
+  String? language;
+  final sourceLists = <SourceEngine, List<CatalogueSource>>{};
+  final packageLists = <SourceEngine, List<CatalogueExtension>>{};
+  final sourceUrls = <SourceEngine, String>{};
+  final packageUrls = <SourceEngine, String>{};
+  final errors = <SourceEngine, String>{};
   final installing = <String>{};
-  String? error;
-  String query = '', lastConnection = '';
-  int request = 0;
 
   @override
   void initState() {
@@ -32,52 +37,59 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
     Future.microtask(load);
   }
 
+  String connection(AppSettings settings, SourceEngine engine) =>
+      engine == SourceEngine.tachimanga
+      ? settings.tachimangaUrl
+      : settings.vbookUrl;
+
+  List<CatalogueSource> get sources =>
+      sourceLists.values.expand((values) => values).toList();
+
   Future<void> load() async {
+    if (!mounted) return;
     final current = ++request;
-    final target = engine;
-    final showExtensions = extensions;
-    if (mounted) {
-      setState(() {
-        loading = true;
-        error = null;
-      });
-    }
+    final extensions = tab == 1;
     final settings = ref.read(settingsProvider);
-    final configured = target == SourceEngine.vbook
-        ? settings.vbookUrl
-        : settings.tachimangaUrl;
-    if (configured.isEmpty) {
-      if (mounted && current == request) {
-        setState(() {
-          loading = false;
-          sources = [];
-          packages = [];
-        });
-      }
-      return;
-    }
-    try {
-      final repo = ref.read(sourceRepositoryProvider);
-      final result = showExtensions
-          ? await repo.extensions(target)
-          : await repo.listSources(target);
-      if (!mounted || current != request) return;
-      setState(() {
-        if (showExtensions) {
-          packages = result.cast<CatalogueExtension>();
-        } else {
-          sources = result.cast<CatalogueSource>();
+    final repo = ref.read(sourceRepositoryProvider);
+    final urls = extensions ? packageUrls : sourceUrls;
+    setState(() {
+      loading = true;
+      errors.clear();
+      for (final engine in SourceEngine.values) {
+        final url = connection(settings, engine);
+        if (urls[engine] != url) {
+          if (extensions) {
+            packageLists.remove(engine);
+          } else {
+            sourceLists.remove(engine);
+          }
+          urls[engine] = url;
         }
-        loading = false;
-      });
-    } catch (e) {
-      if (mounted && current == request) {
-        setState(() {
-          error = '$e';
-          loading = false;
-        });
       }
-    }
+    });
+    await Future.wait(
+      SourceEngine.values.map((engine) async {
+        if (connection(settings, engine).isEmpty) return;
+        try {
+          if (extensions) {
+            final result = await repo.extensions(engine);
+            if (mounted && current == request) {
+              setState(() => packageLists[engine] = result);
+            }
+          } else {
+            final result = await repo.listSources(engine);
+            if (mounted && current == request) {
+              setState(() => sourceLists[engine] = result);
+            }
+          }
+        } catch (error) {
+          if (mounted && current == request) {
+            setState(() => errors[engine] = '$error');
+          }
+        }
+      }),
+    );
+    if (mounted && current == request) setState(() => loading = false);
   }
 
   Future<void> connect() async {
@@ -86,73 +98,25 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
   }
 
   Future<void> add() async {
-    final target = engine;
-    var url = '';
-    var registry = true;
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, set) => AlertDialog(
-          title: Text(
-            target == SourceEngine.tachimanga
-                ? 'Thêm extension Tachimanga'
-                : 'Thêm extension vBook',
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: double.infinity,
-                child: CupertinoSlidingSegmentedControl<bool>(
-                  groupValue: registry,
-                  children: const {
-                    true: Text('Repository'),
-                    false: Text('Gói extension'),
-                  },
-                  onValueChanged: (value) {
-                    if (value != null) set(() => registry = value);
-                  },
-                ),
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                onChanged: (value) => url = value,
-                keyboardType: TextInputType.url,
-                autocorrect: false,
-                decoration: InputDecoration(
-                  labelText: registry
-                      ? 'URL registry JSON'
-                      : target == SourceEngine.tachimanga
-                      ? 'URL APK'
-                      : 'URL plugin.zip',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Hủy'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Thêm'),
-            ),
-          ],
-        ),
-      ),
-    );
-    final value = url.trim();
-    if (result != true || value.isEmpty || !mounted) return;
+    final engine = await chooseExtensionEngine(context);
+    if (engine == null || !mounted) return;
+    if (connection(ref.read(settingsProvider), engine).isEmpty) {
+      await connect();
+      if (!mounted || connection(ref.read(settingsProvider), engine).isEmpty) {
+        return;
+      }
+    }
+    final input = await requestExtension(context, engine);
+    if (input == null || input.url.isEmpty || !mounted) return;
     await perform(context, () async {
       final repo = ref.read(sourceRepositoryProvider);
-      if (registry) {
-        await repo.addRepository(target, value);
+      if (input.repository) {
+        await repo.addRepository(engine, input.url);
       } else {
-        await repo.installExtension(target, value);
+        await repo.installExtension(engine, input.url);
       }
-      await load();
-    }, success: registry ? 'Đã thêm repository' : 'Đã cài extension');
+      if (mounted) await load();
+    }, success: input.repository ? 'Đã thêm repository' : 'Đã cài extension');
   }
 
   Future<void> install(CatalogueExtension package) async {
@@ -168,407 +132,354 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
     if (mounted) setState(() => installing.remove(key));
   }
 
-  Widget panel({
-    required IconData icon,
-    required String title,
-    required String detail,
-    Widget? action,
-  }) => Center(
-    child: SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 340),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 36,
-                color: CupertinoColors.secondaryLabel.resolveFrom(context),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                detail,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
-                ),
-              ),
-              if (action != null) ...[const SizedBox(height: 8), action],
-            ],
+  Future<void> openSource(CatalogueSource source) async {
+    await perform(context, () async {
+      await ref
+          .read(settingsProvider.notifier)
+          .recordSourceUse(source.identity);
+      if (mounted) context.push('/source', extra: source);
+    });
+  }
+
+  Future<void> chooseLanguage() async {
+    final codes = <String>{
+      ...sources.map((source) => source.lang),
+      ...packageLists.values
+          .expand((values) => values)
+          .map((item) => item.lang),
+    }.toList()..sort((a, b) => sourceLanguage(a).compareTo(sourceLanguage(b)));
+    final selected = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        title: const Text('Ngôn ngữ'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, '*'),
+            child: const Text('Tất cả ngôn ngữ'),
           ),
+          for (final code in codes)
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, code),
+              child: Text(sourceLanguage(code)),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Hủy'),
         ),
       ),
-    ),
-  );
-
-  Widget extensionList() {
-    final visible = packages
-        .where(
-          (package) => package.name.toLowerCase().contains(query.toLowerCase()),
-        )
-        .toList();
-    if (visible.isEmpty) {
-      return panel(
-        icon: CupertinoIcons.square_stack_3d_up,
-        title: packages.isEmpty ? 'Chưa có extension' : 'Không có kết quả',
-        detail: packages.isEmpty
-            ? 'Thêm repository hoặc gói extension bằng nút +.'
-            : 'Thử tìm bằng tên extension khác.',
-        action: packages.isEmpty
-            ? TextButton(onPressed: add, child: const Text('Thêm extension'))
-            : null,
-      );
+    );
+    if (selected != null && mounted) {
+      setState(() => language = selected == '*' ? null : selected);
     }
-    return RefreshIndicator(
-      onRefresh: load,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: visible.length,
-        separatorBuilder: (_, _) => const Divider(height: 1, indent: 58),
-        itemBuilder: (_, index) {
-          final package = visible[index];
-          final pending = installing.contains(
-            '${package.engine.name}:${package.id}',
-          );
-          return ListTile(
-            minTileHeight: 60,
-            minVerticalPadding: 6,
-            horizontalTitleGap: 12,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-            leading: const SizedBox(
-              width: 30,
-              height: 36,
-              child: Icon(CupertinoIcons.square_stack_3d_up, size: 25),
-            ),
-            title: Text(
-              package.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 16),
-            ),
-            subtitle: Text(
-              '${package.lang.toUpperCase()} · ${package.version}${package.limitations.isEmpty ? '' : ' · ${package.limitations.join(', ')}'}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                color: CupertinoColors.secondaryLabel.resolveFrom(context),
+  }
+
+  List<Widget> connectionNotes() {
+    final settings = ref.read(settingsProvider);
+    return [
+      for (final engine in SourceEngine.values)
+        if (errors[engine] != null)
+          BrowseNote(
+            '${sourceEngineName(engine)}: ${errors[engine]}',
+            onRetry: load,
+          )
+        else if (connection(settings, engine).isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: connect,
+                child: Text('Kết nối ${sourceEngineName(engine)}'),
               ),
             ),
-            trailing: pending
-                ? const CupertinoActivityIndicator()
-                : package.installed
-                ? Text(
-                    'Đã cài',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: CupertinoColors.secondaryLabel.resolveFrom(
-                        context,
-                      ),
-                    ),
-                  )
-                : CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    minimumSize: const Size(44, 44),
-                    onPressed: () => install(package),
-                    child: const Text('Cài', style: TextStyle(fontSize: 15)),
-                  ),
-          );
-        },
+          ),
+    ];
+  }
+
+  Widget sourceRow(CatalogueSource source, Set<String> pinned) =>
+      SourceBrowseRow(
+        source: source,
+        pinned: pinned.contains(source.identity),
+        onOpen: () => openSource(source),
+        onPin: () => perform(
+          context,
+          () => ref
+              .read(settingsProvider.notifier)
+              .toggleSourcePin(source.identity),
+        ),
+        onInfo: () => showSourceInfo(context, source),
+        onPreferences: source.engine == SourceEngine.tachimanga
+            ? () => showSourcePreferences(context, source)
+            : null,
+      );
+
+  Widget sourceList() {
+    final settings = ref.watch(settingsProvider);
+    final pinned = settings.pinnedSources.toSet();
+    final visible =
+        sources
+            .where(
+              (source) =>
+                  source.name.toLowerCase().contains(query.toLowerCase()) &&
+                  (language == null || source.lang == language),
+            )
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+    final byIdentity = {for (final source in visible) source.identity: source};
+    final recent = settings.recentSources
+        .map((id) => byIdentity[id])
+        .whereType<CatalogueSource>()
+        .take(1)
+        .toList();
+    final pins = visible.where((source) => pinned.contains(source.identity));
+    final grouped = <String, List<CatalogueSource>>{};
+    for (final source in visible.where(
+      (source) => !pinned.contains(source.identity),
+    )) {
+      grouped.putIfAbsent(source.lang, () => []).add(source);
+    }
+    final langs = grouped.keys.toList()
+      ..sort((a, b) => sourceLanguage(a).compareTo(sourceLanguage(b)));
+    return RefreshIndicator(
+      onRefresh: load,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.paddingOf(context).bottom + 16,
+        ),
+        children: [
+          ...connectionNotes(),
+          if (recent.isNotEmpty) ...[
+            const BrowseHeading('Sử dụng lần cuối'),
+            for (final source in recent) sourceRow(source, pinned),
+          ],
+          if (pins.isNotEmpty) ...[
+            const BrowseHeading('Đã ghim'),
+            for (final source in pins) sourceRow(source, pinned),
+          ],
+          for (final lang in langs) ...[
+            BrowseHeading(sourceLanguage(lang)),
+            for (final source in grouped[lang]!) sourceRow(source, pinned),
+          ],
+          if (visible.isEmpty && !loading)
+            BrowseNote(
+              sources.isEmpty
+                  ? 'Chưa có nguồn. Mở Phần mở rộng để cài extension.'
+                  : 'Không có nguồn phù hợp với bộ lọc.',
+            ),
+          const BrowseHeading('Trong thiết bị'),
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+            leading: const Icon(CupertinoIcons.folder, size: 28),
+            title: const Text(
+              'Nguồn trong thiết bị',
+              style: TextStyle(fontSize: 16),
+            ),
+            subtitle: const Text(
+              'EPUB · TXT · CBZ · ZIP',
+              style: TextStyle(fontSize: 13),
+            ),
+            trailing: const Icon(CupertinoIcons.chevron_right, size: 16),
+            onTap: () => perform(
+              context,
+              () => ref.read(libraryProvider.notifier).importFiles(),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget sourceList() {
-    final visible = sources
-        .where(
-          (source) => source.name.toLowerCase().contains(query.toLowerCase()),
-        )
-        .toList();
-    if (visible.isEmpty) {
-      return panel(
-        icon: CupertinoIcons.square_stack_3d_up,
-        title: sources.isEmpty ? 'Chưa có nguồn' : 'Không có kết quả',
-        detail: sources.isEmpty
-            ? 'Mở Tiện ích để cài extension.'
-            : 'Thử tìm bằng tên nguồn khác.',
-        action: sources.isEmpty
-            ? TextButton(
-                onPressed: () {
-                  setState(() => extensions = true);
-                  load();
-                },
-                child: const Text('Mở tiện ích'),
-              )
-            : null,
-      );
-    }
+  Widget extensionList() {
+    final visible =
+        packageLists.values
+            .expand((values) => values)
+            .where(
+              (item) =>
+                  item.name.toLowerCase().contains(query.toLowerCase()) &&
+                  (language == null || item.lang == language),
+            )
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
     return RefreshIndicator(
       onRefresh: load,
-      child: ListView.separated(
+      child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        itemCount: visible.length,
-        separatorBuilder: (_, _) => const Divider(height: 1, indent: 58),
-        itemBuilder: (_, index) {
-          final source = visible[index];
-          return ListTile(
-            minTileHeight: 60,
-            minVerticalPadding: 6,
-            horizontalTitleGap: 12,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-            leading: SizedBox(
-              width: 30,
-              height: 36,
-              child: Icon(
-                source.kind == ContentKind.manga
-                    ? CupertinoIcons.photo
-                    : CupertinoIcons.book,
-                size: 25,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.paddingOf(context).bottom + 16,
+        ),
+        children: [
+          ...connectionNotes(),
+          ListTile(
+            leading: const Icon(CupertinoIcons.plus, size: 24),
+            title: const Text('Thêm repository hoặc extension'),
+            onTap: add,
+          ),
+          for (final engine in SourceEngine.values) ...[
+            BrowseHeading(sourceEngineName(engine)),
+            for (final item in visible.where((item) => item.engine == engine))
+              ListTile(
+                leading: const Icon(CupertinoIcons.square_stack_3d_up),
+                title: Text(
+                  item.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '${sourceLanguage(item.lang)} · ${item.version}${item.limitations.isEmpty ? '' : ' · ${item.limitations.join(', ')}'}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                trailing: installing.contains('${item.engine.name}:${item.id}')
+                    ? const CupertinoActivityIndicator()
+                    : item.installed
+                    ? const Text('Đã cài', style: TextStyle(fontSize: 13))
+                    : CupertinoButton(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        onPressed: () => install(item),
+                        child: const Text(
+                          'Cài',
+                          style: TextStyle(fontSize: 14),
+                        ),
+                      ),
               ),
+          ],
+          if (visible.isEmpty && !loading)
+            BrowseNote(
+              query.isEmpty && language == null
+                  ? 'Chưa có extension. Thêm repository hoặc gói extension bằng nút +.'
+                  : 'Không có extension phù hợp với bộ lọc.',
             ),
-            title: Text(
-              source.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 16),
-            ),
-            subtitle: Text(
-              '${source.lang.toUpperCase()} · ${source.kind == ContentKind.manga ? 'Truyện tranh' : 'Truyện chữ'}',
-              style: TextStyle(
-                fontSize: 12,
-                color: CupertinoColors.secondaryLabel.resolveFrom(context),
-              ),
-            ),
-            trailing: source.engine == SourceEngine.tachimanga
-                ? IconButton(
-                    tooltip: 'Cấu hình ${source.name}',
-                    onPressed: () => showSourcePreferences(context, source),
-                    icon: const Icon(CupertinoIcons.gear, size: 21),
-                  )
-                : const Icon(
-                    CupertinoIcons.chevron_right,
-                    size: 14,
-                    color: CupertinoColors.systemGrey,
-                  ),
-            onTap: () => context.push('/source', extra: source),
-          );
-        },
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider);
-    final connection = '${settings.tachimangaUrl}|${settings.vbookUrl}';
-    if (lastConnection != connection) {
-      lastConnection = connection;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) load();
-      });
-    }
-    final configured = engine == SourceEngine.vbook
-        ? settings.vbookUrl.isNotEmpty
-        : settings.tachimangaUrl.isNotEmpty;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Duyệt'),
-        leading: IconButton(
-          tooltip: 'Tìm nguồn hoặc extension',
-          icon: const Icon(CupertinoIcons.search, size: 22),
-          onPressed: () => setState(() {
-            searching = !searching;
-            if (!searching) query = '';
-          }),
-        ),
-        actions: [
-          if (extensions)
+    ref.listen(
+      settingsProvider.select((s) => (s.tachimangaUrl, s.vbookUrl)),
+      (_, _) => load(),
+    );
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Duyệt'),
+          leading: IconButton(
+            tooltip: 'Kết nối nguồn',
+            icon: const Icon(CupertinoIcons.cloud),
+            onPressed: connect,
+          ),
+          actions: [
             IconButton(
-              tooltip: 'Thêm repository hoặc extension',
-              onPressed: configured ? add : connect,
-              icon: const Icon(CupertinoIcons.plus, size: 23),
+              tooltip: 'Tìm nguồn hoặc extension',
+              icon: const Icon(CupertinoIcons.search),
+              onPressed: () => setState(() {
+                searching = !searching;
+                if (!searching) query = '';
+              }),
             ),
-          PopupMenuButton<String>(
-            tooltip: 'Tùy chọn duyệt',
-            icon: const Icon(CupertinoIcons.ellipsis, size: 23),
-            onSelected: (value) {
-              if (value == 'connection') {
-                connect();
-              } else {
-                load();
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'refresh', child: Text('Làm mới')),
-              PopupMenuItem(value: 'connection', child: Text('Kết nối nguồn')),
-            ],
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 7, 16, 7),
-            child: SizedBox(
-              width: double.infinity,
-              child: CupertinoSlidingSegmentedControl<bool>(
-                groupValue: extensions,
-                children: const {
-                  false: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 3),
-                    child: Text('Nguồn', style: TextStyle(fontSize: 14)),
-                  ),
-                  true: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 3),
-                    child: Text('Tiện ích', style: TextStyle(fontSize: 14)),
-                  ),
-                },
-                onValueChanged: (value) {
-                  if (value == null || value == extensions) return;
-                  setState(() => extensions = value);
+            PopupMenuButton<String>(
+              tooltip: 'Quản lý nguồn và extension',
+              icon: const Icon(CupertinoIcons.globe),
+              onSelected: (value) {
+                if (value == 'add') {
+                  add();
+                } else if (value == 'connection') {
+                  connect();
+                } else {
                   load();
-                },
-              ),
-            ),
-          ),
-          if (searching)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: CupertinoSearchTextField(
-                autofocus: true,
-                placeholder: extensions ? 'Tên extension' : 'Tên nguồn',
-                onChanged: (value) => setState(() => query = value),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 5),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    extensions ? 'EXTENSION' : 'NGUỒN',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: CupertinoColors.secondaryLabel.resolveFrom(
-                        context,
-                      ),
-                    ),
-                  ),
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'refresh', child: Text('Làm mới')),
+                PopupMenuItem(
+                  value: 'add',
+                  child: Text('Thêm repository hoặc extension'),
                 ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 200,
-                  child: CupertinoSegmentedControl<SourceEngine>(
-                    groupValue: engine,
-                    padding: EdgeInsets.zero,
-                    children: const {
-                      SourceEngine.tachimanga: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 3,
-                        ),
-                        child: Text(
-                          'Tachimanga',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                      SourceEngine.vbook: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 3,
-                        ),
-                        child: Text('vBook', style: TextStyle(fontSize: 12)),
-                      ),
-                    },
-                    onValueChanged: (value) {
-                      if (value == engine) return;
-                      setState(() => engine = value);
-                      load();
-                    },
-                  ),
+                PopupMenuItem(
+                  value: 'connection',
+                  child: Text('Kết nối nguồn'),
                 ),
               ],
             ),
+            IconButton(
+              tooltip: 'Ngôn ngữ',
+              icon: const Icon(Icons.translate),
+              onPressed: chooseLanguage,
+            ),
+          ],
+          bottom: TabBar(
+            labelStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+            ),
+            unselectedLabelStyle: const TextStyle(fontSize: 14),
+            indicatorSize: TabBarIndicatorSize.label,
+            indicatorWeight: 3,
+            dividerColor: Colors.transparent,
+            labelPadding: EdgeInsets.zero,
+            tabs: const [
+              Tab(text: 'Nguồn'),
+              Tab(text: 'Phần mở rộng'),
+              Tab(text: 'Di chuyển'),
+            ],
+            onTap: (value) {
+              if (value == tab) return;
+              setState(() => tab = value);
+              load();
+            },
           ),
-          const Divider(height: 1),
-          if (!extensions) ...[
-            ListTile(
-              minTileHeight: 60,
-              minVerticalPadding: 6,
-              horizontalTitleGap: 12,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              leading: const SizedBox(
-                width: 30,
-                height: 36,
-                child: Icon(CupertinoIcons.folder, size: 25),
-              ),
-              title: const Text(
-                'Nguồn trong thiết bị',
-                style: TextStyle(fontSize: 16),
-              ),
-              subtitle: Text(
-                'EPUB · TXT · CBZ · ZIP',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: CupertinoColors.secondaryLabel.resolveFrom(context),
+        ),
+        body: Column(
+          children: [
+            if (searching)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: CupertinoSearchTextField(
+                  autofocus: true,
+                  placeholder: tab == 2
+                      ? 'Tên truyện trong thư viện'
+                      : 'Tên nguồn hoặc extension',
+                  onChanged: (value) => setState(() => query = value),
                 ),
               ),
-              trailing: const Icon(
-                CupertinoIcons.chevron_right,
-                size: 14,
-                color: CupertinoColors.systemGrey,
+            if (language != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        sourceLanguage(language!),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(() => language = null),
+                      child: const Text(
+                        'Bỏ lọc',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              onTap: () => perform(
-                context,
-                () => ref.read(libraryProvider.notifier).importFiles(),
-              ),
+            if (loading) const LinearProgressIndicator(minHeight: 1),
+            Expanded(
+              child: tab == 0
+                  ? sourceList()
+                  : tab == 1
+                  ? extensionList()
+                  : SourceMigrationView(
+                      sources: sources,
+                      onOpenSource: openSource,
+                      query: query,
+                    ),
             ),
-            const Divider(height: 1, indent: 58),
           ],
-          Expanded(
-            child: loading
-                ? const Center(child: CupertinoActivityIndicator())
-                : !configured
-                ? panel(
-                    icon: CupertinoIcons.link,
-                    title:
-                        'Kết nối ${engine == SourceEngine.vbook ? 'vBook' : 'Tachimanga'}',
-                    detail: 'Cấu hình kết nối nguồn trong Thêm hoặc menu •••. Nội dung đã lưu vẫn đọc offline.',
-                    action: TextButton(
-                      onPressed: () => context.go('/more'),
-                      child: const Text('Mở cài đặt'),
-                    ),
-                  )
-                : error != null
-                ? panel(
-                    icon: CupertinoIcons.wifi_slash,
-                    title: 'Không kết nối được',
-                    detail: error!,
-                    action: TextButton(
-                      onPressed: load,
-                      child: const Text('Thử lại'),
-                    ),
-                  )
-                : extensions
-                ? extensionList()
-                : sourceList(),
-          ),
-        ],
+        ),
       ),
     );
   }
