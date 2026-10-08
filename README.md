@@ -9,12 +9,12 @@
 Trên macOS có Xcode và CocoaPods, dùng Flutter 3.47.4 đúng commit đã pin trong script:
 
 ```bash
-bash tools/build_ios.sh 4
+bash tools/build_ios.sh 5
 ```
 
 Script chạy analyze, tests, compile bản release iOS arm64 rồi đóng gói `build/ios/ipa/TachiBooks-unsigned.ipa`. Đây là IPA **chưa ký**; cần ký và provisioning phù hợp trước khi cài lên iPhone/iPad. Script từ chối chạy trên Windows/Linux, không tạo file IPA giả.
 
-Workflow `.github/workflows/ios-build.yml` cho GitHub Actions macOS tự chạy khi push lên main và có thể chạy thủ công qua Actions → iOS unsigned IPA → Run workflow. Pipeline dùng Xcode26.2, chạy hosted XCTest trên iPhone simulator iOS26 để kiểm tra thanh tab UIKit trước khi compile release. Artifact IPA đi kèm SHA-256 và build information; kết quả simulator và ảnh chụp thật được lưu riêng để kiểm tra. IPA vẫn cần ký và kiểm tra trên thiết bị.
+Workflow `.github/workflows/ios-build.yml` cho GitHub Actions macOS tự chạy khi push lên main và có thể chạy thủ công qua Actions → iOS unsigned IPA → Run workflow. Pipeline dùng runner `xcode-27`, chạy hosted XCTest trên iPhone simulator iOS27 theo phiên bản máy người dùng để kiểm tra thanh tab UIKit trước khi compile release. Script kiểm tra SDK và runtime thực tế đúng iOS27. Artifact IPA đi kèm SHA-256 và build information; kết quả simulator và ảnh chụp thật được lưu riêng để kiểm tra. IPA vẫn cần ký và kiểm tra trên thiết bị.
 
 Để build có chữ ký trên Mac, mở `ios/Runner.xcworkspace`, cấu hình Team/Bundle ID phù hợp trong Xcode rồi dùng `flutter build ipa --release` và chọn export method/provisioning tương ứng. Không có certificate hoặc tài khoản ký được lưu trong source.
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Run the hosted UIKit/Flutter integration smoke on an available iOS 26 iPhone.
+# Run the hosted UIKit/Flutter integration smoke on an available iOS 27 iPhone.
 # Requires macOS/Xcode; the xcresult contains native test diagnostics.
 set -euo pipefail
 export FLUTTER_SWIFT_PACKAGE_MANAGER=false
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
-  printf '%s\n' 'Native tab tests require macOS with Xcode and an iOS 26 simulator.' >&2
+  printf '%s\n' 'Native tab tests require macOS with Xcode and an iOS 27 simulator.' >&2
   exit 1
 fi
 for tachi_command in flutter xcodebuild xcrun pod python3; do
@@ -26,20 +26,23 @@ fi
 
 xcodebuild -version
 xcrun --sdk iphonesimulator --show-sdk-version
-# Discover actual runtime/device identifiers. Prefer 26.2, while permitting
-# another installed iOS 26 runtime; never guess a model name or simulator UUID.
+# Discover actual runtime/device identifiers; never guess a model or UUID.
+# Match the user's iOS major version and prefer the selected SDK's runtime.
 tachi_simulator="$(python3 - "$tachi_root/artifacts/native-tabs-simulator.json" <<'PY'
 import json
 import subprocess
 import sys
 
 inventory = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', '--json'], text=True))
+sdk = subprocess.check_output(['xcrun', '--sdk', 'iphonesimulator', '--show-sdk-version'], text=True).strip()
+if sdk.split('.')[0] != '27':
+    raise SystemExit(f'Expected iOS 27 SDK, selected {sdk}; review Xcode selection.')
 runtimes = {
     runtime['identifier']: runtime
     for runtime in inventory.get('runtimes', [])
     if runtime.get('isAvailable')
     and '.iOS-' in runtime['identifier']
-    and runtime.get('version', '').split('.')[0] == '26'
+    and runtime.get('version', '').split('.')[0] == '27'
 }
 device_types = {
     item['identifier']: item for item in inventory.get('devicetypes', [])
@@ -54,13 +57,14 @@ for runtime_id, devices in inventory.get('devices', {}).items():
         is_iphone = kind.get('productFamily') == 'iPhone' or device.get('name', '').startswith('iPhone')
         if device.get('isAvailable') and is_iphone:
             version = tuple(int(part) for part in runtime['version'].split('.'))
-            rank = (version[:2] == (26, 2), device.get('state') == 'Booted', version, device['name'])
+            sdk_version = tuple(int(part) for part in sdk.split('.'))
+            rank = (version[:2] == sdk_version[:2], device.get('state') == 'Booted', version, device['name'])
             candidates.append((rank, runtime, device))
 if not candidates:
-    raise SystemExit('No available iPhone simulator with an iOS 26 runtime; install one in Xcode.')
+    raise SystemExit('No available iPhone simulator with an iOS 27 runtime; install one in Xcode.')
 _, runtime, device = max(candidates, key=lambda item: item[0])
 with open(sys.argv[1], 'w', encoding='utf-8') as handle:
-    json.dump({'runtime': runtime, 'device': device}, handle, indent=2)
+    json.dump({'sdkVersion': sdk, 'runtime': runtime, 'device': device}, handle, indent=2)
     handle.write('\n')
 print(f"Selected {device['name']} / {runtime['name']} / {device['udid']}", file=sys.stderr)
 print(device['udid'])

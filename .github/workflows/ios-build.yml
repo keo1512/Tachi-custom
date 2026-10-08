@@ -8,7 +8,7 @@ on:
       build_number:
         description: Positive iOS build number
         required: true
-        default: '4'
+        default: '5'
         type: string
 
 permissions:
@@ -17,10 +17,10 @@ permissions:
 jobs:
   unsigned-ipa:
     name: Compile iPhone and iPad app (unsigned)
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 60
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
       TACHI_BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
     steps:
       - name: Check out source
@@ -38,7 +38,7 @@ jobs:
           "$RUNNER_TEMP/tachibooks-flutter/bin/flutter" --version
           "$RUNNER_TEMP/tachibooks-flutter/bin/flutter" precache --ios
 
-      - name: Test native UIKit tabs on an iOS 26 iPhone simulator
+      - name: Test native UIKit tabs on an iOS 27 iPhone simulator
         shell: bash
         timeout-minutes: 20
         run: bash tools/test_ios_native_tabs.sh
@@ -77,4 +77,4 @@ jobs:
         run: |
           printf '%s\n' '### TachiBooks unsigned iOS package' >> "$GITHUB_STEP_SUMMARY"
           printf '%s\n' 'The artifact contains an unsigned device IPA for iPhone and iPad. It requires re-signing with valid provisioning before installation.' >> "$GITHUB_STEP_SUMMARY"
-          printf '%s\n' 'The hosted native smoke verifies six UIKit tabs, Dart navigation and safe-area visibility on an iOS 26 iPhone simulator. The simulator screenshot still needs visual review; this workflow does not test a physical iPhone or iPad.' >> "$GITHUB_STEP_SUMMARY"
+          printf '%s\n' 'The hosted native smoke verifies six UIKit tabs, Dart navigation and safe-area visibility on an iOS 27 iPhone simulator. The simulator screenshot still needs visual review; this workflow does not test a physical iPhone or iPad.' >> "$GITHUB_STEP_SUMMARY"

@@ -31,9 +31,7 @@ class SceneDelegate: FlutterSceneDelegate {
 
     // Flutter's automatic scene discovery only recognizes a FlutterVC root.
     // Keep forwarding scene/plugin events to the same engine after containment.
-    if let engine = controller.flutterViewController.engine {
-      registerSceneLifeCycle(with: engine)
-    }
+    registerSceneLifeCycle(with: controller.flutterViewController.engine)
     (UIApplication.shared.delegate as? AppDelegate)?.attachNativeTabs(to: controller)
   }
 }
