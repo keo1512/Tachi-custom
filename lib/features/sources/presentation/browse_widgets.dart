@@ -62,12 +62,24 @@ class SourceBrowseRow extends StatelessWidget {
                   color: gray.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: Icon(
-                  source.kind == ContentKind.manga
-                      ? CupertinoIcons.photo
-                      : CupertinoIcons.book,
-                  color: gray,
-                  size: 22,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: source.iconUrl.isEmpty
+                      ? _sourcePlaceholder(gray)
+                      : Image.network(
+                          source.iconUrl,
+                          width: 38,
+                          height: 38,
+                          fit: BoxFit.contain,
+                          cacheWidth: 114,
+                          cacheHeight: 114,
+                          excludeFromSemantics: true,
+                          errorBuilder: (_, _, _) => _sourcePlaceholder(gray),
+                          loadingBuilder: (_, child, progress) =>
+                              progress == null
+                              ? child
+                              : _sourcePlaceholder(gray),
+                        ),
                 ),
               ),
               const SizedBox(width: 20),
@@ -116,6 +128,15 @@ class SourceBrowseRow extends StatelessWidget {
       ),
     );
   }
+
+  Widget _sourcePlaceholder(Color gray) => Icon(
+    source.kind == ContentKind.manga
+        ? CupertinoIcons.photo
+        : CupertinoIcons.book,
+    key: const ValueKey('source-icon-placeholder'),
+    color: gray,
+    size: 22,
+  );
 }
 
 class _SourceButton extends StatelessWidget {

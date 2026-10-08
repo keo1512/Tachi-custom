@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/feedback.dart';
 import '../../downloads/presentation/download_queue_controller.dart';
+import '../../settings/settings_controller.dart';
 import '../domain/library_book.dart';
 import 'activity_book_cover.dart';
 import 'library_view_model.dart';
@@ -252,7 +253,7 @@ class HistoryScreen extends ConsumerStatefulWidget {
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   final search = TextEditingController();
-  bool clearing = false, searching = false, hidden = false;
+  bool clearing = false, searching = false;
 
   @override
   void dispose() {
@@ -310,6 +311,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final library = ref.watch(libraryProvider);
+    final incognito = ref.watch(
+      settingsProvider.select((settings) => settings.incognitoMode),
+    );
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lịch sử'),
@@ -322,9 +326,17 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               onPressed: () => context.go('/more'),
             ),
             IconButton(
-              tooltip: hidden ? 'Hiện lịch sử' : 'Ẩn lịch sử',
-              icon: const Icon(CupertinoIcons.eyeglasses),
-              onPressed: () => setState(() => hidden = !hidden),
+              tooltip: incognito ? 'Tắt chế độ ẩn danh' : 'Bật chế độ ẩn danh',
+              icon: Icon(
+                CupertinoIcons.eyeglasses,
+                color: incognito ? Theme.of(context).colorScheme.primary : null,
+              ),
+              onPressed: () => perform(
+                context,
+                () => ref
+                    .read(settingsProvider.notifier)
+                    .update(incognitoMode: !incognito),
+              ),
             ),
           ],
         ),
@@ -372,6 +384,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 ..sort((a, b) => b.lastRead!.compareTo(a.lastRead!));
           return Column(
             children: [
+              if (incognito)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Text(
+                    'Ẩn danh đang bật. Phiên đọc mở mới không lưu tiến độ, lịch sử hoặc thời gian đọc. Dấu trang bạn chủ động thêm vẫn được lưu.',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ),
               if (searching)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -382,12 +402,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   ),
                 ),
               Expanded(
-                child: hidden
-                    ? const _ActivityEmpty(
-                        title: 'Lịch sử đã ẩn',
-                        description: 'Nhấn biểu tượng kính để hiện danh sách.',
-                      )
-                    : history.isEmpty
+                child: history.isEmpty
                     ? _ActivityEmpty(
                         title: query.isEmpty
                             ? 'Không có lịch sử'

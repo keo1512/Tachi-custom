@@ -82,6 +82,7 @@ class SourceRepository {
             name: _requiredText(item['name'], 'tên nguồn'),
             lang: _text(item['lang']),
             baseUrl: _text(item['baseUrl']),
+            iconUrl: _sourceIconUrl(engine, item['iconUrl']),
             kind: engine == SourceEngine.tachimanga
                 ? ContentKind.manga
                 : _kind(item['kind']),
@@ -89,6 +90,31 @@ class SourceRepository {
           );
         })
         .toList(growable: false);
+  }
+
+  String _sourceIconUrl(SourceEngine engine, dynamic value) {
+    if (value is! String || value.trim().isEmpty || value.length > 4096) {
+      return '';
+    }
+    final icon = Uri.tryParse(value.trim());
+    if (icon == null) return '';
+    final base = _base(engine);
+    final prefix = base.path.endsWith('/') ? base.path : '${base.path}/';
+    // Suwayomi supplies /api/v1/extension/icon/<package>. Keep a configured
+    // reverse-proxy prefix, as other companion API requests do.
+    final resolved = icon.hasScheme || icon.hasAuthority
+        ? base.resolveUri(icon)
+        : base
+              .replace(path: prefix)
+              .resolveUri(
+                icon.replace(path: icon.path.replaceFirst(RegExp(r'^/+'), '')),
+              );
+    try {
+      return _validateUrl(resolved.toString()).toString();
+    } on ApiException {
+      // An optional malformed icon must not hide an otherwise usable source.
+      return '';
+    }
   }
 
   Future<List<Map<String, dynamic>>> sourcePreferences(

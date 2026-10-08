@@ -10,6 +10,7 @@ class CatalogueSource {
     required this.baseUrl,
     required this.kind,
     required this.engine,
+    this.iconUrl = '',
   });
 
   // Source IDs remain strings: Tachiyomi IDs can exceed JavaScript's safe range.
@@ -17,6 +18,7 @@ class CatalogueSource {
   final String name;
   final String lang;
   final String baseUrl;
+  final String iconUrl;
   final ContentKind kind;
   final SourceEngine engine;
 

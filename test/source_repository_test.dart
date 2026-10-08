@@ -118,7 +118,7 @@ void main() {
     final repo = repository((request) async {
       expect(request.url.path, '/reader/api/v1/source/list');
       return http.Response(
-        '[{"id":9007199254740995,"name":"Fixture source","lang":"en","baseUrl":null}]',
+        '[{"id":9007199254740995,"name":"Fixture source","lang":"en","baseUrl":null,"iconUrl":"/api/v1/extension/icon/eu.kanade.tachiyomi.extension.all.komga"}]',
         200,
         headers: {'content-type': 'application/json'},
       );
@@ -128,6 +128,55 @@ void main() {
     expect(sources.single.identity, 'tachimanga:9007199254740995');
     expect(sources.single.baseUrl, '');
     expect(sources.single.kind, ContentKind.manga);
+    expect(
+      sources.single.iconUrl,
+      'http://localhost:4567/reader/api/v1/extension/icon/eu.kanade.tachiyomi.extension.all.komga',
+    );
+  });
+
+  test('optional source icons use returned HTTP URLs and invalid or absent icons fall back', () async {
+    final icons = [
+      'https://icons.test/source.png',
+      'assets/source.png',
+      'file:///tmp/source.png',
+      'https://user:secret@icons.test/source.png',
+      null,
+      42,
+    ];
+    final repo = repository((request) async {
+        expect(request.url.path, '/v1/sources');
+      return http.Response(
+        jsonEncode([
+          for (var index = 0; index < icons.length; index++)
+            {
+              'id': '$index',
+              'name': 'Source $index',
+              'lang': 'vi',
+              'kind': 'novel',
+              'baseUrl': 'https://source.test',
+              'iconUrl': icons[index],
+            },
+        ]),
+        200,
+      );
+    });
+    final sources = await repo.listSources(SourceEngine.vbook);
+    expect(sources.map((source) => source.iconUrl), [
+      'https://icons.test/source.png',
+        'http://localhost:4570/assets/source.png',
+      '',
+      '',
+      '',
+      '',
+    ]);
+    expect(sources.map((source) => source.identity), [
+      'vbook:0',
+      'vbook:1',
+      'vbook:2',
+      'vbook:3',
+      'vbook:4',
+      'vbook:5',
+    ]);
   });
 
   test(

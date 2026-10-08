@@ -53,6 +53,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   late final LibraryRepository repository;
   late final LibraryViewModel vm;
   late final SharedPreferences preferences;
+  late final bool incognitoSession;
   LibraryBook? book;
   ReaderContent? content;
   List<GlobalKey> imageKeys = [];
@@ -74,6 +75,9 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     repository = ref.read(libraryRepositoryProvider);
     vm = ref.read(libraryProvider.notifier);
     preferences = ref.read(preferencesProvider);
+    // Privacy is fixed for this reader session, including delayed writes and
+    // disposal. Changing the setting takes effect when opening a new reader.
+    incognitoSession = ref.read(settingsProvider).incognitoMode;
     mangaMode = ref.read(settingsProvider).mangaMode;
     lifecycle =
         WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
@@ -115,7 +119,8 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   }
 
   void startReadingTime() {
-    if (!loading &&
+    if (!incognitoSession &&
+        !loading &&
         error == null &&
         content != null &&
         lifecycle == AppLifecycleState.resumed) {
@@ -126,7 +131,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   void stopReadingTime() {
     final start = started;
     started = null;
-    if (start == null) return;
+    if (incognitoSession || start == null) return;
     final end = DateTime.now();
     timeWrites = timeWrites
         .then((_) async {
@@ -295,6 +300,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   }
 
   Future<void> persist() async {
+    if (incognitoSession) return;
     if (book == null || content == null || loading || error != null) return;
     final id = book!.id;
     final chapterId = book!.chapters[current].id;

@@ -11,6 +11,7 @@ final settingsProvider = NotifierProvider<SettingsController, AppSettings>(
 class AppSettings {
   const AppSettings({
     this.dark = true,
+    this.incognitoMode = false,
     this.libraryColumns = 5,
     this.downloadConcurrency = 2,
     this.pinnedSources = const [],
@@ -23,7 +24,7 @@ class AppSettings {
     this.tachimangaUrl = '',
     this.vbookUrl = '',
   });
-  final bool dark;
+  final bool dark, incognitoMode;
   final int libraryColumns, downloadConcurrency;
   final List<String> pinnedSources, recentSources;
   final double fontSize, lineHeight;
@@ -36,6 +37,7 @@ class SettingsController extends Notifier<AppSettings> {
     final p = ref.watch(preferencesProvider);
     return AppSettings(
       dark: p.getBool('dark') ?? true,
+      incognitoMode: p.getBool('incognitoMode') ?? false,
       libraryColumns: (p.getInt('libraryColumns') ?? 5).clamp(2, 8),
       downloadConcurrency: (p.getInt('downloadConcurrency') ?? 2).clamp(1, 4),
       pinnedSources: List.unmodifiable(p.getStringList('pinnedSources') ?? []),
@@ -52,6 +54,7 @@ class SettingsController extends Notifier<AppSettings> {
 
   Future<void> update({
     bool? dark,
+    bool? incognitoMode,
     int? libraryColumns,
     int? downloadConcurrency,
     double? fontSize,
@@ -64,6 +67,10 @@ class SettingsController extends Notifier<AppSettings> {
   }) async {
     final p = ref.read(preferencesProvider);
     if (dark != null) await p.setBool('dark', dark);
+    if (incognitoMode != null) {
+      final saved = await p.setBool('incognitoMode', incognitoMode);
+      if (!saved) throw StateError('Không lưu được chế độ ẩn danh');
+    }
     if (libraryColumns != null) {
       await p.setInt('libraryColumns', libraryColumns.clamp(2, 8));
     }
