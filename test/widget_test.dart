@@ -90,8 +90,8 @@ void main() {
       expect(find.text('Nguồn trong thiết bị'), findsOneWidget);
       await tester.tap(find.text('Phần mở rộng'));
       await tester.pumpAndSettle();
-      expect(find.text('Thêm repository hoặc extension'), findsOneWidget);
-      await tester.tap(find.text('Thêm repository hoặc extension'));
+      expect(find.text('Thêm kho extension bằng link'), findsOneWidget);
+      await tester.tap(find.text('Thêm kho extension bằng link'));
       await tester.pumpAndSettle();
       expect(find.text('Tachimanga'), findsWidgets);
       expect(find.text('vBook'), findsWidgets);

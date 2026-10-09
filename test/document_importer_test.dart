@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:isar_community/isar.dart';
 import 'package:tachi_books/features/library/data/attachment_store_native.dart';
+import 'package:tachi_books/features/library/data/backup_service.dart';
 import 'package:tachi_books/features/library/data/document_importer.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
@@ -101,6 +102,218 @@ void main() {
         ? 'Set TACHI_ISAR_TEST_LIBRARY to an official installed Isar Core library.'
         : false,
   );
+  test(
+    'Native backup moves all EPUB TXT CBZ content to a separate empty storage directory',
+    () async {
+      await Isar.initializeIsarCore(
+        libraries: {Abi.current(): isarLibrary!},
+        download: false,
+      );
+      final sourceDirectory = await Directory.systemTemp.createTemp(
+        'tachi-backup-source-',
+      );
+      final destinationDirectory = await Directory.systemTemp.createTemp(
+        'tachi-backup-destination-',
+      );
+      LibraryRepository? repository;
+      try {
+        repository = await LibraryRepository.open(
+          directoryPath: sourceDirectory.path,
+        );
+        final importer = DocumentImporter();
+        final epub = await importer.import(
+          'offline.epub',
+          archiveBytes(epubEntries()),
+          repository,
+        );
+        final txt = await importer.import(
+          'offline.txt',
+          Uint8List.fromList(utf8.encode('Chương 1\nCó thể đọc ngay.')),
+          repository,
+        );
+        final cbz = await importer.import(
+          'offline.cbz',
+          archiveBytes({'page1.png': epubEntries()['images/cover.png']!}),
+          repository,
+        );
+        await repository.save(
+          epub.copyWith(
+            series: 'Bộ truyện mẫu',
+            progress: .4,
+            bookmarks: ['0:0.4'],
+          ),
+        );
+        final sourceService = BackupService(repository);
+        final bytes = await sourceService.export();
+        final fingerprint = sourceService.fingerprint(bytes);
+        await repository.close();
+        repository = null;
+        // Destination has neither source files nor attachment references.
+        repository = await LibraryRepository.open(
+          directoryPath: destinationDirectory.path,
+        );
+        var service = BackupService(repository);
+        expect(await service.merge(bytes), 3);
+        expect(service.fingerprint(await service.export()), fingerprint);
+        await repository.close();
+        repository = await LibraryRepository.open(
+          directoryPath: destinationDirectory.path,
+        );
+        service = BackupService(repository);
+        expect((await repository.find(epub.id))!.series, 'Bộ truyện mẫu');
+        expect((await repository.find(epub.id))!.bookmarks, ['0:0.4']);
+        expect(
+          (await repository.readChapter(epub.id, 0))!.html,
+          contains('data:image/png;base64,'),
+        );
+        expect(
+          (await repository.readChapter(txt.id, 0))!.html,
+          contains('Có thể đọc ngay.'),
+        );
+        expect(
+          (await repository.readChapter(cbz.id, 0))!.images.single,
+          startsWith('data:image/png;base64,'),
+        );
+        final recovered = await service.exportRecovery();
+        expect(recovered, isNotNull);
+        expect(
+          service.fingerprint(recovered!),
+          BackupService(MemoryLibraryRepository()).fingerprint(
+            await BackupService(MemoryLibraryRepository()).export(),
+          ),
+        );
+        // Cloud replacement updates existing state/content and saves all prior
+        // offline media in a flushed, self-contained recovery image.
+        final incomingRepository = MemoryLibraryRepository();
+        final incoming = (await repository.find(txt.id))!
+            .copyWith(progress: .8);
+        await incomingRepository.save(incoming);
+        await incomingRepository.saveChapter(
+          txt.id,
+          0,
+          ReaderContent(kind: 'novel', html: '<p>Bản đồng bộ mới</p>'),
+        );
+        final remoteBytes = await BackupService(incomingRepository).export();
+        final beforeReplace = await service.export();
+        await service.replace(
+          remoteBytes,
+          expectedFingerprint: service.fingerprint(beforeReplace),
+        );
+        expect(
+          service.fingerprint(await service.export()),
+          service.fingerprint(remoteBytes),
+        );
+        expect(
+          service.fingerprint((await service.exportRecovery())!),
+          service.fingerprint(beforeReplace),
+        );
+        await repository.close();
+        repository = await LibraryRepository.open(
+          directoryPath: destinationDirectory.path,
+        );
+        service = BackupService(repository);
+        expect((await repository.find(txt.id))!.progress, .8);
+        expect(
+          (await repository.readChapter(txt.id, 0))!.html,
+          '<p>Bản đồng bộ mới</p>',
+        );
+        final recoveryBytes = (await service.exportRecovery())!;
+        await service.replace(
+          recoveryBytes,
+          expectedFingerprint: service.fingerprint(await service.export()),
+        );
+        expect(
+          (await repository.readChapter(epub.id, 0))!.html,
+          contains('data:image/png;base64,'),
+        );
+        expect(
+          (await repository.readChapter(cbz.id, 0))!.images.single,
+          startsWith('data:image/png;base64,'),
+        );
+      } finally {
+        await repository?.close();
+        await sourceDirectory.delete(recursive: true);
+        await destinationDirectory.delete(recursive: true);
+      }
+    },
+    skip: isarLibrary == null
+        ? 'Set TACHI_ISAR_TEST_LIBRARY for native persistence.'
+        : false,
+  );
+
+  test(
+    'Native stale full-content replacement and failed recovery write preserve current library',
+    () async {
+      await Isar.initializeIsarCore(
+        libraries: {Abi.current(): isarLibrary!},
+        download: false,
+      );
+      final directory = await Directory.systemTemp.createTemp(
+        'tachi-backup-atomic-',
+      );
+      LibraryRepository? repository;
+      try {
+        repository = await LibraryRepository.open(
+          directoryPath: directory.path,
+        );
+        final book = await DocumentImporter().import(
+          'book.epub',
+          archiveBytes(epubEntries()),
+          repository,
+        );
+        final service = BackupService(repository);
+        final initial = await service.export();
+        final oldFingerprint = service.fingerprint(initial);
+        await repository.saveChapter(
+          book.id,
+          0,
+          ReaderContent(kind: 'novel', html: '<p>Thay đổi sau preview</p>'),
+        );
+        final current = await service.export();
+        await expectLater(
+          service.replace(initial, expectedFingerprint: oldFingerprint),
+          throwsStateError,
+        );
+        expect(
+          service.fingerprint(await service.export()),
+          service.fingerprint(current),
+        );
+        expect(await service.exportRecovery(), isNull);
+        // A directory creation failure occurs before the first Isar mutation.
+        await File('${directory.path}/backup-recovery')
+            .writeAsString('blocked');
+        await expectLater(
+          service.replace(
+            initial,
+            expectedFingerprint: service.fingerprint(current),
+          ),
+          throwsA(isA<FileSystemException>()),
+        );
+        expect(
+          service.fingerprint(await service.export()),
+          service.fingerprint(current),
+        );
+        await repository.close();
+        repository = await LibraryRepository.open(
+          directoryPath: directory.path,
+        );
+        expect(
+          (await repository.readChapter(book.id, 0))!.html,
+          contains('Thay đổi sau preview'),
+        );
+        expect(
+          (await repository.find(book.id))!.cover,
+          startsWith('data:image/png;base64,'),
+        );
+      } finally {
+        await repository?.close();
+        await directory.delete(recursive: true);
+      }
+    },
+    skip: isarLibrary == null
+        ? 'Set TACHI_ISAR_TEST_LIBRARY for native atomic restore.'
+        : false,
+  );
   test('TXT UTF8 BOM imports real chapters and escapes text', () async {
     final repo = MemoryLibraryRepository();
     final book = await DocumentImporter().import(
@@ -160,6 +373,45 @@ void main() {
       expect(content.html, contains('data:image/png;base64,'));
       expect(content.html, isNot(contains('<script')));
       expect(content.html, isNot(contains('onclick')));
+    },
+  );
+  test(
+    'EPUB imports a single explicit series from calibre or EPUB3 metadata only',
+    () async {
+      for (final metadata in [
+        '<meta name="calibre:series" content="Bộ truyện mẫu"/>',
+        '<meta property="belongs-to-collection" id="series">Bộ truyện mẫu</meta><meta refines="#series" property="collection-type">series</meta>',
+      ]) {
+        final entries = epubEntries();
+        entries['OPS/book.opf'] = utf8.encode(
+          utf8
+              .decode(entries['OPS/book.opf']!)
+              .replaceFirst('</metadata>', '$metadata</metadata>'),
+        );
+        final book = await DocumentImporter().import(
+          'series.epub',
+          archiveBytes(entries),
+          MemoryLibraryRepository(),
+        );
+        expect(book.series, 'Bộ truyện mẫu');
+      }
+      final entries = epubEntries();
+      entries['OPS/book.opf'] = utf8.encode(
+        utf8
+            .decode(entries['OPS/book.opf']!)
+            .replaceFirst(
+              '</metadata>',
+              '<meta name="calibre:series" content="A"/><meta name="calibre:series" content="B"/></metadata>',
+            ),
+      );
+      expect(
+        (await DocumentImporter().import(
+          'ambiguous.epub',
+          archiveBytes(entries),
+          MemoryLibraryRepository(),
+        )).series,
+        '',
+      );
     },
   );
   test(

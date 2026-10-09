@@ -56,8 +56,11 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   late final bool incognitoSession;
   LibraryBook? book;
   ReaderContent? content;
+  int? loadedRevision;
   List<GlobalKey> imageKeys = [];
   final readyImages = <int>{};
+  final decodedImages = <int>{};
+  final failedImages = <int>{};
   int current = 0, page = 0, generation = 0, requestedChapter = 0;
   double? requestedPosition;
   double position = 0;
@@ -173,6 +176,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
 
   Future<void> load(int index, {bool resume = false, double? offset}) async {
     final request = ++generation;
+    final revision = repository.replacementRevision;
     debounce?.cancel();
     stopReadingTime();
     await stopSpeech();
@@ -199,12 +203,18 @@ class _ReaderState extends ConsumerState<ReaderScreen>
       final data = await vm.getContent(item, index);
       final latest = await repository.find(item.id);
       if (!mounted || request != generation) return;
+      if (repository.replacementRevision != revision) {
+        throw StateError(
+          'Thư viện đã thay đổi. Hãy mở lại chương từ thư viện.',
+        );
+      }
       if (latest == null) throw StateError('Sách đã được xóa khỏi thư viện');
       final mapped = latest.chapters.indexWhere((c) => c.id == chapterId);
       if (mapped < 0) throw StateError('Chương không còn trong mục lục');
       setState(() {
         book = latest;
         content = data;
+        loadedRevision = revision;
         current = mapped;
         position = fraction.clamp(0, 1);
         page = data.images.isEmpty
@@ -215,6 +225,8 @@ class _ReaderState extends ConsumerState<ReaderScreen>
               );
         imageKeys = List.generate(data.images.length, (_) => GlobalKey());
         readyImages.clear();
+        decodedImages.clear();
+        failedImages.clear();
         loading = false;
       });
       startReadingTime();
@@ -296,6 +308,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         }
       }
       restoring = false;
+      if (mangaChapterCompleted) unawaited(persist());
     });
   }
 
@@ -304,9 +317,20 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     if (book == null || content == null || loading || error != null) return;
     final id = book!.id;
     final chapterId = book!.chapters[current].id;
-    final fraction = position;
+    // A pager resumes by page index. A saved end fraction from another reader
+    // mode must not imply successful decoding of this page.
+    final fraction = content!.kind == 'manga' && mangaMode != 'vertical'
+        ? page / content!.images.length
+        : position;
     try {
-      await vm.updateProgress(id, chapterId, fraction);
+      await vm.updateProgress(
+        id,
+        chapterId,
+        fraction,
+        chapterCompleted: mangaChapterCompleted,
+        inferCompletionFromFraction: content!.kind != 'manga',
+        expectedRevision: loadedRevision,
+      );
     } catch (e) {
       if (mounted) {
         message(context, 'Chưa lưu được tiến độ: $e');
@@ -316,6 +340,16 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     }
   }
 
+  bool get mangaChapterCompleted =>
+      !restoring &&
+      content?.kind == 'manga' &&
+      content!.images.isNotEmpty &&
+      (mangaMode == 'vertical'
+          ? position >= .999
+          : page == content!.images.length - 1) &&
+      decodedImages.contains(content!.images.length - 1) &&
+      failedImages.isEmpty;
+
   Future<void> bookmark() async {
     if (book == null || loading) return;
     await perform(context, () async {
@@ -323,6 +357,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         book!.id,
         book!.chapters[current].id,
         position,
+        expectedRevision: loadedRevision,
       );
       if (mounted) {
         message(context, added ? 'Đã lưu dấu trang' : 'Đã xóa dấu trang');
@@ -485,8 +520,18 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                                     size: 19,
                                   ),
                                   onPressed: () async {
-                                    await vm.removeBookmark(b.id, mark);
-                                    if (ctx.mounted) {
+                                    final removed = await perform(
+                                      ctx,
+                                      () async {
+                                        await vm.removeBookmark(
+                                          b.id,
+                                          mark,
+                                          expectedRevision: loadedRevision,
+                                        );
+                                        return true;
+                                      },
+                                    );
+                                    if (removed == true && ctx.mounted) {
                                       updateSheet(() => marks.remove(mark));
                                     }
                                   },
@@ -545,18 +590,35 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     super.dispose();
   }
 
-  void imageReady(int index, int request) {
+  void imageReady(int index, int request, {bool success = true}) {
     if (index < 0) return;
-    if (request != generation || !readyImages.add(index)) return;
-    if (restoring && readyImages.length == imageKeys.length) {
+    if (request != generation) return;
+    final firstLayout = readyImages.add(index);
+    final firstDecode = success && decodedImages.add(index);
+    if (success) {
+      failedImages.remove(index);
+    } else {
+      failedImages.add(index);
+      decodedImages.remove(index);
+    }
+    if (firstLayout && restoring && readyImages.length == imageKeys.length) {
       restoreLocation(request);
+    }
+    if (firstDecode) {
+      // A single-page chapter has no page-change callback. Completion is only
+      // recorded after successful decoding/layout, with the same resume fraction.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && request == generation && mangaChapterCompleted) {
+          unawaited(persist());
+        }
+      });
     }
   }
 
   Widget image(String url, int index) {
     final request = generation;
     Widget failed(Object error) {
-      imageReady(index, request);
+      imageReady(index, request, success: false);
       return Padding(
         padding: const EdgeInsets.all(24),
         child: Text('Không tải được ảnh. $error'),

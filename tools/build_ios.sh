@@ -74,6 +74,18 @@ if 'iPhoneOS' not in info.get('CFBundleSupportedPlatforms', []):
     raise SystemExit('Expected an iOS device app, not a simulator app.')
 if not {1, 2}.issubset(info.get('UIDeviceFamily', [])):
     raise SystemExit('The build must target both iPhone and iPad.')
+config_path = app / 'GoogleService-Info.plist'
+if not config_path.is_file():
+    raise SystemExit('The device app is missing TachiBooks Firebase iOS configuration.')
+with config_path.open('rb') as handle:
+    firebase = plistlib.load(handle)
+if firebase.get('BUNDLE_ID') != info['CFBundleIdentifier'] or firebase.get('PROJECT_ID') != 'tachibooks':
+    raise SystemExit('The device app has mismatched Firebase configuration.')
+client_id = firebase.get('CLIENT_ID')
+callback = firebase.get('REVERSED_CLIENT_ID')
+schemes = [scheme for item in info.get('CFBundleURLTypes', []) for scheme in item.get('CFBundleURLSchemes', [])]
+if not client_id or not callback or info.get('GIDClientID') != client_id or callback not in schemes:
+    raise SystemExit('The device app is missing its Google sign-in client or callback configuration.')
 architectures = subprocess.check_output(['xcrun', 'lipo', '-archs', str(app / info['CFBundleExecutable'])], text=True).strip().split()
 if 'arm64' not in architectures:
     raise SystemExit('The device executable is missing arm64.')
@@ -93,6 +105,7 @@ build_info = {
     'xcode': subprocess.check_output(['xcodebuild', '-version'], text=True).strip(),
     'checks': 'Flutter analyze, Flutter tests, release device compilation and package checks passed.',
     'runtimeValidation': 'Not performed on an iPhone or iPad by this build script.',
+    'firebaseConfiguration': 'Matching TachiBooks iOS config and Google callback included; live login and sync not verified by this build.',
 }
 with (output / 'TachiBooks-unsigned.build-info.json').open('w', encoding='utf-8') as handle:
     json.dump(build_info, handle, ensure_ascii=False, indent=2)

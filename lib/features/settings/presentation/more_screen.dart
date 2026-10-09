@@ -2,18 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'app_settings_screens.dart';
-import 'backup_settings_screen.dart';
+import '../../sync/presentation/sync_screen.dart';
 import 'reading_info_screen.dart';
 import 'settings_widgets.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
 
-  static const syncPage = FeatureStatusScreen(
-    title: 'Đồng bộ',
-    description: 'App chưa kết nối dịch vụ đồng bộ tài khoản hoặc iCloud. Thư viện, tiến độ và dấu trang hiện chỉ lưu trên thiết bị. Bạn có thể chuyển dữ liệu bằng Sao lưu & Khôi phục.',
-    offerBackup: true,
-  );
+  static const syncPage = SyncScreen();
 
   @override
   Widget build(BuildContext context) {
@@ -50,18 +46,12 @@ class MoreScreen extends StatelessWidget {
             icon: CupertinoIcons.person_crop_circle_fill,
             title: 'Tài khoản',
             height: 68,
-            onTap: () => open(
-              const FeatureStatusScreen(
-                title: 'Tài khoản',
-                description: 'App chưa có dịch vụ đăng nhập. Thư viện hiện được lưu trên thiết bị và không liên kết với tài khoản Tachimanga, vBook hoặc Apple Books.',
-                offerBackup: true,
-              ),
-            ),
+            onTap: () => open(const AccountScreen()),
           ),
           SettingsRow(
             icon: CupertinoIcons.cloud,
             title: 'Đồng bộ ngay',
-            subtitle: 'Chưa hỗ trợ đồng bộ tài khoản',
+            subtitle: 'Tài khoản Google và sao lưu',
             height: 68,
             onTap: () => open(syncPage),
           ),
@@ -106,11 +96,6 @@ class MoreScreen extends StatelessWidget {
             icon: CupertinoIcons.compass_fill,
             title: 'Phần mở rộng',
             onTap: () => open(const ExtensionSettingsScreen()),
-          ),
-          SettingsRow(
-            icon: CupertinoIcons.arrow_counterclockwise,
-            title: 'Sao lưu & Khôi phục',
-            onTap: () => open(const BackupSettingsScreen()),
           ),
           SettingsRow(
             icon: CupertinoIcons.shield_lefthalf_fill,

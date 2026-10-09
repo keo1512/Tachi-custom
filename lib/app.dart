@@ -15,6 +15,7 @@ import 'features/settings/presentation/more_screen.dart';
 import 'features/sources/domain/catalogue.dart';
 import 'features/sources/presentation/browse_screen.dart';
 import 'features/sources/presentation/source_search_screen.dart';
+import 'features/sync/application/sync_lifecycle.dart';
 
 GoRouter createRouter({
   required NativeTabs tabs,
@@ -161,6 +162,8 @@ class _AppState extends ConsumerState<TachiBooksApp> {
       darkTheme: appTheme(Brightness.dark),
       themeMode: dark ? ThemeMode.dark : ThemeMode.light,
       routerConfig: router,
+      builder: (context, child) =>
+          SyncLifecycle(child: child ?? const SizedBox.shrink()),
     );
   }
 }

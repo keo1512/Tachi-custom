@@ -30,6 +30,8 @@ class CatalogueBook {
     required this.ref,
     required this.title,
     this.author = '',
+    this.artist = '',
+    this.genres = const [],
     this.description = '',
     this.coverUrl = '',
     required this.sourceId,
@@ -40,6 +42,8 @@ class CatalogueBook {
   final String ref;
   final String title;
   final String author;
+  final String artist;
+  final List<String> genres;
   final String description;
   final String coverUrl;
   final String sourceId;

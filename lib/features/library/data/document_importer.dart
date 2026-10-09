@@ -23,6 +23,7 @@ class DocumentImporter {
       throw const FormatException('Tệp trống hoặc vượt giới hạn nhập 100 MB.');
     }
     final id = sha256.convert(bytes).toString();
+    final revision = repo.replacementRevision;
     final existing = await repo.find(id);
     // Content-addressed import is idempotent and keeps all reader/library state.
     if (existing != null) return existing;
@@ -31,29 +32,28 @@ class DocumentImporter {
         .split(RegExp(r'[/\\]'))
         .last
         .replaceFirst(RegExp(r'\.[^.]+$'), '');
-    try {
-      final parsed = switch (extension) {
-        'txt' => await _text(id, title, bytes),
-        'epub' => await _epub(id, title, bytes, repo),
-        'cbz' || 'zip' => await _comic(id, title, bytes, repo),
-        _ => throw const FormatException(
-          'Hỗ trợ EPUB, TXT, CBZ và ZIP chứa ảnh.',
-        ),
-      };
-      repo.validateBook(parsed.book);
-      for (var index = 0; index < parsed.contents.length; index++) {
-        repo.validateChapter(index, parsed.contents[index]);
-      }
-      for (var index = 0; index < parsed.contents.length; index++) {
-        await repo.saveChapter(id, index, parsed.contents[index]);
-      }
-      await repo.save(parsed.book);
-      return (await repo.find(id))!;
-    } catch (_) {
-      // A failed first import must not leave partially visible book/chapter data.
-      await repo.remove(id);
-      rethrow;
+    // Parsing stages media in memory; no active library files are written.
+    final staging = MemoryLibraryRepository();
+    final parsed = switch (extension) {
+      'txt' => await _text(id, title, bytes),
+      'epub' => await _epub(id, title, bytes, staging),
+      'cbz' || 'zip' => await _comic(id, title, bytes, staging),
+      _ => throw const FormatException(
+        'Hỗ trợ EPUB, TXT, CBZ và ZIP chứa ảnh.',
+      ),
+    };
+    repo.validateBook(parsed.book);
+    for (var index = 0; index < parsed.contents.length; index++) {
+      repo.validateChapter(index, parsed.contents[index]);
     }
+    return repo.insertBook(
+      parsed.book,
+      contents: {
+        for (var index = 0; index < parsed.contents.length; index++)
+          index: parsed.contents[index],
+      },
+      expectedRevision: revision,
+    );
   }
 
   Future<_ParsedBook> _text(String id, String title, Uint8List bytes) async {
@@ -189,6 +189,27 @@ class DocumentImporter {
           name,
         ).map((element) => element.innerText.trim()).firstOrNull ??
         '';
+    final seriesNames = <String>{};
+    final metaElements = _elements(package, 'meta').toList();
+    for (final meta in metaElements) {
+      if (meta.getAttribute('name') == 'calibre:series') {
+        final name = (meta.getAttribute('content') ?? '').trim();
+        if (name.isNotEmpty) seriesNames.add(name);
+      }
+      if (meta.getAttribute('property') == 'belongs-to-collection') {
+        final id = meta.getAttribute('id');
+        if (id != null &&
+            metaElements.any(
+              (value) =>
+                  value.getAttribute('refines') == '#$id' &&
+                  value.getAttribute('property') == 'collection-type' &&
+                  value.innerText.trim() == 'series',
+            )) {
+          final name = meta.innerText.trim();
+          if (name.isNotEmpty) seriesNames.add(name);
+        }
+      }
+    }
     final items = <String, XmlElement>{};
     for (final item in _elements(package, 'item')) {
       final key = item.getAttribute('id');
@@ -328,6 +349,7 @@ class DocumentImporter {
         id: id,
         title: metadata('title').isEmpty ? fallbackTitle : metadata('title'),
         author: metadata('creator'),
+        series: seriesNames.length == 1 ? seriesNames.single : '',
         description: metadata('description'),
         cover: cover,
         kind: 'novel',

@@ -144,7 +144,7 @@ void main() {
       42,
     ];
     final repo = repository((request) async {
-        expect(request.url.path, '/v1/sources');
+      expect(request.url.path, '/v1/sources');
       return http.Response(
         jsonEncode([
           for (var index = 0; index < icons.length; index++)
@@ -163,7 +163,7 @@ void main() {
     final sources = await repo.listSources(SourceEngine.vbook);
     expect(sources.map((source) => source.iconUrl), [
       'https://icons.test/source.png',
-        'http://localhost:4570/assets/source.png',
+      'http://localhost:4570/assets/source.png',
       '',
       '',
       '',
@@ -236,27 +236,45 @@ void main() {
     },
   );
 
-  test('uses chapter source-order indexes rather than database IDs', () async {
-    final requests = <http.Request>[];
-    final repo = repository((request) async {
-      requests.add(request);
-      if (request.url.path.endsWith('/chapters')) {
-        return jsonResponse([
-          {'id': 981, 'index': 7, 'name': 'Chapter 7', 'pageCount': -1},
-        ]);
-      }
-      expect(request.url.path, '/reader/api/v1/manga/42/chapter/7');
-      return jsonResponse({'id': 981, 'index': 7, 'pageCount': 2});
-    });
-    final chapters = await repo.chapters(manga);
-    expect(chapters.single.ref, '7');
-    expect(requests.single.url.queryParameters, {'onlineFetch': 'true'});
-    final content = await repo.chapter(manga, chapters.single);
-    expect(content.images, [
-      'http://localhost:4567/reader/api/v1/manga/42/chapter/7/page/0?updateProgress=false',
-      'http://localhost:4567/reader/api/v1/manga/42/chapter/7/page/1?updateProgress=false',
-    ]);
-  });
+  test(
+    'uses stable chapter URLs and resolves source-order API indexes',
+    () async {
+      final requests = <http.Request>[];
+      final repo = repository((request) async {
+        requests.add(request);
+        if (request.url.path.endsWith('/manga/42')) {
+          return jsonResponse({'id': 42, 'sourceId': manga.sourceId});
+        }
+        if (request.url.path.endsWith('/chapters')) {
+          return jsonResponse([
+            {
+              'id': 981,
+              'index': 7,
+              'url': '/chapter/7',
+              'name': 'Chapter 7',
+              'pageCount': -1,
+            },
+          ]);
+        }
+        expect(request.url.path, '/reader/api/v1/manga/42/chapter/7');
+        return jsonResponse({
+          'id': 981,
+          'index': 7,
+          'url': '/chapter/7',
+          'name': 'Chapter 7',
+          'pageCount': 2,
+        });
+      });
+      final chapters = await repo.chapters(manga);
+      expect(chapters.single.ref, '/chapter/7');
+      expect(requests.last.url.queryParameters, {'onlineFetch': 'true'});
+      final content = await repo.chapter(manga, chapters.single);
+      expect(content.images, [
+        'http://localhost:4567/reader/api/v1/manga/42/chapter/7/page/0?updateProgress=false',
+        'http://localhost:4567/reader/api/v1/manga/42/chapter/7/page/1?updateProgress=false',
+      ]);
+    },
+  );
 
   test('vBook source/search/novel chapter use the runtime contract', () async {
     final repo = repository((request) async {

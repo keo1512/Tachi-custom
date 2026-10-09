@@ -23,6 +23,92 @@ class SourceRepository {
   final http.Client _client;
   final bool _ownsClient;
   final Duration timeout;
+  final Map<String, Future<String>> _restoredManga = {};
+
+  bool _externalManga(CatalogueBook book) =>
+      book.engine == SourceEngine.tachimanga &&
+      !RegExp(r'^\d+$').hasMatch(book.ref);
+
+  /// Backup URLs remain stable locally; resolve them against this companion.
+  /// Never substitute a title match from another URL or another source.
+  Future<String> _mangaId(CatalogueBook book) async {
+    if (!_externalManga(book)) return book.ref;
+    final key = jsonEncode([book.sourceId, book.ref]);
+    final pending = _restoredManga.putIfAbsent(key, () => _resolveManga(book));
+    try {
+      return await pending;
+    } catch (_) {
+      if (identical(_restoredManga[key], pending)) _restoredManga.remove(key);
+      rethrow;
+    }
+  }
+
+  Future<String> _resolveManga(CatalogueBook book) async {
+    final source = BigInt.tryParse(book.sourceId);
+    if (source == null || source.toSigned(64) != source) {
+      throw const ApiException('ID nguồn trong bản sao lưu không hợp lệ.');
+    }
+    final response = _map(
+      await _json(
+        'POST',
+        _url(book.engine, ['api', 'graphql']),
+        body: {
+          'query': r'query RestoredManga($condition: MangaConditionInput!) { mangas(condition: $condition, first: 2) { nodes { id sourceId url } } }',
+          'variables': {
+            'condition': {'sourceId': book.sourceId, 'url': book.ref},
+          },
+        },
+      ),
+    );
+    if (response['errors'] is List && (response['errors'] as List).isNotEmpty) {
+      throw const ApiException(
+        'Engine không tra được URL truyện trong bản sao lưu.',
+        code: 'GRAPHQL_ERROR',
+      );
+    }
+    final nodes = _list(_map(_map(response['data'])['mangas'])['nodes']);
+    var matched = nodes
+        .map(_map)
+        .where(
+          (item) =>
+              _id(item['sourceId']) == book.sourceId &&
+              _text(item['url']) == book.ref,
+        )
+        .toList();
+    if (matched.isEmpty) {
+      // Search populates the companion DB. Accept only the original URL.
+      final result = _map(
+        await _json(
+          'POST',
+          _url(
+            book.engine,
+            ['api', 'v1', 'source', book.sourceId, 'quick-search'],
+            {'pageNum': '1'},
+          ),
+          body: {'searchTerm': book.title, 'filter': null},
+        ),
+      );
+      matched = _list(result['mangaList'])
+          .map(_map)
+          .where(
+            (item) =>
+                _id(item['sourceId']) == book.sourceId &&
+                _text(item['url']) == book.ref,
+          )
+          .toList();
+    }
+    if (matched.length != 1) {
+      throw const ApiException(
+        'Chưa tìm thấy đúng URL truyện trong nguồn gốc. Hãy cài extension tương ứng và tìm lại truyện ở nguồn đó.',
+        code: 'RESTORED_TITLE_UNRESOLVED',
+      );
+    }
+    final id = _id(matched.single['id']);
+    if (!RegExp(r'^\d+$').hasMatch(id)) {
+      throw const ApiException('Engine trả mã truyện không hợp lệ.');
+    }
+    return id;
+  }
 
   Uri _base(SourceEngine engine) {
     final base = engine == SourceEngine.tachimanga ? _tachimanga : _vbook;
@@ -207,18 +293,32 @@ class SourceRepository {
 
   Future<CatalogueBook> detail(CatalogueBook book) async {
     if (book.engine == SourceEngine.tachimanga) {
-      return _manga(
+      final mangaId = await _mangaId(book);
+      final detail = _manga(
         _map(
           await _json(
             'GET',
             _url(
               book.engine,
-              ['api', 'v1', 'manga', book.ref],
+              ['api', 'v1', 'manga', mangaId],
               {'onlineFetch': 'true'},
             ),
           ),
         ),
         book.sourceId,
+      );
+      if (!_externalManga(book)) return detail;
+      return CatalogueBook(
+        ref: book.ref,
+        title: detail.title,
+        author: detail.author,
+        artist: detail.artist,
+        genres: detail.genres,
+        description: detail.description,
+        coverUrl: detail.coverUrl,
+        sourceId: detail.sourceId,
+        kind: detail.kind,
+        engine: detail.engine,
       );
     }
     return _vbookBook(
@@ -238,13 +338,19 @@ class SourceRepository {
   }
 
   Future<List<CatalogueChapter>> chapters(CatalogueBook book) async {
+    final mangaId = book.engine == SourceEngine.tachimanga
+        ? await _mangaId(book)
+        : book.ref;
+    if (book.engine == SourceEngine.tachimanga) {
+      await _verifyMangaIdentity(book, mangaId);
+    }
     final result = _list(
       await _json(
         'GET',
         _url(
           book.engine,
           book.engine == SourceEngine.tachimanga
-              ? ['api', 'v1', 'manga', book.ref, 'chapters']
+              ? ['api', 'v1', 'manga', mangaId, 'chapters']
               : ['v1', 'sources', book.sourceId, 'chapters'],
           book.engine == SourceEngine.tachimanga
               ? {'onlineFetch': 'true'}
@@ -252,14 +358,15 @@ class SourceRepository {
         ),
       ),
     );
-    return result
+    final chapters = result
         .map((value) {
           final item = _map(value);
           final index = _integer(item['index']);
           return CatalogueChapter(
-            // Suwayomi addresses chapters by source-order index, not database ID.
+            // URLs are identities; the mutable source-order index is resolved
+            // against the current source immediately before an uncached read.
             ref: book.engine == SourceEngine.tachimanga
-                ? '$index'
+                ? _requiredText(item['url'], 'URL chương')
                 : _id(item['ref']),
             title: _requiredText(
               item[book.engine == SourceEngine.tachimanga ? 'name' : 'title'],
@@ -269,6 +376,23 @@ class SourceRepository {
           );
         })
         .toList(growable: false);
+    if (book.engine == SourceEngine.tachimanga) {
+      // Suwayomi source-order starts at the oldest chapter; REST lists it
+      // newest-first. Keep reader "next" and library positions chronological.
+      chapters.sort((a, b) => a.index.compareTo(b.index));
+    }
+    if (book.engine == SourceEngine.tachimanga &&
+        (chapters.any((chapter) => chapter.index < 0) ||
+            chapters.map((chapter) => chapter.ref).toSet().length !=
+                chapters.length ||
+            chapters.map((chapter) => chapter.index).toSet().length !=
+                chapters.length)) {
+      throw const ApiException(
+        'Mục lục nguồn có URL hoặc thứ tự chương trùng, không thể xác định đúng chương.',
+        code: 'CHAPTER_IDENTITY_CHANGED',
+      );
+    }
+    return chapters;
   }
 
   Future<ChapterContent> chapter(
@@ -276,6 +400,53 @@ class SourceRepository {
     CatalogueChapter chapter,
   ) async {
     if (book.engine == SourceEngine.tachimanga) {
+      final mangaId = await _mangaId(book);
+      await _verifyMangaIdentity(book, mangaId);
+      final items = _list(
+        await _json(
+          'GET',
+          _url(
+            book.engine,
+            ['api', 'v1', 'manga', mangaId, 'chapters'],
+            {'onlineFetch': 'true'},
+          ),
+        ),
+      ).map(_map).toList(growable: false);
+      final legacyIndex = RegExp(r'^\d+$').hasMatch(chapter.ref)
+          ? int.tryParse(chapter.ref)
+          : null;
+      final matched = items
+          .where(
+            (item) => legacyIndex == null
+                ? _text(item['url']) == chapter.ref
+                : _integer(item['index']) == legacyIndex,
+          )
+          .toList();
+      if (matched.length != 1) {
+        throw const ApiException(
+          'Không xác định được đúng chương gốc trong mục lục nguồn.',
+          code: 'CHAPTER_IDENTITY_CHANGED',
+        );
+      }
+      final selected = matched.single;
+      final index = _integer(selected['index']);
+      final chapterUrl = _requiredText(selected['url'], 'URL chương');
+      if (index < 0 ||
+          items.where((item) => _integer(item['index']) == index).length != 1 ||
+          items.where((item) => _text(item['url']) == chapterUrl).length != 1 ||
+          (legacyIndex != null &&
+              (chapter.index != legacyIndex ||
+                  _text(selected['name']) != chapter.title ||
+                  items
+                          .where((item) => _text(item['name']) == chapter.title)
+                          .length !=
+                      1))) {
+        throw const ApiException(
+          'Thứ tự hoặc tên chương cũ đã thay đổi hoặc không xác định. Dữ liệu đã lưu được giữ nguyên; hãy mở lại đúng chương từ nguồn.',
+          code: 'CHAPTER_IDENTITY_CHANGED',
+        );
+      }
+      final chapterRef = '$index';
       final info = _map(
         await _json(
           'GET',
@@ -283,12 +454,20 @@ class SourceRepository {
             'api',
             'v1',
             'manga',
-            book.ref,
+            mangaId,
             'chapter',
-            chapter.ref,
+            chapterRef,
           ]),
         ),
       );
+      if (_text(info['url']) != chapterUrl ||
+          _integer(info['index']) != index ||
+          (legacyIndex != null && _text(info['name']) != chapter.title)) {
+        throw const ApiException(
+          'Nguồn đã thay đổi chương trong lúc mở. Hãy thử lại từ mục lục.',
+          code: 'CHAPTER_IDENTITY_CHANGED',
+        );
+      }
       final count = _integer(info['pageCount']);
       if (count < 1 || count > 10000) {
         throw const ApiException(
@@ -305,9 +484,9 @@ class SourceRepository {
               'api',
               'v1',
               'manga',
-              book.ref,
+              mangaId,
               'chapter',
-              chapter.ref,
+              chapterRef,
               'page',
               '$index',
             ],
@@ -356,6 +535,20 @@ class SourceRepository {
           : _headers(content['headers']),
       imageHeaders: imageHeaders,
     );
+  }
+
+  Future<void> _verifyMangaIdentity(CatalogueBook book, String mangaId) async {
+    final item = _map(
+      await _json('GET', _url(book.engine, ['api', 'v1', 'manga', mangaId])),
+    );
+    if (_id(item['id']) != mangaId ||
+        _id(item['sourceId']) != book.sourceId ||
+        (_externalManga(book) && _text(item['url']) != book.ref)) {
+      throw const ApiException(
+        'Mã truyện hoặc nguồn đã thay đổi. Không thể mở nội dung bằng kết nối hiện tại.',
+        code: 'MANGA_IDENTITY_CHANGED',
+      );
+    }
   }
 
   Future<List<CatalogueExtension>> extensions(SourceEngine engine) async {
@@ -477,6 +670,10 @@ class SourceRepository {
       ref: ref,
       title: _requiredText(item['title'], 'tên truyện'),
       author: _text(item['author']),
+      artist: _text(item['artist']),
+      genres: item['genre'] is List
+          ? _list(item['genre']).map(_text).toList(growable: false)
+          : const [],
       description: _text(item['description']),
       coverUrl: _url(SourceEngine.tachimanga, [
         'api',

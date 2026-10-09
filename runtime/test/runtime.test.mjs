@@ -40,13 +40,15 @@ test('plaintext package identity is stable across version updates and original Z
   t.after(() => rm(directory, { recursive: true, force: true }));
   const store = await new RuntimeStore(directory).init();
   const firstBytes = makePackage();
-  const first = await store.installBytes(firstBytes);
-  const second = await store.installBytes(makePackage({ version: 2 }));
+  const first = await store.installBytes(firstBytes, 'https://repo.invalid/plugin.zip');
+  const second = await store.installBytes(makePackage({ version: 2 }), 'https://repo.invalid/plugin.zip');
   assert.equal(first.id, second.id);
   assert.notEqual(first.packageHash, second.packageHash);
   assert.deepEqual(await readFile(store.versionPath(first.id, first.packageHash, 'package.zip')), Buffer.from(firstBytes));
   assert.equal(store.sources().length, 1);
-  assert.equal((await new RuntimeStore(directory).init()).extensions()[0].version, 2);
+  const reloaded = (await new RuntimeStore(directory).init()).extensions()[0];
+  assert.equal(reloaded.version, 2);
+  assert.equal(reloaded.packageUrl, 'https://repo.invalid/plugin.zip');
 });
 
 test('ZIP malformed/path/count/size/duplicate/encrypted packages are rejected before execution', () => {

@@ -7,6 +7,7 @@ import '../../../core/widgets/book_cover.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../downloads/presentation/download_queue_controller.dart';
 import '../domain/library_book.dart';
+import '../domain/library_reading.dart';
 import 'chapter_options_sheet.dart';
 import 'library_view_model.dart';
 
@@ -28,13 +29,6 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
     super.dispose();
   }
 
-  bool isRead(LibraryBook book, int index) =>
-      book.completed ||
-      (book.lastRead != null &&
-          (index < book.currentChapter ||
-              (index == book.currentChapter &&
-                  book.progress * book.chapters.length - index >= .999)));
-
   Future<void> bookActions(LibraryBook book) async {
     final action = await showCupertinoModalPopup<String>(
       context: context,
@@ -51,6 +45,10 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
                   ? 'Đánh dấu chưa hoàn thành'
                   : 'Đánh dấu hoàn thành',
             ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'notes'),
+            child: const Text('Ghi chú cá nhân'),
           ),
           CupertinoActionSheetAction(
             isDestructiveAction: true,
@@ -105,6 +103,8 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
         context,
         () => vm.updateMetadata(book.id, completed: !book.completed),
       );
+    } else if (action == 'notes') {
+      await editNotes(book);
     } else {
       final yes = await showCupertinoDialog<bool>(
         context: context,
@@ -130,6 +130,50 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
           if (mounted) context.pop();
         });
       }
+    }
+  }
+
+  Future<void> editNotes(LibraryBook book) async {
+    final controller = TextEditingController(text: book.notes);
+    try {
+      final notes = await showCupertinoDialog<String>(
+        context: context,
+        builder: (ctx) => CupertinoAlertDialog(
+          title: const Text('Ghi chú cá nhân'),
+          content: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: CupertinoTextField(
+              controller: controller,
+              placeholder: 'Ghi chú về truyện này',
+              minLines: 4,
+              maxLines: 8,
+              maxLength: 20000,
+              textAlignVertical: TextAlignVertical.top,
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Hủy'),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.pop(ctx, controller.text),
+              child: const Text('Lưu'),
+            ),
+          ],
+        ),
+      );
+      if (notes != null && mounted) {
+        await perform(
+          context,
+          () => ref
+              .read(libraryProvider.notifier)
+              .updateMetadata(book.id, notes: notes),
+        );
+      }
+    } finally {
+      controller.dispose();
     }
   }
 
@@ -182,6 +226,41 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
     onDownloadFilter: (value) => setState(() => downloadFilter = value),
     onSort: (value) => setState(() => newestFirst = value),
   );
+
+  Future<void> chapterActions(LibraryBook book, int index) async {
+    final chapter = book.chapters[index];
+    final read = chapterIsRead(book, index);
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    final selected = await showCupertinoModalPopup<bool>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        title: Text(chapter.title),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, !read),
+            child: Text(read ? 'Đánh dấu chưa đọc' : 'Đánh dấu đã đọc'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Hủy'),
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    await perform(
+      context,
+      () => ref
+          .read(libraryProvider.notifier)
+          .markChapterRead(
+            book.id,
+            chapter.id,
+            selected,
+            expectedRevision: revision,
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(libraryProvider);
@@ -216,7 +295,7 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
             if ((query.isEmpty ||
                     book.chapters[i].title.toLowerCase().contains(query)) &&
                 (readingFilter == 'all' ||
-                    (readingFilter == 'read') == isRead(book, i)) &&
+                    (readingFilter == 'read') == chapterIsRead(book, i)) &&
                 (downloadFilter == 'all' ||
                     (downloadFilter == 'downloaded') ==
                         book.chapters[i].downloaded))
@@ -359,11 +438,53 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
                             ),
                           ],
                         ),
+                        if (book.artist.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'Họa sĩ: ${book.artist}',
+                            style: TextStyle(color: secondary, fontSize: 14),
+                          ),
+                        ],
+                        if (book.genres.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            book.genres.join(' · '),
+                            style: TextStyle(color: secondary, fontSize: 14),
+                          ),
+                        ],
                         if (book.description.isNotEmpty) ...[
                           const SizedBox(height: 16),
                           Text(
                             book.description,
                             style: const TextStyle(fontSize: 15, height: 1.4),
+                          ),
+                        ],
+                        if (book.notes.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () => editNotes(book),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Ghi chú cá nhân',
+                                  style: TextStyle(
+                                    color: primary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  book.notes,
+                                  maxLines: 4,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ],
@@ -454,7 +575,7 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
                 }
                 final index = indices[row - headerCount];
                 final chapter = book.chapters[index];
-                final read = isRead(book, index);
+                final read = chapterIsRead(book, index);
                 return Column(
                   children: [
                     ListTile(
@@ -514,6 +635,7 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
                             ),
                       onTap: () =>
                           context.push('/read/${book.id}?chapter=$index'),
+                      onLongPress: () => chapterActions(book, index),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(left: 16),

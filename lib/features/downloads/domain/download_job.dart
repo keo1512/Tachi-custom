@@ -8,24 +8,31 @@ class DownloadJob {
     required this.chapterId,
     this.status = DownloadJobStatus.pending,
     this.error,
+    this.attempts = 0,
   });
   final String bookId, chapterId;
   final DownloadJobStatus status;
   final String? error;
+  final int attempts;
   String get identity => jsonEncode([bookId, chapterId]);
 
-  DownloadJob copyWith({DownloadJobStatus? status, String? error}) =>
-      DownloadJob(
-        bookId: bookId,
-        chapterId: chapterId,
-        status: status ?? this.status,
-        error: error,
-      );
+  DownloadJob copyWith({
+    DownloadJobStatus? status,
+    String? error,
+    int? attempts,
+  }) => DownloadJob(
+    bookId: bookId,
+    chapterId: chapterId,
+    status: status ?? this.status,
+    error: error,
+    attempts: attempts ?? this.attempts,
+  );
 
   Map<String, dynamic> toJson() => {
     'bookId': bookId,
     'chapterId': chapterId,
     'status': status.name,
+    'attempts': attempts,
     if (error != null) 'error': error,
   };
 }

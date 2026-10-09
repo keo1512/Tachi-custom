@@ -1,0 +1,86 @@
+rules_version = '2';
+
+// Complete rules for TachiBooks' own Firebase project. No other application's
+// collections are opened. Apply manually after creating the free Spark project.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    function validHead(h) {
+      return h.keys().hasOnly(['id', 'parts', 'digest', 'bytes'])
+        && h.id is string && h.id.matches('^[a-f0-9]{32}$')
+        && h.digest is string && h.digest.matches('^[a-f0-9]{64}$')
+        && h.parts is int && h.parts >= 1 && h.parts <= 256
+        && h.bytes is int && h.bytes >= 1 && h.bytes <= 134217728;
+    }
+    function manifestMatches(uid, h) {
+      let manifest = get(/databases/$(database)/documents/tachiBooksUsers/$(uid)/snapshots/$(h.id)).data;
+      return manifest.id == h.id && manifest.parts == h.parts
+        && manifest.bytes == h.bytes && manifest.digest == h.digest;
+    }
+    function notRetained(uid, snapshotId) {
+      let path = /databases/$(database)/documents/tachiBooksUsers/$(uid)/sync/head;
+      return exists(path)
+        && get(path).data.retained[0].id != snapshotId
+        && (get(path).data.retained.size() < 2 || get(path).data.retained[1].id != snapshotId)
+        && (get(path).data.retained.size() < 3 || get(path).data.retained[2].id != snapshotId);
+    }
+
+    match /tachiBooksUsers/{uid}/sync/head {
+      allow read: if owner(uid);
+      allow create, update: if owner(uid)
+        && request.resource.data.keys().hasOnly(['schema', 'id', 'parts', 'digest', 'bytes', 'retained', 'updatedAt'])
+        && request.resource.data.schema == 'tachi-books-cloud-1'
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.retained is list
+        && request.resource.data.retained.size() >= 1
+        && request.resource.data.retained.size() <= 3
+        && validHead(request.resource.data.retained[0])
+        && request.resource.data.retained[0].id == request.resource.data.id
+        && request.resource.data.retained[0].parts == request.resource.data.parts
+        && request.resource.data.retained[0].bytes == request.resource.data.bytes
+        && request.resource.data.retained[0].digest == request.resource.data.digest
+        && manifestMatches(uid, request.resource.data.retained[0])
+        && (request.resource.data.retained.size() < 2
+          || (validHead(request.resource.data.retained[1])
+            && manifestMatches(uid, request.resource.data.retained[1])))
+        && (request.resource.data.retained.size() < 3
+          || (validHead(request.resource.data.retained[2])
+            && manifestMatches(uid, request.resource.data.retained[2])));
+      // Deleting the head would erase the CAS baseline; the app never does this.
+      allow delete: if false;
+    }
+
+    match /tachiBooksUsers/{uid}/snapshots/{snapshotId} {
+      allow read: if owner(uid);
+      allow create: if owner(uid)
+        && snapshotId.matches('^[a-f0-9]{32}$')
+        && request.resource.data.keys().hasOnly(['schema', 'id', 'parts', 'digest', 'bytes', 'createdAt'])
+        && request.resource.data.schema == 'tachi-books-cloud-1'
+        && request.resource.data.id == snapshotId
+        && request.resource.data.digest is string && request.resource.data.digest.matches('^[a-f0-9]{64}$')
+        && request.resource.data.parts is int && request.resource.data.parts >= 1 && request.resource.data.parts <= 256
+        && request.resource.data.bytes is int && request.resource.data.bytes >= 1 && request.resource.data.bytes <= 134217728
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if owner(uid) && notRetained(uid, snapshotId);
+
+      match /parts/{partId} {
+        allow read: if owner(uid);
+        allow create: if owner(uid)
+          && snapshotId.matches('^[a-f0-9]{32}$')
+          && partId.matches('^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$')
+          && existsAfter(/databases/$(database)/documents/tachiBooksUsers/$(uid)/snapshots/$(snapshotId))
+          && request.resource.data.keys().hasOnly(['data'])
+          && request.resource.data.data is string
+          && request.resource.data.data.size() > 0 && request.resource.data.data.size() <= 700000;
+        allow update: if false;
+        allow delete: if owner(uid) && notRetained(uid, snapshotId);
+      }
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

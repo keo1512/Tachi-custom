@@ -10,7 +10,9 @@ import 'package:html/parser.dart' as html;
 
 import '../data/document_importer.dart';
 import '../data/library_repository.dart';
+import '../data/library_mutation.dart';
 import '../domain/library_book.dart';
+import '../domain/library_reading.dart';
 import '../../settings/settings_controller.dart';
 import '../../sources/data/source_repository.dart';
 import '../../sources/domain/catalogue.dart';
@@ -42,6 +44,7 @@ final chapterHttpClientProvider = Provider<http.Client>((ref) {
 
 class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
   late LibraryRepository repository;
+  int _refreshGeneration = 0;
   final Map<String, Future<void>> _pending = {};
   Future<T> _withBook<T>(String id, Future<T> Function() action) {
     final result = (_pending[id] ?? Future<void>.value()).then((_) => action());
@@ -63,8 +66,11 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
   }
 
   Future<void> refresh() async {
+    final generation = ++_refreshGeneration;
     final books = await repository.list();
-    if (ref.mounted) state = AsyncData(books);
+    if (ref.mounted && generation == _refreshGeneration) {
+      state = AsyncData(books);
+    }
   }
 
   Future<void> save(LibraryBook book) => _withBook(book.id, () async {
@@ -72,82 +78,199 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     await refresh();
   });
 
+  Future<LibraryBook?> _mutateBook(
+    String id,
+    LibraryBook Function(LibraryBook) transform, {
+    int? expectedRevision,
+  }) {
+    final revision = expectedRevision ?? repository.replacementRevision;
+    return _withBook(id, () async {
+      final result = await repository.mutateBook(
+        id,
+        transform,
+        expectedRevision: revision,
+      );
+      await refresh();
+      return result;
+    });
+  }
+
   Future<void> updateMetadata(
     String id, {
     bool? favorite,
     bool? completed,
     String? collection,
-  }) => _withBook(id, () async {
-    final book = await repository.find(id);
-    if (book == null) return;
-    await repository.save(
-      book.copyWith(
+    String? author,
+    String? series,
+    String? notes,
+  }) async {
+    await _mutateBook(
+      id,
+      (book) => book.copyWith(
         favorite: favorite,
         completed: completed,
         collection: collection,
+        author: author,
+        series: series,
+        notes: notes,
       ),
     );
-    await refresh();
-  });
+  }
 
-  Future<void> clearHistory(Iterable<String> ids) async {
+  /// Patches only selected metadata on the latest version of each book.
+  /// A download, reading update or bookmark queued for the same ID is preserved.
+  Future<int> groupBooks(
+    Iterable<String> ids, {
+    String? collection,
+    String? author,
+    String? series,
+  }) async {
+    if (collection == null && author == null && series == null) return 0;
+    if (collection != null && collection.trim().isEmpty) {
+      throw const FormatException('Tên kệ không được để trống.');
+    }
+    var changed = 0;
+    final revision = repository.replacementRevision;
     try {
       for (final id in ids.toSet()) {
-        await _withBook(id, () async {
-          final book = await repository.find(id);
-          if (book != null) {
-            await repository.save(book.copyWith(clearLastRead: true));
-          }
-        });
+        final updated = await _mutateBook(
+          id,
+          (latest) => latest.copyWith(
+            collection: collection?.trim(),
+            author: author?.trim(),
+            series: series?.trim(),
+          ),
+          expectedRevision: revision,
+        );
+        if (updated != null) changed++;
+      }
+    } finally {
+      await refresh();
+    }
+    return changed;
+  }
+
+  Future<void> clearHistory(Iterable<String> ids) async {
+    final revision = repository.replacementRevision;
+    try {
+      for (final id in ids.toSet()) {
+        await _mutateBook(
+          id,
+          (book) => book.copyWith(clearLastRead: true),
+          expectedRevision: revision,
+        );
       }
     } finally {
       await refresh();
     }
   }
 
-  Future<void> remove(String id) => _withBook(id, () async {
-    await repository.remove(id);
-    await refresh();
-  });
-  Future<void> updateProgress(String id, String chapterId, double fraction) =>
-      _withBook(id, () async {
-        final book = await repository.find(id);
-        if (book == null || book.chapters.isEmpty) return;
-        final index = book.chapters.indexWhere((c) => c.id == chapterId);
-        if (index < 0) return;
-        await repository.save(
-          book.copyWith(
-            currentChapter: index,
-            progress: ((index + fraction.clamp(0, 1)) / book.chapters.length)
-                .clamp(0, 1),
-            lastRead: DateTime.now(),
-          ),
-        );
-        await refresh();
-      });
-  Future<bool> toggleBookmark(String id, String chapterId, double fraction) =>
-      _withBook(id, () async {
-        final book = await repository.find(id);
-        if (book == null) return false;
-        final index = book.chapters.indexWhere((c) => c.id == chapterId);
-        if (index < 0) return false;
-        final mark = '$index:${fraction.clamp(0, 1).toStringAsFixed(4)}';
-        final marks = [...book.bookmarks];
-        final added = !marks.remove(mark);
-        if (added) marks.add(mark);
-        await repository.save(book.copyWith(bookmarks: marks));
-        await refresh();
-        return added;
-      });
-  Future<void> removeBookmark(String id, String mark) =>
-      _withBook(id, () async {
-        final book = await repository.find(id);
-        if (book == null) return;
-        await repository.save(
-          book.copyWith(bookmarks: [...book.bookmarks]..remove(mark)),
-        );
-        await refresh();
-      });
+  Future<void> remove(String id) {
+    final revision = repository.replacementRevision;
+    return _withBook(id, () async {
+      await repository.removeBook(id, expectedRevision: revision);
+      await refresh();
+    });
+  }
+
+  Future<void> updateProgress(
+    String id,
+    String chapterId,
+    double fraction, {
+    bool chapterCompleted = false,
+    bool inferCompletionFromFraction = true,
+    int? expectedRevision,
+  }) async {
+    if (!fraction.isFinite) {
+      throw const FormatException('Vị trí đọc không hợp lệ.');
+    }
+    await _mutateBook(id, (book) {
+      if (book.chapters.isEmpty) return book;
+      final index = book.chapters.indexWhere((c) => c.id == chapterId);
+      if (index < 0) return book;
+      final boundedFraction = fraction.clamp(0.0, 1.0);
+      // Freeze legacy inferred flags before moving manga resume position.
+      // A jump must not erase previously read chapters or read skipped pages.
+      final chapters = inferCompletionFromFraction
+          ? [...book.chapters]
+          : [
+              for (final entry in book.chapters.indexed)
+                entry.$2.copyWith(read: chapterIsRead(book, entry.$1)),
+            ];
+      if ((inferCompletionFromFraction && boundedFraction >= .999) ||
+          chapterCompleted) {
+        chapters[index] = chapters[index].copyWith(read: true);
+      }
+      return book.copyWith(
+        chapters: chapters,
+        currentChapter: index,
+        progress: ((index + boundedFraction) / book.chapters.length).clamp(
+          0,
+          1,
+        ),
+        lastRead: DateTime.now(),
+      );
+    }, expectedRevision: expectedRevision);
+  }
+
+  Future<void> markChapterRead(
+    String id,
+    String chapterId,
+    bool read, {
+    int? expectedRevision,
+  }) async {
+    await _mutateBook(id, (book) {
+      final index = book.chapters.indexWhere(
+        (chapter) => chapter.id == chapterId,
+      );
+      if (index < 0) return book;
+      final chapters = book.completed && !read
+          ? [
+              for (final entry in book.chapters.indexed)
+                entry.$2.copyWith(read: chapterIsRead(book, entry.$1)),
+            ]
+          : [...book.chapters];
+      chapters[index] = chapters[index].copyWith(read: read);
+      return book.copyWith(
+        chapters: chapters,
+        completed: read ? book.completed : false,
+      );
+    }, expectedRevision: expectedRevision);
+  }
+
+  Future<bool> toggleBookmark(
+    String id,
+    String chapterId,
+    double fraction, {
+    int? expectedRevision,
+  }) async {
+    if (!fraction.isFinite) {
+      throw const FormatException('Vị trí dấu trang không hợp lệ.');
+    }
+    var added = false;
+    await _mutateBook(id, (book) {
+      final index = book.chapters.indexWhere((c) => c.id == chapterId);
+      if (index < 0) return book;
+      final mark = '$index:${fraction.clamp(0, 1).toStringAsFixed(4)}';
+      final marks = [...book.bookmarks];
+      added = !marks.remove(mark);
+      if (added) marks.add(mark);
+      return book.copyWith(bookmarks: marks);
+    }, expectedRevision: expectedRevision);
+    return added;
+  }
+
+  Future<void> removeBookmark(
+    String id,
+    String mark, {
+    int? expectedRevision,
+  }) async {
+    await _mutateBook(
+      id,
+      (book) => book.copyWith(bookmarks: [...book.bookmarks]..remove(mark)),
+      expectedRevision: expectedRevision,
+    );
+  }
 
   Future<int> importFiles() async {
     final result = await FilePicker.pickFiles(
@@ -176,6 +299,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
   }
 
   Future<LibraryBook> addFromSource(CatalogueBook item) async {
+    final revision = repository.replacementRevision;
     final id = sha256
         .convert(
           utf8.encode('${item.engine.name}:${item.sourceId}:${item.ref}'),
@@ -190,6 +314,8 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
       id: id,
       title: detail.title,
       author: detail.author,
+      artist: detail.artist,
+      genres: detail.genres,
       description: detail.description,
       cover: detail.coverUrl,
       kind: detail.kind.name,
@@ -197,11 +323,19 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
       sourceId: detail.sourceId,
       sourceRef: detail.ref,
       chapters: chapters
-          .map((c) => BookChapter(id: c.ref, title: c.title, index: c.index))
+          .map(
+            (c) => BookChapter(
+              id: c.ref,
+              title: c.title,
+              index: c.index,
+              read: false,
+            ),
+          )
           .toList(),
     );
-    await save(book);
-    return book;
+    final saved = await repository.insertBook(book, expectedRevision: revision);
+    await refresh();
+    return saved;
   }
 
   CatalogueBook catalogue(LibraryBook book) => CatalogueBook(
@@ -221,74 +355,91 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     LibraryBook book,
     int index, {
     bool download = false,
-  }) {
+  }) async {
+    if (index < 0 || index >= book.chapters.length) {
+      throw StateError('Vị trí chương không hợp lệ');
+    }
     final chapterId = book.chapters[index].id;
-    return _withBook(book.id, () async {
-      final latest = await repository.find(book.id);
-      if (latest == null) throw StateError('Sách đã được xóa khỏi thư viện');
-      final target = latest.chapters.indexWhere((c) => c.id == chapterId);
-      if (target < 0) throw StateError('Chương không còn trong mục lục');
-      final cached = await repository.readChapter(book.id, target);
-      if (cached != null && (!download || _isOffline(cached))) return cached;
-      if (latest.engine == 'local') {
-        throw StateError('Không tìm thấy nội dung đã nhập');
-      }
-      ReaderContent content;
-      if (cached != null) {
-        content = cached;
-      } else {
-        final chapter = latest.chapters[target];
-        final result = await ref
-            .read(sourceRepositoryProvider)
-            .chapter(
-              catalogue(latest),
-              CatalogueChapter(
-                ref: chapter.id,
-                title: chapter.title,
-                index: chapter.index,
-              ),
-            );
-        content = ReaderContent(
-          kind: result.kind.name,
-          html: result.html,
-          images: result.images,
-          headers: result.headers,
-          imageHeaders: result.imageHeaders,
+    final read = await repository.openChapter(book.id, chapterId);
+    if (read == null) {
+      throw StateError('Sách hoặc chương không còn trong thư viện');
+    }
+    final latest = read.book;
+    final cached = read.content;
+    if (cached != null) checkChapterContent(latest, cached);
+    if (cached != null && (!download || chapterIsOffline(cached))) {
+      if (chapterIsOffline(cached) && !latest.chapters[read.index].downloaded) {
+        final saved = await repository.commitChapter(
+          read,
+          cached,
+          downloaded: true,
         );
-      }
-      if (download) content = await _downloadContent(book.id, content);
-      if (download || latest.kind == 'novel') {
-        await repository.saveChapter(book.id, target, content);
-        final updated = [...latest.chapters];
-        updated[target] = updated[target].copyWith(
-          downloaded: _isOffline(content),
-        );
-        await repository.save(latest.copyWith(chapters: updated));
         await refresh();
-        return (await repository.readChapter(book.id, target))!;
+        return saved;
       }
-      return content;
-    });
-  }
-
-  bool _isOffline(ReaderContent content) {
-    bool local(String url) =>
-        url.startsWith('data:') || url.startsWith('tachi-asset://');
-    if (!content.images.every(local)) return false;
-    final document = html.parseFragment(content.html);
-    return document
-        .querySelectorAll('img')
-        .every(
-          (image) =>
-              local(image.attributes['src'] ?? '') &&
-              !image.attributes.containsKey('srcset'),
-        );
+      return cached;
+    }
+    if (latest.engine == 'local') {
+      throw StateError('Không tìm thấy nội dung đã nhập');
+    }
+    ReaderContent content;
+    if (cached != null) {
+      content = cached;
+    } else {
+      final chapter = latest.chapters[read.index];
+      final result = await ref
+          .read(sourceRepositoryProvider)
+          .chapter(
+            catalogue(latest),
+            CatalogueChapter(
+              ref: chapter.id,
+              title: chapter.title,
+              index: chapter.index,
+            ),
+          );
+      content = ReaderContent(
+        kind: result.kind.name,
+        html: result.html,
+        images: result.images,
+        headers: result.headers,
+        imageHeaders: result.imageHeaders,
+      );
+    }
+    checkChapterContent(latest, content);
+    if (download) {
+      content = await _downloadContent(
+        content,
+        onPartial: (partial) async {
+          await repository.commitChapter(read, partial, downloaded: false);
+          await refresh();
+        },
+      );
+    }
+    if (download || latest.kind == 'novel') {
+      final saved = await repository.commitChapter(
+        read,
+        content,
+        downloaded: chapterIsOffline(content),
+      );
+      await refresh();
+      return saved;
+    }
+    final current = await repository.openChapter(book.id, chapterId);
+    checkLibraryRevision(repository.replacementRevision, read.revision);
+    if (current == null ||
+        bookSourceIdentity(current.book) != bookSourceIdentity(latest)) {
+      throw StateError('Sách hoặc nguồn đã thay đổi.');
+    }
+    if (current.content != null && chapterIsOffline(current.content!)) {
+      return current.content!;
+    }
+    return content;
   }
 
   Future<ReaderContent> _downloadContent(
-    String bookId,
-    ReaderContent content,
-  ) async {
+    ReaderContent content, {
+    required Future<void> Function(ReaderContent) onPartial,
+  }) async {
     final client = ref.read(chapterHttpClientProvider);
     var total = 0;
     final saved = <String, String>{};
@@ -329,23 +480,49 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
         bytes.add(chunk);
       }
       if (bytes.isEmpty) throw StateError('Ảnh tải về rỗng');
-      return saved[url] = await repository.storeAttachment(
-        bookId,
-        bytes.takeBytes(),
-        type,
-      );
+      // Keep bytes staged in memory until the revision-checked atomic commit;
+      // a removed/restored book must not recreate attachment files mid-request.
+      return saved[url] =
+          'data:$type;base64,${base64Encode(bytes.takeBytes())}';
     }
 
     final images = <String>[];
-    for (final url in content.images) {
-      images.add(await downloadImage(url));
-    }
     final document = html.parseFragment(content.html);
-    for (final image in document.querySelectorAll('img')) {
-      image.attributes['src'] = await downloadImage(
-        image.attributes['src'] ?? '',
-      );
-      image.attributes.remove('srcset');
+    try {
+      for (final url in content.images) {
+        images.add(await downloadImage(url));
+      }
+      for (final image in document.querySelectorAll('img')) {
+        image.attributes['src'] = await downloadImage(
+          image.attributes['src'] ?? '',
+        );
+        image.attributes.remove('srcset');
+      }
+    } catch (_) {
+      if (saved.isNotEmpty) {
+        final partial = html.parseFragment(content.html);
+        for (final image in partial.querySelectorAll('img')) {
+          final source = image.attributes['src'];
+          if (saved.containsKey(source)) {
+            image.attributes['src'] = saved[source]!;
+            image.attributes.remove('srcset');
+          }
+        }
+        // Save only complete images. An interrupted byte stream is discarded.
+        // The chapter stays online and the next attempt skips these local pages.
+        await onPartial(
+          ReaderContent(
+            kind: content.kind,
+            html: partial.outerHtml,
+            images: content.images
+                .map((source) => saved[source] ?? source)
+                .toList(),
+            headers: content.headers,
+            imageHeaders: content.imageHeaders,
+          ),
+        );
+      }
+      rethrow;
     }
     return ReaderContent(
       kind: content.kind,
@@ -358,63 +535,26 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     var added = 0;
     for (final book in await repository.list()) {
       if (book.engine == 'local') continue;
-      added += await _withBook(book.id, () async {
-        final current = await repository.find(book.id);
-        if (current == null) return 0;
-        final latest = await ref
-            .read(sourceRepositoryProvider)
-            .chapters(catalogue(current));
-        if (latest.map((c) => c.ref).toSet().length != latest.length) {
-          throw StateError('Nguồn trả mục lục có mã chương trùng');
-        }
-        final old = {
-          for (var i = 0; i < current.chapters.length; i++)
-            current.chapters[i].id: i,
-        };
-        final previous = latest.map((c) => old[c.ref]).toList();
-        final chapters = latest
-            .map(
-              (c) => BookChapter(
-                id: c.ref,
-                title: c.title,
-                index: c.index,
-                downloaded: old[c.ref] == null
-                    ? false
-                    : current.chapters[old[c.ref]!].downloaded,
-              ),
-            )
-            .toList();
-        final previousCurrent = current.chapters.isEmpty
-            ? 0
-            : current.currentChapter.clamp(0, current.chapters.length - 1);
-        final newCurrent = previous.indexOf(previousCurrent);
-        final fraction =
-            (current.progress * current.chapters.length - previousCurrent)
-                .clamp(0.0, 1.0);
-        final marks = <String>[];
-        for (final mark in current.bookmarks) {
-          final split = mark.split(':');
-          final index = split.length == 2 ? int.tryParse(split[0]) : null;
-          final position = split.length == 2 ? double.tryParse(split[1]) : null;
-          if (index == null || position == null || !position.isFinite) continue;
-          final mapped = previous.indexOf(index);
-          if (mapped >= 0) {
-            marks.add('$mapped:${position.clamp(0, 1).toStringAsFixed(4)}');
-          }
-        }
-        await repository.replaceChapterOrder(
-          current.copyWith(
-            chapters: chapters,
-            currentChapter: newCurrent < 0 ? 0 : newCurrent,
-            progress: chapters.isEmpty || newCurrent < 0
-                ? 0
-                : (newCurrent + fraction) / chapters.length,
-            bookmarks: marks,
-          ),
-          previous,
+      final revision = repository.replacementRevision;
+      final current = await repository.find(book.id);
+      if (current == null) continue;
+      checkLibraryRevision(repository.replacementRevision, revision);
+      final latest = await ref
+          .read(sourceRepositoryProvider)
+          .chapters(catalogue(current));
+      if (latest.isEmpty && current.chapters.isNotEmpty) {
+        throw StateError(
+          'Nguồn trả mục lục trống. Các chương đang có được giữ nguyên.',
         );
-        return chapters.where((c) => !old.containsKey(c.id)).length;
-      });
+      }
+      final chapters = latest
+          .map((c) => BookChapter(id: c.ref, title: c.title, index: c.index))
+          .toList();
+      added += await repository.updateChapterOrder(
+        current,
+        chapters,
+        expectedRevision: revision,
+      );
     }
     await refresh();
     return added;

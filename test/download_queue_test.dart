@@ -173,7 +173,7 @@ void main() {
           preferencesProvider.overrideWithValue(prefs),
           libraryRepositoryProvider.overrideWithValue(repo),
           downloadJobExecutorProvider.overrideWithValue((_, _) async {
-            if (++calls == 1) throw StateError('Network fixture unavailable');
+            if (++calls <= 3) throw StateError('Network fixture unavailable');
           }),
         ],
       );
@@ -190,12 +190,79 @@ void main() {
         DownloadQueueRepository(prefs).load().single.error,
         contains('Network fixture unavailable'),
       );
+      expect(calls, 3);
+      expect(DownloadQueueRepository(prefs).load().single.attempts, 3);
+      final reopened = DownloadQueueRepository(prefs).load();
+      expect(reopened.single.status, DownloadJobStatus.failed);
+      expect(reopened.single.attempts, 3);
       await controller.retry();
       await _until(() => container.read(downloadQueueProvider).tasks.isEmpty);
-      expect(calls, 2);
+      expect(calls, 4);
       expect(DownloadQueueRepository(prefs).load(), isEmpty);
     },
   );
+
+  test('a transient failure automatically retries and preserves the original chapter identity', () async {
+    final prefs = await SharedPreferences.getInstance();
+    final repo = MemoryLibraryRepository();
+    await repo.save(_book());
+    final calls = <String>[];
+    final container = ProviderContainer(
+      overrides: [
+        preferencesProvider.overrideWithValue(prefs),
+        libraryRepositoryProvider.overrideWithValue(repo),
+        downloadJobExecutorProvider.overrideWithValue((book, index) async {
+          calls.add(book.chapters[index].id);
+          if (calls.length == 1) throw StateError('Transient failure');
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    final queue = container.read(downloadQueueProvider.notifier);
+    await queue.enqueue('book', ['b']);
+    await queue.start();
+    await _until(
+      () =>
+          calls.length == 2 &&
+          container.read(downloadQueueProvider).tasks.isEmpty,
+    );
+    expect(calls, ['b', 'b']);
+    expect((await repo.find('book'))!.progress, .5);
+    expect(DownloadQueueRepository(prefs).load(), isEmpty);
+  });
+
+  test('old queue entries default attempts to zero and invalid attempts preserve raw data', () async {
+    final old = jsonEncode({
+      'version': 1,
+      'tasks': [
+        {'bookId': 'book', 'chapterId': 'a', 'status': 'active'},
+      ],
+    });
+    SharedPreferences.setMockInitialValues({DownloadQueueRepository.key: old});
+    var prefs = await SharedPreferences.getInstance();
+    final job = DownloadQueueRepository(prefs).load().single;
+    expect(job.attempts, 0);
+    expect(job.status, DownloadJobStatus.pending);
+    for (final invalid in [-1, 4, 'three']) {
+      final raw = jsonEncode({
+        'version': 1,
+        'tasks': [
+          {
+            'bookId': 'book',
+            'chapterId': 'a',
+            'status': 'failed',
+            'attempts': invalid,
+          },
+        ],
+      });
+      SharedPreferences.setMockInitialValues({
+        DownloadQueueRepository.key: raw,
+      });
+      prefs = await SharedPreferences.getInstance();
+      expect(DownloadQueueRepository(prefs).load, throwsFormatException);
+      expect(prefs.getString(DownloadQueueRepository.key), raw);
+    }
+  });
 
   test('malformed persisted queue is reported and never overwritten', () async {
     for (final raw in [

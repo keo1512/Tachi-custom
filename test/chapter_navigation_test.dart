@@ -28,6 +28,42 @@ void main() {
   });
 
   testWidgets(
+    'personal notes survive editing and can be cleared without changing chapters',
+    (tester) async {
+      final fixture = await _openDetail(tester);
+      await tester.tap(find.byTooltip('Tùy chọn'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ghi chú cá nhân'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(CupertinoTextField),
+        'Đọc tiếp sau\nChương thứ hai',
+      );
+      await tester.tap(find.text('Lưu'));
+      await tester.pumpAndSettle();
+      var saved = (await fixture.repository.find(fixture.book.id))!;
+      expect(saved.notes, 'Đọc tiếp sau\nChương thứ hai');
+      expect(
+        saved.chapters.map((c) => c.toJson()),
+        fixture.book.chapters.map((c) => c.toJson()),
+      );
+      expect(saved.progress, fixture.book.progress);
+      await tester.tap(find.byTooltip('Tùy chọn'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ghi chú cá nhân').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(CupertinoTextField), '');
+      await tester.tap(find.text('Lưu'));
+      await tester.pumpAndSettle();
+      saved = (await fixture.repository.find(fixture.book.id))!;
+      expect(saved.notes, isEmpty);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
     'detail bulk download uses the durable queue and keeps reading metadata',
     (tester) async {
       final pending = Completer<void>();
@@ -130,6 +166,226 @@ void main() {
       await _expectOriginalChapter(tester, fixture, 1);
     },
   );
+
+  testWidgets(
+    'read filter respects imported per-chapter flags instead of sequential inference',
+    (tester) async {
+      final fixture = await _openDetail(tester);
+      await fixture.repository.save(
+        fixture.book.copyWith(
+          currentChapter: 2,
+          progress: .9,
+          chapters: [
+            fixture.book.chapters[0].copyWith(read: false),
+            fixture.book.chapters[1].copyWith(read: true),
+            fixture.book.chapters[2].copyWith(read: false),
+          ],
+        ),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(BookDetailScreen)),
+      );
+      await container.read(libraryProvider.notifier).refresh();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Lọc và sắp xếp chương'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SegmentedButton<String>),
+          matching: find.text('Đã đọc'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Tùy chọn chương'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đóng'));
+      await tester.pumpAndSettle();
+      expect(_chapterTitles(tester), ['Chương hai: Bước ngoặt']);
+      expect(
+        (await fixture.repository.find(fixture.book.id))!.chapters
+            .map((chapter) => chapter.read),
+        [false, true, false],
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'long press marks the original chapter under filtering and reverse sort',
+    (tester) async {
+      final fixture = await _openDetail(tester);
+      await tester.tap(find.byTooltip('Lọc và sắp xếp chương'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SegmentedButton<String>),
+          matching: find.text('Đã tải'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sắp xếp'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chương mới trước'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Tùy chọn chương'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đóng'));
+      await tester.pumpAndSettle();
+      expect(_chapterTitles(tester), [
+        'Chương ba: Kết thúc',
+        'Chương một: Mở đầu',
+      ]);
+
+      await tester.longPress(find.text('Chương ba: Kết thúc'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hủy'));
+      await tester.pumpAndSettle();
+      expect(
+        (await fixture.repository.find(fixture.book.id))!.toJson(),
+        fixture.book.toJson(),
+      );
+      await tester.longPress(find.text('Chương ba: Kết thúc'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đánh dấu đã đọc'));
+      await tester.pumpAndSettle();
+      await _expectReadAction(tester, fixture, 2, true);
+
+      await tester.longPress(find.text('Chương ba: Kết thúc'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đánh dấu chưa đọc'));
+      await tester.pumpAndSettle();
+      await _expectReadAction(tester, fixture, 2, false);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'mark unread updates the read filter without changing the resume position',
+    (tester) async {
+      final fixture = await _openDetail(tester);
+      final saved = fixture.book.copyWith(
+        currentChapter: 2,
+        progress: .9,
+        chapters: [
+          fixture.book.chapters[0].copyWith(read: false),
+          fixture.book.chapters[1].copyWith(read: true),
+          fixture.book.chapters[2].copyWith(read: false),
+        ],
+      );
+      await fixture.repository.save(saved);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(BookDetailScreen)),
+      );
+      await container.read(libraryProvider.notifier).refresh();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Lọc và sắp xếp chương'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SegmentedButton<String>),
+          matching: find.text('Đã đọc'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Tùy chọn chương'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đóng'));
+      await tester.pumpAndSettle();
+      await tester.longPress(find.text('Chương hai: Bước ngoặt'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đánh dấu chưa đọc'));
+      await tester.pumpAndSettle();
+      expect(_chapterTitles(tester), isEmpty);
+      expect(find.text('Không có chương phù hợp'), findsOneWidget);
+      expect(
+        (await fixture.repository.find(fixture.book.id))!.toJson(),
+        saved
+            .copyWith(
+              chapters: [
+                saved.chapters[0],
+                saved.chapters[1].copyWith(read: false),
+                saved.chapters[2],
+              ],
+            )
+            .toJson(),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'chapter action opened before a replacement cannot modify the new library',
+    (tester) async {
+      final fixture = await _openDetail(tester);
+      await tester.longPress(find.text('Chương ba: Kết thúc'));
+      await tester.pumpAndSettle();
+      await fixture.repository.clear();
+      final replacement = fixture.book.copyWith(
+        title: 'Thư viện được khôi phục',
+        notes: 'Dữ liệu từ thiết bị khác',
+        chapters: [
+          fixture.book.chapters[0].copyWith(read: true),
+          fixture.book.chapters[1].copyWith(read: true),
+          fixture.book.chapters[2].copyWith(read: false),
+        ],
+      );
+      await fixture.repository.save(replacement);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(BookDetailScreen)),
+      );
+      await container.read(libraryProvider.notifier).refresh();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Đánh dấu đã đọc'));
+      await tester.pumpAndSettle();
+      expect(
+        (await fixture.repository.find(fixture.book.id))!.toJson(),
+        replacement.toJson(),
+      );
+      expect(find.byType(ReaderScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
+}
+
+Future<void> _expectReadAction(
+  WidgetTester tester,
+  _Fixture fixture,
+  int index,
+  bool read,
+) async {
+  final saved = (await fixture.repository.find(fixture.book.id))!;
+  expect(
+    saved.toJson(),
+    fixture.book
+        .copyWith(
+          chapters: [
+            for (var i = 0; i < fixture.book.chapters.length; i++)
+              i == index
+                  ? fixture.book.chapters[i].copyWith(read: read)
+                  : fixture.book.chapters[i],
+          ],
+        )
+        .toJson(),
+  );
+  for (var i = 0; i < fixture.bodies.length; i++) {
+    expect(
+      (await fixture.repository.readChapter(fixture.book.id, i))!.html,
+      '<p>${fixture.bodies[i]}</p>',
+    );
+  }
+  expect(
+    (await fixture.repository.find(fixture.otherBook.id))!.toJson(),
+    fixture.otherBook.toJson(),
+  );
+  expect(find.byType(ReaderScreen), findsNothing);
+  expect(tester.takeException(), isNull);
 }
 
 typedef _Fixture = ({
@@ -272,7 +528,15 @@ Future<void> _expectOriginalChapter(
   );
   expect(
     saved.chapters.map((chapter) => chapter.toJson()).toList(),
-    fixture.book.chapters.map((chapter) => chapter.toJson()).toList(),
+    fixture.book.chapters.indexed
+        .map(
+          (entry) => entry.$2
+              .copyWith(
+                downloaded: entry.$1 == index ? true : entry.$2.downloaded,
+              )
+              .toJson(),
+        )
+        .toList(),
   );
   expect(
     saved.chapters[saved.currentChapter].id,

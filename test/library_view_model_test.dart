@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
+import 'package:tachi_books/features/library/data/library_mutation.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/sources/data/source_repository.dart';
@@ -64,13 +65,17 @@ class PausingRepository extends MemoryLibraryRepository {
   bool pauseNextSave = false;
 
   @override
-  Future<void> save(LibraryBook book) async {
+  Future<ReaderContent> commitChapter(
+    LibraryChapterRead read,
+    ReaderContent content, {
+    required bool downloaded,
+  }) async {
     if (pauseNextSave) {
       pauseNextSave = false;
       started.complete();
       await release.future;
     }
-    await super.save(book);
+    return super.commitChapter(read, content, downloaded: downloaded);
   }
 }
 
@@ -118,8 +123,8 @@ void main() {
     await container.read(libraryProvider.future);
     final vm = container.read(libraryProvider.notifier);
 
-    // Pause after real chapter bytes are cached but before the downloaded flag
-    // is persisted. Simulate edits while an older detail screen is still open.
+    // Pause before the atomic content/flag commit. Other edits must persist
+    // while a chapter request is pending, then survive its eventual commit.
     repo.pauseNextSave = true;
     final download = vm.getContent(original, 0, download: true);
     await repo.started.future;
@@ -159,7 +164,13 @@ void main() {
   });
   test('reordering updates moves cache, read position and bookmarks by chapter identity', () async {
     final repo = MemoryLibraryRepository();
-    final original = fixtureBook();
+    final original = fixtureBook().copyWith(
+      chapters: [
+        fixtureBook().chapters[0].copyWith(read: false),
+        fixtureBook().chapters[1].copyWith(read: true),
+        fixtureBook().chapters[2].copyWith(read: false),
+      ],
+    );
     await repo.save(original);
     for (var i = 0; i < original.chapters.length; i++) {
       await repo.saveChapter(
@@ -180,6 +191,12 @@ void main() {
     final vm = container.read(libraryProvider.notifier);
     expect(await vm.updateAll(), 1);
     final book = (await repo.find('book'))!;
+    expect(book.chapters.map((chapter) => chapter.read), [
+      false,
+      false,
+      true,
+      false,
+    ]);
     expect(book.currentChapter, 2);
     expect(book.progress, closeTo(2.5 / 4, .000001));
     expect(book.bookmarks, ['2:0.5000', '1:0.2500']);
@@ -198,6 +215,43 @@ void main() {
     expect((await repo.find('book'))!.bookmarks, isEmpty);
     expect(source.chapterCalls, 0);
   });
+
+  test(
+    'finishing an imported unread chapter marks only that chapter read',
+    () async {
+      final repo = MemoryLibraryRepository();
+      final original = fixtureBook().copyWith(
+        chapters: [
+          fixtureBook().chapters[0].copyWith(read: false),
+          fixtureBook().chapters[1].copyWith(read: false),
+          fixtureBook().chapters[2].copyWith(read: true),
+        ],
+      );
+      await repo.save(original);
+      final container = ProviderContainer(
+        overrides: [libraryRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
+      await container.read(libraryProvider.future);
+      final vm = container.read(libraryProvider.notifier);
+      await vm.updateProgress('book', 'b', .75);
+      expect(
+        (await repo.find('book'))!.chapters.map((chapter) => chapter.read),
+        [false, false, true],
+      );
+      await vm.updateProgress('book', 'b', 1);
+      final finished = (await repo.find('book'))!;
+      expect(finished.chapters.map((chapter) => chapter.read), [
+        false,
+        true,
+        true,
+      ]);
+      expect(finished.bookmarks, original.bookmarks);
+      // Reopening a finished chapter at the top does not erase its read flag.
+      await vm.updateProgress('book', 'b', 0);
+      expect((await repo.find('book'))!.chapters[1].read, isTrue);
+    },
+  );
 
   test('web chapter remap rolls back metadata and cache when persistence exceeds capacity', () async {
     SharedPreferences.setMockInitialValues({});
@@ -273,6 +327,74 @@ void main() {
     expect((await repo.find('book'))!.chapters.single.downloaded, isTrue);
     expect(source.chapterCalls, 1);
     expect(imageCalls, 1);
+  });
+
+  test('failed chapter preserves complete pages and retry after reopening fetches only remaining pages', () async {
+    final repo = MemoryLibraryRepository();
+    final book = fixtureBook(kind: 'manga').copyWith(
+      chapters: [const BookChapter(id: 'a', title: 'a', index: 0)],
+      currentChapter: 0,
+    );
+    await repo.save(book);
+    const first = 'https://fixture.example/first.png',
+        second = 'https://fixture.example/second.png';
+    final source = FixtureSource(
+      ['a'],
+      content: const ChapterContent(
+        kind: ContentKind.manga,
+        images: [first, second],
+        imageHeaders: {
+          second: {'X-Page': 'preserved'},
+        },
+      ),
+    );
+    final requests = <String>[];
+    var fail = true;
+    final client = MockClient((request) async {
+      requests.add(request.url.toString());
+      if (request.url.toString() == second) {
+        expect(request.headers['X-Page'], 'preserved');
+        if (fail) return http.Response('unavailable', 503);
+      }
+      return http.Response.bytes(
+        Uint8List.fromList([1, 2, 3]),
+        200,
+        headers: {'content-type': 'image/png'},
+      );
+    });
+    ProviderContainer open() => ProviderContainer(
+      overrides: [
+        libraryRepositoryProvider.overrideWithValue(repo),
+        sourceRepositoryProvider.overrideWithValue(source),
+        chapterHttpClientProvider.overrideWithValue(client),
+      ],
+    );
+    final initial = open();
+    await initial.read(libraryProvider.future);
+    await expectLater(
+      initial
+          .read(libraryProvider.notifier)
+          .getContent(book, 0, download: true),
+      throwsStateError,
+    );
+    final partial = (await repo.readChapter(book.id, 0))!;
+    expect(partial.images.first, startsWith('data:image/png;base64,'));
+    expect(partial.images.last, second);
+    expect((await repo.find(book.id))!.chapters.single.downloaded, isFalse);
+    expect((await repo.find(book.id))!.progress, book.progress);
+    initial.dispose();
+    fail = false;
+    final reopened = open();
+    addTearDown(reopened.dispose);
+    await reopened.read(libraryProvider.future);
+    final content = await reopened
+        .read(libraryProvider.notifier)
+        .getContent(book, 0, download: true);
+    expect(content.images.every((image) => image.startsWith('data:')), isTrue);
+    expect(requests, [first, second, second]);
+    expect(source.chapterCalls, 1);
+    expect((await repo.find(book.id))!.chapters.single.downloaded, isTrue);
+    expect((await repo.find(book.id))!.progress, book.progress);
   });
 
   test('oversized image stops the stream and never marks a partial chapter offline', () async {

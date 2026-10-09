@@ -9,7 +9,7 @@ Future<SourceEngine?> chooseExtensionEngine(BuildContext context) =>
       context: context,
       builder: (context) => CupertinoActionSheet(
         title: const Text('Thêm phần mở rộng'),
-        message: const Text('Chọn loại extension hoặc repository'),
+        message: const Text('Chọn hệ extension'),
         actions: [
           for (final engine in SourceEngine.values)
             CupertinoActionSheetAction(
@@ -68,7 +68,7 @@ class _ExtensionDialogState extends State<_ExtensionDialog> {
             child: CupertinoSlidingSegmentedControl<bool>(
               groupValue: repository,
               children: const {
-                true: Text('Repository'),
+                true: Text('Kho extension'),
                 false: Text('Gói extension'),
               },
               onValueChanged: (value) {
@@ -77,18 +77,40 @@ class _ExtensionDialogState extends State<_ExtensionDialog> {
             ),
           ),
           const SizedBox(height: 16),
+          if (repository)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () =>
+                    text.text = widget.engine == SourceEngine.tachimanga
+                    ? 'https://github.com/keiyoushi/extensions'
+                    : 'https://raw.githubusercontent.com/Darkrai9x/vbook-extensions/master/plugin.json',
+                child: Text(
+                  widget.engine == SourceEngine.tachimanga
+                      ? 'Dùng kho Keiyoushi'
+                      : 'Dùng kho vBook / Darkrai9x',
+                ),
+              ),
+            ),
           TextField(
             controller: text,
             keyboardType: TextInputType.url,
             autocorrect: false,
             decoration: InputDecoration(
               labelText: repository
-                  ? 'URL registry JSON'
+                  ? 'Link kho extension'
                   : widget.engine == SourceEngine.tachimanga
                   ? 'URL APK'
                   : 'URL plugin.zip',
             ),
           ),
+          if (repository && widget.engine == SourceEngine.vbook) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Với vbookext.me, sao chép link kho của tác giả rồi dán vào đây.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ],
         ],
       ),
     ),

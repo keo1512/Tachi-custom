@@ -75,5 +75,20 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>GIDClientID</key>
+	<string>340925094049-ejetl1t7bikpcpk6ss0i6o7gkn7f5gq2.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>TachiBooks Google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.340925094049-ejetl1t7bikpcpk6ss0i6o7gkn7f5gq2</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

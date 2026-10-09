@@ -7,6 +7,7 @@ import '../../../core/widgets/feedback.dart';
 import '../../downloads/presentation/download_queue_controller.dart';
 import '../../settings/settings_controller.dart';
 import '../domain/library_book.dart';
+import '../domain/library_reading.dart';
 import 'activity_book_cover.dart';
 import 'library_view_model.dart';
 
@@ -18,6 +19,7 @@ class UpdatesScreen extends ConsumerStatefulWidget {
 
 class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
   bool updating = false;
+  String? category;
 
   Future<void> update() async {
     if (updating) return;
@@ -39,14 +41,15 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
   List<_UnreadChapter> entries(List<LibraryBook> books) {
     final result = <_UnreadChapter>[];
     for (final book in books.where(
-      (book) => book.engine != 'local' && !book.completed,
+      (book) =>
+          book.engine != 'local' &&
+          !book.completed &&
+          (category == null || book.collection == category),
     )) {
-      final first = (book.progress * book.chapters.length).floor().clamp(
-        0,
-        book.chapters.length,
-      );
-      for (var index = book.chapters.length - 1; index >= first; index--) {
-        result.add(_UnreadChapter(book, book.chapters[index], index));
+      for (var index = book.chapters.length - 1; index >= 0; index--) {
+        if (!chapterIsRead(book, index)) {
+          result.add(_UnreadChapter(book, book.chapters[index], index));
+        }
       }
     }
     return result;
@@ -93,19 +96,42 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
               onSelected: (action) {
                 if (action == 'update') {
                   update();
+                } else if (action == 'all-categories') {
+                  setState(() => category = null);
+                } else if (action.startsWith('category:')) {
+                  setState(
+                    () => category = action.substring('category:'.length),
+                  );
                 } else {
                   download(entries(library.value ?? []));
                 }
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(
+              itemBuilder: (_) => [
+                const PopupMenuItem(
                   value: 'update',
                   child: Text('Kiểm tra chương mới'),
                 ),
-                PopupMenuItem(
+                const PopupMenuItem(
                   value: 'download',
                   child: Text('Tải chương chưa đọc'),
                 ),
+                const PopupMenuDivider(),
+                CheckedPopupMenuItem(
+                  value: 'all-categories',
+                  checked: category == null,
+                  child: const Text('Tất cả kệ'),
+                ),
+                for (final name
+                    in ((library.value ?? [])
+                        .map((book) => book.collection)
+                        .toSet()
+                        .toList()
+                      ..sort()))
+                  CheckedPopupMenuItem(
+                    value: 'category:$name',
+                    checked: category == name,
+                    child: Text(name),
+                  ),
               ],
             ),
         ],
@@ -142,11 +168,13 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
               itemCount: unread.length + 1,
               itemBuilder: (context, row) {
                 if (row == 0) {
-                  return const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 14, 16, 18),
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
                     child: Text(
-                      'Chương chưa đọc',
-                      style: TextStyle(fontSize: 15),
+                      category == null
+                          ? 'Chương chưa đọc'
+                          : 'Chương chưa đọc · $category',
+                      style: const TextStyle(fontSize: 15),
                     ),
                   );
                 }

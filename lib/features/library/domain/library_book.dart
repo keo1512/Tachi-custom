@@ -4,33 +4,41 @@ class BookChapter {
     required this.title,
     required this.index,
     this.downloaded = false,
+    this.read,
   });
   final String id;
   final String title;
   final int index;
   final bool downloaded;
+
+  /// null keeps the existing sequential progress inference for older libraries.
+  final bool? read;
   BookChapter copyWith({
     String? id,
     String? title,
     int? index,
     bool? downloaded,
+    bool? read,
   }) => BookChapter(
     id: id ?? this.id,
     title: title ?? this.title,
     index: index ?? this.index,
     downloaded: downloaded ?? this.downloaded,
+    read: read ?? this.read,
   );
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
     'index': index,
     'downloaded': downloaded,
+    if (read != null) 'read': read,
   };
   factory BookChapter.fromJson(Map<String, dynamic> json) => BookChapter(
     id: json['id'] as String,
     title: json['title'] as String,
     index: (json['index'] as num).toInt(),
     downloaded: json['downloaded'] as bool? ?? false,
+    read: json['read'] as bool?,
   );
 }
 
@@ -39,6 +47,10 @@ class LibraryBook {
     required this.id,
     required this.title,
     this.author = '',
+    this.artist = '',
+    List<String> genres = const [],
+    this.notes = '',
+    this.series = '',
     this.description = '',
     this.kind = 'novel',
     this.engine = 'local',
@@ -53,11 +65,15 @@ class LibraryBook {
     this.completed = false,
     this.collection = 'Mặc định',
     List<String> bookmarks = const [],
-  }) : chapters = List.unmodifiable(chapters),
+  }) : genres = List.unmodifiable(genres),
+       chapters = List.unmodifiable(chapters),
        bookmarks = List.unmodifiable(bookmarks);
   final String id,
       title,
       author,
+      artist,
+      notes,
+      series,
       description,
       kind,
       engine,
@@ -66,6 +82,7 @@ class LibraryBook {
       cover,
       collection;
   final List<BookChapter> chapters;
+  final List<String> genres;
   final List<String> bookmarks;
   final int currentChapter;
   final double progress;
@@ -75,6 +92,10 @@ class LibraryBook {
     String? id,
     String? title,
     String? author,
+    String? artist,
+    List<String>? genres,
+    String? notes,
+    String? series,
     String? description,
     String? kind,
     String? engine,
@@ -94,6 +115,10 @@ class LibraryBook {
     id: id ?? this.id,
     title: title ?? this.title,
     author: author ?? this.author,
+    artist: artist ?? this.artist,
+    genres: genres ?? this.genres,
+    notes: notes ?? this.notes,
+    series: series ?? this.series,
     description: description ?? this.description,
     kind: kind ?? this.kind,
     engine: engine ?? this.engine,
@@ -113,6 +138,10 @@ class LibraryBook {
     'id': id,
     'title': title,
     'author': author,
+    'artist': artist,
+    'genres': genres,
+    'notes': notes,
+    'series': series,
     'description': description,
     'kind': kind,
     'engine': engine,
@@ -132,6 +161,10 @@ class LibraryBook {
     id: json['id'] as String,
     title: json['title'] as String,
     author: json['author'] as String? ?? '',
+    artist: json['artist'] as String? ?? '',
+    genres: (json['genres'] as List? ?? const []).cast<String>(),
+    notes: json['notes'] as String? ?? '',
+    series: json['series'] as String? ?? '',
     description: json['description'] as String? ?? '',
     kind: json['kind'] as String? ?? 'novel',
     engine: json['engine'] as String? ?? 'local',

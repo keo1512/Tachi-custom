@@ -38,7 +38,11 @@ class DownloadQueueRepository {
           !DownloadJobStatus.values.any(
             (status) => status.name == item['status'],
           ) ||
-          (item['error'] != null && item['error'] is! String)) {
+          (item['error'] != null && item['error'] is! String) ||
+          (item['attempts'] != null &&
+              (item['attempts'] is! int ||
+                  (item['attempts'] as int) < 0 ||
+                  (item['attempts'] as int) > 3))) {
         throw const FormatException(
           'Mục tải xuống không hợp lệ. Dữ liệu gốc được giữ nguyên.',
         );
@@ -53,6 +57,7 @@ class DownloadQueueRepository {
             ? DownloadJobStatus.pending
             : status,
         error: item['error'] as String?,
+        attempts: item['attempts'] as int? ?? 0,
       );
       if (!identities.add(job.identity)) {
         throw const FormatException(

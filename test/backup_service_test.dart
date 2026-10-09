@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tachi_books/features/library/data/backup_service.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
+import 'package:tachi_books/features/library/data/library_snapshot.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 
 const image = 'data:image/png;base64,AQID';
@@ -61,6 +62,18 @@ Uint8List encode(Map<String, dynamic> backup) =>
 class RecordingRepository extends MemoryLibraryRepository {
   int writes = 0;
   @override
+  Future<void> replaceSnapshot(
+    LibrarySnapshot incoming, {
+    required String expectedFingerprint,
+  }) async {
+    writes++;
+    await super.replaceSnapshot(
+      incoming,
+      expectedFingerprint: expectedFingerprint,
+    );
+  }
+
+  @override
   Future<void> save(LibraryBook book) async {
     writes++;
     await super.save(book);
@@ -85,9 +98,17 @@ class RecordingRepository extends MemoryLibraryRepository {
 
 class FailingRepository extends RecordingRepository {
   @override
-  Future<void> save(LibraryBook book) async {
-    if (book.id == 'second') throw StateError('Storage full');
-    await super.save(book);
+  Future<void> replaceSnapshot(
+    LibrarySnapshot incoming, {
+    required String expectedFingerprint,
+  }) async {
+    if (incoming.entries.any((entry) => entry.book.id == 'second')) {
+      throw StateError('Storage full');
+    }
+    await super.replaceSnapshot(
+      incoming,
+      expectedFingerprint: expectedFingerprint,
+    );
   }
 }
 
@@ -181,6 +202,10 @@ void main() {
       (root) => root['entries'].add(root['entries'][0]),
       (root) => root['entries'][0]['book']['progress'] = -.1,
       (root) => root['entries'][0]['book']['progress'] = 2,
+      (root) => root['entries'][0]['book']['bookmarks'] = ['2:0.5'],
+      (root) => root['entries'][0]['book']['bookmarks'] = ['0:NaN'],
+      (root) => root['entries'][0]['book']['bookmarks'] = ['0:1.1'],
+      (root) => root['entries'][0]['book']['chapters'][0]['read'] = 'true',
       (root) => root['entries'][0]['book']['currentChapter'] = 2,
       (root) => root['entries'][0]['book']['chapters'][1]['index'] = 0,
       (root) => root['entries'][0]['book']['chapters'][1]['id'] =
@@ -251,4 +276,54 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+
+  test('Stale preview rejects metadata and content-only changes without overwriting either', () async {
+    final source = MemoryLibraryRepository();
+    await seed(source, sampleBook(id: 'new'));
+    final bytes = await BackupService(source).export();
+    final repository = MemoryLibraryRepository();
+    await seed(repository, sampleBook(id: 'existing'));
+    final service = BackupService(repository);
+    final preview = await service.preview(bytes);
+    final previous = (await repository.find('existing'))!;
+    await repository.save(previous.copyWith(collection: 'Vừa sửa'));
+    await expectLater(service.mergePreview(preview), throwsStateError);
+    expect(await repository.find('new'), isNull);
+    expect((await repository.find('existing'))!.collection, 'Vừa sửa');
+    final secondPreview = await service.preview(bytes);
+    await repository.saveChapter(
+      'existing',
+      0,
+      ReaderContent(kind: 'novel', html: '<p>Vừa sửa nội dung</p>'),
+    );
+    await expectLater(service.mergePreview(secondPreview), throwsStateError);
+    expect(
+      (await repository.readChapter('existing', 0))!.html,
+      contains('Vừa sửa'),
+    );
+    expect(await repository.recoverySnapshot(), isNull);
+  });
+
+  test(
+    'Atomic manual merge preserves a complete pre-merge recovery image',
+    () async {
+      final source = MemoryLibraryRepository();
+      await seed(source, sampleBook(id: 'new'));
+      final repository = MemoryLibraryRepository();
+      await seed(repository, sampleBook(id: 'existing'));
+      final service = BackupService(repository);
+      final before = await service.export();
+      expect(await service.merge(await BackupService(source).export()), 1);
+      expect(
+        service.fingerprint((await service.exportRecovery())!),
+        service.fingerprint(before),
+      );
+      expect((await repository.list()).length, 2);
+      expect(
+        (await repository.readChapter('existing', 0))!.html,
+        contains(image),
+      );
+      expect((await repository.readChapter('new', 0))!.html, contains(image));
+    },
+  );
 }

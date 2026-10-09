@@ -96,6 +96,7 @@ export class RuntimeStore {
   extensions() {
     return [...this.packages.values()].map(pkg => ({ ...sourceOf(pkg), type: pkg.type,
       version: pkg.manifest.metadata.version ?? 0, packageHash: pkg.hash,
+      packageUrl: this.index.extensions.find(entry => entry.id === pkg.id)?.origin ?? '',
       limitations: ['Browser/WebView, encrypted scripts, native crypto and newer native APIs are unsupported.'] }));
   }
   package(id) {

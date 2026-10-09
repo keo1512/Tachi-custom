@@ -12,6 +12,8 @@ import 'browse_dialogs.dart';
 import 'browse_widgets.dart';
 import 'source_migration_view.dart';
 import 'source_preferences_dialog.dart';
+import 'extension_catalogue_controller.dart';
+import 'extension_catalogue_view.dart';
 
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key});
@@ -21,7 +23,7 @@ class BrowseScreen extends ConsumerStatefulWidget {
 
 class _BrowseState extends ConsumerState<BrowseScreen> {
   int tab = 0, request = 0;
-  bool loading = false, searching = false;
+  bool loading = false, searching = false, adding = false;
   String query = '';
   String? language;
   final sourceLists = <SourceEngine, List<CatalogueSource>>{};
@@ -98,25 +100,35 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
   }
 
   Future<void> add() async {
+    if (adding) return;
     final engine = await chooseExtensionEngine(context);
     if (engine == null || !mounted) return;
-    if (connection(ref.read(settingsProvider), engine).isEmpty) {
-      await connect();
-      if (!mounted || connection(ref.read(settingsProvider), engine).isEmpty) {
-        return;
-      }
-    }
     final input = await requestExtension(context, engine);
     if (input == null || input.url.isEmpty || !mounted) return;
+    setState(() => adding = true);
     await perform(context, () async {
       final repo = ref.read(sourceRepositoryProvider);
       if (input.repository) {
-        await repo.addRepository(engine, input.url);
+        await ref
+            .read(extensionCatalogueProvider.notifier)
+            .add(engine, input.url);
       } else {
+        requireEngine(engine);
         await repo.installExtension(engine, input.url);
       }
       if (mounted) await load();
     }, success: input.repository ? 'Đã thêm repository' : 'Đã cài extension');
+    if (mounted) setState(() => adding = false);
+  }
+
+  void requireEngine(SourceEngine engine) {
+    if (connection(ref.read(settingsProvider), engine).isEmpty) {
+      throw StateError(
+        'Bản này chưa có engine ${sourceEngineName(engine)} chạy trực tiếp '
+        'trên iPhone. Để cài và đọc nguồn, mở Thêm → Chung → Kết nối nguồn '
+        'và kết nối engine. Danh sách kho vẫn dùng được khi chưa kết nối.',
+      );
+    }
   }
 
   Future<void> install(CatalogueExtension package) async {
@@ -124,9 +136,15 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
     if (installing.contains(key)) return;
     setState(() => installing.add(key));
     await perform(context, () async {
+      requireEngine(package.engine);
       await ref
           .read(sourceRepositoryProvider)
-          .installExtension(package.engine, package.installRef);
+          .installExtension(
+            package.engine,
+            package.packageUrl.isEmpty
+                ? package.installRef
+                : package.packageUrl,
+          );
       if (mounted) await load();
     });
     if (mounted) setState(() => installing.remove(key));
@@ -146,6 +164,12 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
       ...sources.map((source) => source.lang),
       ...packageLists.values
           .expand((values) => values)
+          .map((item) => item.lang),
+      ...?ref
+          .read(extensionCatalogueProvider)
+          .asData
+          ?.value
+          .expand((index) => index.entries)
           .map((item) => item.lang),
     }.toList()..sort((a, b) => sourceLanguage(a).compareTo(sourceLanguage(b)));
     final selected = await showCupertinoModalPopup<String>(
@@ -291,69 +315,20 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
     );
   }
 
-  Widget extensionList() {
-    final visible =
-        packageLists.values
-            .expand((values) => values)
-            .where(
-              (item) =>
-                  item.name.toLowerCase().contains(query.toLowerCase()) &&
-                  (language == null || item.lang == language),
-            )
-            .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
-    return RefreshIndicator(
-      onRefresh: load,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.paddingOf(context).bottom + 16,
-        ),
-        children: [
-          ...connectionNotes(),
-          ListTile(
-            leading: const Icon(CupertinoIcons.plus, size: 24),
-            title: const Text('Thêm repository hoặc extension'),
-            onTap: add,
-          ),
-          for (final engine in SourceEngine.values) ...[
-            BrowseHeading(sourceEngineName(engine)),
-            for (final item in visible.where((item) => item.engine == engine))
-              ListTile(
-                leading: const Icon(CupertinoIcons.square_stack_3d_up),
-                title: Text(
-                  item.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  '${sourceLanguage(item.lang)} · ${item.version}${item.limitations.isEmpty ? '' : ' · ${item.limitations.join(', ')}'}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                trailing: installing.contains('${item.engine.name}:${item.id}')
-                    ? const CupertinoActivityIndicator()
-                    : item.installed
-                    ? const Text('Đã cài', style: TextStyle(fontSize: 13))
-                    : CupertinoButton(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        onPressed: () => install(item),
-                        child: const Text(
-                          'Cài',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-              ),
-          ],
-          if (visible.isEmpty && !loading)
-            BrowseNote(
-              query.isEmpty && language == null
-                  ? 'Chưa có extension. Thêm repository hoặc gói extension bằng nút +.'
-                  : 'Không có extension phù hợp với bộ lọc.',
-            ),
-        ],
-      ),
-    );
-  }
+  Widget extensionList() => ExtensionCatalogueView(
+    installed: packageLists.values.expand((items) => items).toList(),
+    installing: installing,
+    onInstall: install,
+    onAdd: add,
+    query: query,
+    language: language,
+    onRefresh: load,
+    adding: adding,
+    engineErrors: [
+      for (final entry in errors.entries)
+        'Trạng thái ${sourceEngineName(entry.key)}: ${entry.value}',
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -390,13 +365,21 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
                   connect();
                 } else {
                   load();
+                  if (tab == 1) {
+                    perform(
+                      context,
+                      () => ref
+                          .read(extensionCatalogueProvider.notifier)
+                          .refresh(),
+                    );
+                  }
                 }
               },
               itemBuilder: (_) => const [
                 PopupMenuItem(value: 'refresh', child: Text('Làm mới')),
                 PopupMenuItem(
                   value: 'add',
-                  child: Text('Thêm repository hoặc extension'),
+                  child: Text('Thêm kho hoặc gói extension'),
                 ),
                 PopupMenuItem(
                   value: 'connection',

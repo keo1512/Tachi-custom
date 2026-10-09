@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../library/domain/library_book.dart';
+import '../../library/domain/library_reading.dart';
+import '../../library/data/library_mutation.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../../settings/settings_controller.dart';
 import '../data/download_queue_repository.dart';
@@ -77,6 +79,53 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
     _pump();
   }
 
+  /// One durable batch using current chapter flags and stable identities.
+  Future<int> enqueueBooks(
+    Iterable<LibraryBook> books, {
+    bool unreadOnly = false,
+    int? expectedRevision,
+  }) async {
+    final library = ref.read(libraryRepositoryProvider);
+    final revision = expectedRevision ?? library.replacementRevision;
+    final selected = {for (final book in books) book.id: book};
+    final jobs = <DownloadJob>[];
+    for (final selection in selected.values) {
+      checkLibraryRevision(library.replacementRevision, revision);
+      final book = await library.find(selection.id);
+      checkLibraryRevision(library.replacementRevision, revision);
+      if (book == null) continue;
+      if (bookSourceIdentity(book) != bookSourceIdentity(selection)) {
+        throw StateError('Nguồn của truyện đã thay đổi. Hãy chọn lại truyện.');
+      }
+      if (book.engine == 'local') continue;
+      for (final entry in book.chapters.indexed) {
+        if (entry.$2.downloaded ||
+            (unreadOnly && chapterIsRead(book, entry.$1))) {
+          continue;
+        }
+        if (book.id.isEmpty || entry.$2.id.isEmpty) {
+          throw ArgumentError('Thiếu mã truyện hoặc chương');
+        }
+        jobs.add(DownloadJob(bookId: book.id, chapterId: entry.$2.id));
+      }
+    }
+    var added = 0;
+    await _change((current) {
+      checkLibraryRevision(library.replacementRevision, revision);
+      final tasks = [...current];
+      final identities = current.map((task) => task.identity).toSet();
+      for (final job in jobs) {
+        if (identities.add(job.identity)) {
+          tasks.add(job);
+          added++;
+        }
+      }
+      return tasks;
+    });
+    _pump();
+    return added;
+  }
+
   Future<void> start() async {
     if (state.storageError != null) throw StateError(state.storageError!);
     state = DownloadQueueState(tasks: state.tasks, running: true);
@@ -95,7 +144,7 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
       (tasks) => tasks
           .map(
             (task) => task.status == DownloadJobStatus.failed
-                ? task.copyWith(status: DownloadJobStatus.pending)
+                ? task.copyWith(status: DownloadJobStatus.pending, attempts: 0)
                 : task,
           )
           .toList(),
@@ -138,7 +187,9 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
         (chapter) => chapter.id == job.chapterId,
       );
       if (index < 0) throw StateError('Chương không còn trong mục lục');
-      await ref.read(downloadJobExecutorProvider)(book, index);
+      if (!book.chapters[index].downloaded) {
+        await ref.read(downloadJobExecutorProvider)(book, index);
+      }
       await _change(
         (tasks) =>
             tasks.where((task) => task.identity != job.identity).toList(),
@@ -150,8 +201,11 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
               .map(
                 (task) => task.identity == job.identity
                     ? task.copyWith(
-                        status: DownloadJobStatus.failed,
+                        status: task.attempts + 1 < 3
+                            ? DownloadJobStatus.pending
+                            : DownloadJobStatus.failed,
                         error: '$error',
+                        attempts: task.attempts + 1,
                       )
                     : task,
               )

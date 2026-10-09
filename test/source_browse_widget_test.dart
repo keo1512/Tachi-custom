@@ -14,9 +14,11 @@ import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
 import 'package:tachi_books/features/sources/data/source_repository.dart';
+import 'package:tachi_books/features/sources/data/extension_index.dart';
 import 'package:tachi_books/features/sources/domain/catalogue.dart';
 import 'package:tachi_books/features/sources/presentation/browse_screen.dart';
 import 'package:tachi_books/features/sources/presentation/browse_widgets.dart';
+import 'package:tachi_books/features/sources/presentation/extension_catalogue_controller.dart';
 
 void main() {
   setUp(() {
@@ -112,19 +114,53 @@ void main() {
   }
 
   testWidgets(
-    'both engines merge by language and repository action uses chosen engine',
+    'both engines merge and link addition fetches a local repository catalogue',
     (tester) async {
       final prefs = await SharedPreferences.getInstance();
       final posts = <http.Request>[];
+      var installed = false;
+      final indexes = ExtensionIndexRepository(
+        MockClient((request) async {
+          expect(request.url.toString(), 'https://packages.test/registry.json');
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {
+                  'name': 'Catalogue fixture',
+                  'path': 'fixture/plugin.zip',
+                  'version': 1,
+                  'locale': 'vi_VN',
+                },
+              ],
+            }),
+            200,
+          );
+        }),
+      );
       final repo = SourceRepository(
         tachimangaUrl: 'http://tachi.test',
         vbookUrl: 'http://vbook.test',
         client: MockClient((request) async {
           if (request.method == 'POST') {
             posts.add(request);
+            installed = true;
             return http.Response('{}', 200);
           }
           if (request.url.path.contains('extension')) {
+            if (request.url.host == 'vbook.test' && installed) {
+              return http.Response(
+                jsonEncode([
+                  {
+                    'id': 'vb-installed-fixture',
+                    'name': 'Catalogue fixture',
+                    'version': 1,
+                    'lang': 'vi_VN',
+                    'packageUrl': 'https://packages.test/fixture/plugin.zip',
+                  },
+                ]),
+                200,
+              );
+            }
             return http.Response('[]', 200);
           }
           return http.Response(
@@ -143,14 +179,14 @@ void main() {
           );
         }),
       );
-      final router = await mountBrowse(tester, prefs, repo);
+      final router = await mountBrowse(tester, prefs, repo, indexes: indexes);
       expect(find.text('Novel source'), findsOneWidget);
       expect(find.text('Manga source'), findsOneWidget);
       expect(find.byTooltip('Cấu hình Novel source'), findsNothing);
       expect(find.byTooltip('Cấu hình Manga source'), findsOneWidget);
       await tester.tap(find.text('Phần mở rộng'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Thêm repository hoặc extension'));
+      await tester.tap(find.text('Thêm kho extension bằng link'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('vBook').last);
       await tester.pumpAndSettle();
@@ -160,12 +196,105 @@ void main() {
         'https://packages.test/registry.json',
       );
       await tester.tap(find.text('Thêm'));
+      await waitForRepositorySave(tester, prefs);
+      await tester.pumpAndSettle();
+      expect(posts, isEmpty);
+      expect(
+        prefs.getString('extensionRepositoriesV1'),
+        isNotNull,
+        reason: find
+            .byType(Text)
+            .evaluate()
+            .map((element) => (element.widget as Text).data)
+            .join(' | '),
+      );
+      expect(find.text('Catalogue fixture'), findsOneWidget);
+      expect(find.text('Cài'), findsOneWidget);
+      expect(find.text('Đã cài'), findsNothing);
+      expect(jsonDecode(prefs.getString('extensionRepositoriesV1')!), [
+        {'url': 'https://packages.test/registry.json', 'engine': 'vbook'},
+      ]);
+      await tester.tap(find.text('Cài'));
       await tester.pumpAndSettle();
       expect(posts.length, 1);
-      expect(posts.single.url.toString(), 'http://vbook.test/v1/repositories');
+      expect(
+        posts.single.url.toString(),
+        'http://vbook.test/v1/extensions/install',
+      );
       expect(jsonDecode(posts.single.body), {
-        'url': 'https://packages.test/registry.json',
+        'url': 'https://packages.test/fixture/plugin.zip',
       });
+      expect(find.text('Đã cài'), findsWidgets);
+      expect(find.text('Cài'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      repo.dispose();
+      router.dispose();
+    },
+  );
+
+  testWidgets(
+    'repository list and presets work without an engine; install explains the missing engine',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      var engineRequests = 0;
+      final repo = SourceRepository(
+        tachimangaUrl: '',
+        vbookUrl: '',
+        client: MockClient((_) async {
+          engineRequests++;
+          return http.Response('{}', 200);
+        }),
+      );
+      final indexes = ExtensionIndexRepository(
+        MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'data': [
+                {
+                  'name': 'Fixture to install',
+                  'path': 'fixture/plugin.zip',
+                  'version': 1,
+                },
+              ],
+            }),
+            200,
+          ),
+        ),
+      );
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 568);
+      addTearDown(tester.view.reset);
+      final router = await mountBrowse(tester, prefs, repo, indexes: indexes);
+      await tester.tap(find.text('Phần mở rộng'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Thêm kho extension bằng link'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('vBook').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dùng kho vBook / Darkrai9x'));
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'https://raw.githubusercontent.com/Darkrai9x/vbook-extensions/master/plugin.json',
+      );
+      await tester.enterText(
+        find.byType(TextField),
+        'https://fixture.test/plugin.json',
+      );
+      await tester.tap(find.text('Thêm'));
+      await waitForRepositorySave(tester, prefs);
+      await tester.pumpAndSettle();
+      expect(find.text('Fixture to install'), findsOneWidget);
+      // Let the successful "repository added" snackbar finish first.
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cài'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('chưa có engine vBook'), findsOneWidget);
+      expect(find.text('Đã cài'), findsNothing);
+      expect(engineRequests, 0);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       repo.dispose();
@@ -226,11 +355,29 @@ void main() {
   );
 }
 
+// Repository loading includes streamed HTTP and platform preference writes.
+// Wait for the observable write in the real async zone before settling frames.
+Future<void> waitForRepositorySave(
+  WidgetTester tester,
+  SharedPreferences prefs,
+) async {
+  await tester.runAsync(() async {
+    final deadline = DateTime.now().add(const Duration(seconds: 3));
+    while (prefs.getString('extensionRepositoriesV1') == null) {
+      if (DateTime.now().isAfter(deadline)) {
+        throw StateError('Repository catalogue did not finish saving.');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+  });
+}
+
 Future<GoRouter> mountBrowse(
   WidgetTester tester,
   SharedPreferences prefs,
   SourceRepository repo, {
   MemoryLibraryRepository? library,
+  ExtensionIndexRepository? indexes,
 }) async {
   final router = GoRouter(
     routes: [
@@ -250,6 +397,8 @@ Future<GoRouter> mountBrowse(
       overrides: [
         preferencesProvider.overrideWithValue(prefs),
         sourceRepositoryProvider.overrideWithValue(repo),
+        if (indexes != null)
+          extensionIndexRepositoryProvider.overrideWithValue(indexes),
         libraryRepositoryProvider.overrideWithValue(
           library ?? MemoryLibraryRepository(),
         ),

@@ -1,7 +1,7 @@
 name: tachi_books
 description: "Manga, truyện chữ và ebook với hai hệ extension."
 publish_to: 'none'
-version: 1.0.0+6
+version: 1.0.0+7
 
 environment:
   sdk: ^3.13.3
@@ -25,6 +25,11 @@ dependencies:
   crypto: ^3.0.7
   flutter_tts: ^4.2.5
   html: ^0.15.7
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.7.0
+  cloud_firestore: ^6.10.0
+  google_sign_in: ^7.2.0
+  sqlite3: ^3.7.0
 
 dev_dependencies:
   flutter_test:

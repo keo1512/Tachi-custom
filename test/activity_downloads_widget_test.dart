@@ -78,6 +78,53 @@ void main() {
   }
 
   testWidgets(
+    'updates retain earlier unread flags, hide later read flags and filter by shelf',
+    (tester) async {
+      final repo = MemoryLibraryRepository();
+      for (final item in [('first', 'Kệ A'), ('second', 'Kệ B')]) {
+        await repo.save(
+          _book(item.$1, 'Truyện ${item.$1}').copyWith(
+            collection: item.$2,
+            chapters: const [
+              BookChapter(
+                id: 'a',
+                title: 'Chương chưa đọc trước tiến độ',
+                index: 0,
+                read: false,
+              ),
+              BookChapter(
+                id: 'b',
+                title: 'Chương đã đọc sau tiến độ',
+                index: 1,
+                read: true,
+              ),
+            ],
+          ),
+        );
+      }
+      await _show(
+        tester,
+        await SharedPreferences.getInstance(),
+        repo,
+        const UpdatesScreen(),
+      );
+      expect(find.text('Chương chưa đọc trước tiến độ'), findsNWidgets(2));
+      expect(find.text('Chương đã đọc sau tiến độ'), findsNothing);
+      await tester.tap(find.byTooltip('Tùy chọn cập nhật'));
+      await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(CheckedPopupMenuItem<String>, 'Kệ A'));
+      await tester.pumpAndSettle();
+      expect(find.text('Chương chưa đọc trước tiến độ'), findsOneWidget);
+      expect(find.text('Truyện first'), findsOneWidget);
+      expect(find.text('Truyện second'), findsNothing);
+      expect(find.text('Chương chưa đọc · Kệ A'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
     'history searches real books and removes one history entry without changing progress or cache',
     (tester) async {
       final repo = MemoryLibraryRepository();
