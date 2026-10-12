@@ -5,9 +5,10 @@ import '../domain/library_book.dart';
 import '../domain/library_grouping.dart';
 
 class LibraryGroupEdit {
-  const LibraryGroupEdit(this.grouping, this.value);
+  const LibraryGroupEdit(this.grouping, this.value, {this.categories});
   final LibraryGrouping grouping;
   final String value;
+  final List<String>? categories;
 }
 
 Future<LibraryGroupEdit?> showLibraryGroupDialog(
@@ -42,6 +43,20 @@ class _LibraryGroupDialogState extends State<_LibraryGroupDialog> {
   final form = GlobalKey<FormState>();
   late LibraryGrouping grouping = widget.grouping;
   late final controller = TextEditingController(text: commonValue());
+  bool multipleCategories = false;
+  late final selectedCategories = commonCategories();
+
+  Set<String> commonCategories() {
+    final selected = widget.books
+        .where((book) => widget.selectedIds.contains(book.id))
+        .toList();
+    if (selected.isEmpty) return {};
+    final common = selected.first.categories.toSet();
+    for (final book in selected.skip(1)) {
+      common.retainAll(book.categories);
+    }
+    return common;
+  }
 
   String commonValue() {
     final values = widget.books
@@ -97,26 +112,71 @@ class _LibraryGroupDialogState extends State<_LibraryGroupDialog> {
                 },
               ),
               const SizedBox(height: 16),
+              if (grouping == LibraryGrouping.collection)
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  key: const ValueKey('multiple-categories'),
+                  title: const Text('Nhiều danh mục'),
+                  value: multipleCategories,
+                  onChanged: (value) => setState(() {
+                    multipleCategories = value;
+                    controller.text = value ? '' : commonValue();
+                  }),
+                ),
+              if (grouping == LibraryGrouping.collection &&
+                  multipleCategories &&
+                  names.isNotEmpty)
+                SizedBox(
+                  height: 150,
+                  child: ListView(
+                    children: [
+                      for (final name in names)
+                        CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(name),
+                          key: ValueKey('assign-category-$name'),
+                          value: selectedCategories.contains(name),
+                          onChanged: (value) => setState(() {
+                            if (value == true) {
+                              selectedCategories.add(name);
+                            } else {
+                              selectedCategories.remove(name);
+                            }
+                          }),
+                        ),
+                    ],
+                  ),
+                ),
               TextFormField(
                 key: const ValueKey('group-name'),
                 controller: controller,
                 maxLength: 256,
                 decoration: InputDecoration(
-                  labelText: 'Tên ${grouping.label.toLowerCase()}',
+                  labelText:
+                      multipleCategories &&
+                          grouping == LibraryGrouping.collection
+                      ? 'Thêm tên danh mục mới (tùy chọn)'
+                      : 'Tên ${grouping.label.toLowerCase()}',
                 ),
                 validator: (value) =>
                     grouping == LibraryGrouping.collection &&
+                        !multipleCategories &&
                         (value ?? '').trim().isEmpty
                     ? 'Nhập tên kệ.'
                     : null,
               ),
               Text(
                 grouping == LibraryGrouping.collection
-                    ? 'Chuyển các sách đã chọn vào cùng kệ.'
+                    ? multipleCategories
+                          ? 'Gán các danh mục đã chọn cho mọi sách. Bỏ hết để về Mặc định.'
+                          : 'Chuyển các sách đã chọn vào cùng kệ.'
                     : 'Gán cùng ${grouping.label.toLowerCase()} cho các sách đã chọn. Kệ thủ công được giữ nguyên. Để trống để xóa thông tin này.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-              if (names.isNotEmpty) ...[
+              if (names.isNotEmpty &&
+                  !(grouping == LibraryGrouping.collection &&
+                      multipleCategories)) ...[
                 const SizedBox(height: 12),
                 const Text('Tên đã có'),
                 SizedBox(
@@ -146,7 +206,19 @@ class _LibraryGroupDialogState extends State<_LibraryGroupDialog> {
             if (form.currentState!.validate()) {
               Navigator.pop(
                 context,
-                LibraryGroupEdit(grouping, controller.text.trim()),
+                LibraryGroupEdit(
+                  grouping,
+                  controller.text.trim(),
+                  categories:
+                      grouping == LibraryGrouping.collection &&
+                          multipleCategories
+                      ? List.unmodifiable({
+                          ...selectedCategories,
+                          if (controller.text.trim().isNotEmpty)
+                            controller.text.trim(),
+                        })
+                      : null,
+                ),
               );
             }
           },

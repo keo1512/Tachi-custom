@@ -7,8 +7,16 @@ import 'package:xml/xml.dart';
 
 import '../domain/library_book.dart';
 import 'library_repository.dart';
+import 'local_comic_metadata.dart';
+import 'local_comic_files_platform.dart';
 
 class DocumentImporter {
+  DocumentImporter({
+    Future<Map<String, Uint8List>> Function(Uint8List)? extractRar,
+    this.stableComicChapterIds = false,
+  }) : _extractRar = extractRar ?? NativeLocalComicFilesPlatform().extractRar;
+  final Future<Map<String, Uint8List>> Function(Uint8List) _extractRar;
+  final bool stableComicChapterIds;
   static const maxInputBytes = 100 * 1024 * 1024;
   static const maxExpandedBytes = 200 * 1024 * 1024;
   static const maxEntryBytes = 8 * 1024 * 1024;
@@ -17,8 +25,9 @@ class DocumentImporter {
   Future<LibraryBook> import(
     String filename,
     Uint8List bytes,
-    LibraryRepository repo,
-  ) async {
+    LibraryRepository repo, {
+    List<String>? defaultCategories,
+  }) async {
     if (bytes.isEmpty || bytes.length > maxInputBytes) {
       throw const FormatException('Tệp trống hoặc vượt giới hạn nhập 100 MB.');
     }
@@ -38,16 +47,35 @@ class DocumentImporter {
       'txt' => await _text(id, title, bytes),
       'epub' => await _epub(id, title, bytes, staging),
       'cbz' || 'zip' => await _comic(id, title, bytes, staging),
+      'cbr' || 'rar' => await _comicEntries(
+        id,
+        title,
+        await _extractRar(bytes),
+        staging,
+      ),
+      'png' ||
+      'jpg' ||
+      'jpeg' ||
+      'webp' ||
+      'gif' ||
+      'avif' ||
+      'heic' ||
+      'heif' ||
+      'jxl' => await _singleImage(id, title, filename, bytes, staging),
       _ => throw const FormatException(
-        'Hỗ trợ EPUB, TXT, CBZ và ZIP chứa ảnh.',
+        'Hỗ trợ EPUB, TXT, CBZ, ZIP, CBR, RAR và tệp ảnh truyện.',
       ),
     };
-    repo.validateBook(parsed.book);
+    final book = parsed.book.copyWith(
+      createdAt: DateTime.now(),
+      categories: defaultCategories,
+    );
+    repo.validateBook(book);
     for (var index = 0; index < parsed.contents.length; index++) {
       repo.validateChapter(index, parsed.contents[index]);
     }
     return repo.insertBook(
-      parsed.book,
+      book,
       contents: {
         for (var index = 0; index < parsed.contents.length; index++)
           index: parsed.contents[index],
@@ -133,30 +161,158 @@ class DocumentImporter {
     LibraryRepository repo,
   ) async {
     final zip = _SafeZip(bytes);
-    final names = zip.names.where((name) => _imageType(name) != null).toList()
-      ..sort(_naturalCompare);
+    return _comicReader(id, title, zip.names, zip.read, repo);
+  }
+
+  /// Native RAR extraction and Files-folder scans share archive validation and
+  /// the same natural page/chapter ordering, metadata and cover handling.
+  Future<LibraryBook> importComicEntries(
+    String id,
+    String title,
+    Map<String, Uint8List> entries,
+    LibraryRepository repo,
+  ) async {
+    final staging = MemoryLibraryRepository();
+    final parsed = await _comicEntries(id, title, entries, staging);
+    return repo.insertBook(
+      parsed.book,
+      contents: {
+        for (var i = 0; i < parsed.contents.length; i++) i: parsed.contents[i],
+      },
+      expectedRevision: repo.replacementRevision,
+    );
+  }
+
+  Future<_ParsedBook> _comicEntries(
+    String id,
+    String title,
+    Map<String, Uint8List> entries,
+    LibraryRepository repo,
+  ) {
+    if (entries.isEmpty || entries.length > maxEntries) {
+      throw const FormatException(
+        'Thư mục/archive trống hoặc có quá nhiều mục.',
+      );
+    }
+    var expanded = 0;
+    for (final entry in entries.entries) {
+      _safePath(entry.key);
+      expanded += entry.value.length;
+      if (entry.value.length > maxEntryBytes || expanded > maxExpandedBytes) {
+        throw const FormatException(
+          'Ảnh/archive vượt giới hạn 8 MB/mục hoặc 200 MB tổng.',
+        );
+      }
+    }
+    return _comicReader(
+      id,
+      title,
+      entries.keys,
+      (name) => entries[name]!,
+      repo,
+    );
+  }
+
+  Future<_ParsedBook> _comicReader(
+    String id,
+    String title,
+    Iterable<String> entryNames,
+    Uint8List Function(String) read,
+    LibraryRepository repo,
+  ) async {
+    final names =
+        entryNames.where((name) => localImageType(name) != null).toList()
+          ..sort(naturalFileCompare);
     if (names.isEmpty) {
       throw const FormatException(
-        'ZIP/CBZ không có ảnh PNG, JPEG, WebP, GIF hoặc AVIF.',
+        'ZIP/CBZ không có ảnh truyện được nhận diện.',
       );
     }
-    final pages = <String>[];
-    for (final name in names) {
-      pages.add(
-        await repo.storeAttachment(id, zip.read(name), _imageType(name)!),
+    final metadata = entryNames.contains('details.json')
+        ? LocalComicMetadata.decode(read('details.json'))
+        : null;
+    final covers = names
+        .where(
+          (name) =>
+              !name.contains('/') &&
+              name.toLowerCase().split('.').first == 'cover',
+        )
+        .toList();
+    final coverName =
+        covers.where((name) => name.toLowerCase() == 'cover.jpg').firstOrNull ??
+        covers.firstOrNull;
+    final pageNames = names.where((name) => !covers.contains(name)).toList();
+    if (pageNames.isEmpty) pageNames.addAll(names);
+    final groups = <String, List<String>>{};
+    for (final name in pageNames) {
+      final slash = name.lastIndexOf('/');
+      final group = slash < 0 ? '' : name.substring(0, slash);
+      (groups[group] ??= []).add(name);
+    }
+    final folders = groups.keys.toList()..sort(naturalFileCompare);
+    final contents = <ReaderContent>[];
+    final chapters = <BookChapter>[];
+    for (final folder in folders) {
+      final pages = <String>[];
+      for (final name in groups[folder]!) {
+        pages.add(
+          await repo.storeAttachment(id, read(name), localImageType(name)!),
+        );
+      }
+      final index = contents.length;
+      contents.add(ReaderContent(kind: 'manga', images: pages));
+      chapters.add(
+        BookChapter(
+          id: stableComicChapterIds ? '$id:folder:$folder' : '$id:$index',
+          title: folder.isEmpty ? title : folder.split('/').last,
+          index: index,
+          downloaded: true,
+        ),
       );
     }
+    final cover = coverName == null
+        ? contents.first.images.first
+        : await repo.storeAttachment(
+            id,
+            read(coverName),
+            localImageType(coverName)!,
+          );
+    var book = LibraryBook(
+      id: id,
+      title: title,
+      kind: 'manga',
+      cover: cover,
+      chapters: chapters,
+    );
+    if (metadata != null) book = metadata.apply(book);
+    return _ParsedBook(book, contents);
+  }
+
+  Future<_ParsedBook> _singleImage(
+    String id,
+    String title,
+    String filename,
+    Uint8List bytes,
+    LibraryRepository repo,
+  ) async {
+    final image = await repo.storeAttachment(
+      id,
+      bytes,
+      localImageType(filename)!,
+    );
     return _ParsedBook(
       LibraryBook(
         id: id,
         title: title,
         kind: 'manga',
-        cover: pages.first,
+        cover: image,
         chapters: [
           BookChapter(id: '$id:0', title: title, index: 0, downloaded: true),
         ],
       ),
-      [ReaderContent(kind: 'manga', images: pages)],
+      [
+        ReaderContent(kind: 'manga', images: [image]),
+      ],
     );
   }
 
@@ -246,7 +402,7 @@ class DocumentImporter {
         packagePath,
         coverItem.getAttribute('href') ?? '',
       );
-      final type = _imageType(coverPath);
+      final type = localImageType(coverPath);
       if (type != null) {
         cover = await repo.storeAttachment(id, zip.read(coverPath), type);
       }
@@ -303,7 +459,7 @@ class DocumentImporter {
               );
           if (source == null || source.isEmpty) continue;
           final resourcePath = _resolve(path, source);
-          final type = _imageType(resourcePath);
+          final type = localImageType(resourcePath);
           if (type == null) {
             throw const FormatException('EPUB chứa ảnh không được hỗ trợ.');
           }
@@ -404,35 +560,6 @@ String _resolve(String base, String reference) {
   final result = parts.join('/');
   _safePath(result);
   return result;
-}
-
-String? _imageType(String name) => switch (name.toLowerCase().split('.').last) {
-  'png' => 'image/png',
-  'jpg' || 'jpeg' => 'image/jpeg',
-  'webp' => 'image/webp',
-  'gif' => 'image/gif',
-  'avif' => 'image/avif',
-  _ => null,
-};
-
-int _naturalCompare(String left, String right) {
-  final a = RegExp(r'\d+|\D+')
-      .allMatches(left.toLowerCase())
-      .map((match) => match.group(0)!)
-      .toList();
-  final b = RegExp(r'\d+|\D+')
-      .allMatches(right.toLowerCase())
-      .map((match) => match.group(0)!)
-      .toList();
-  for (var index = 0; index < a.length && index < b.length; index++) {
-    final ai = BigInt.tryParse(a[index]), bi = BigInt.tryParse(b[index]);
-    final comparison = ai != null && bi != null
-        ? ai.compareTo(bi)
-        : a[index].compareTo(b[index]);
-    if (comparison != 0) return comparison;
-  }
-  final comparison = a.length.compareTo(b.length);
-  return comparison != 0 ? comparison : left.compareTo(right);
 }
 
 class _SafeZip {

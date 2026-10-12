@@ -1,3 +1,5 @@
+import 'external_backup_metadata.dart';
+
 class BookChapter {
   const BookChapter({
     required this.id,
@@ -5,11 +7,21 @@ class BookChapter {
     required this.index,
     this.downloaded = false,
     this.read,
+    this.uploadedAt,
+    this.discoveredAt,
+    this.scanlator = '',
+    this.number,
   });
   final String id;
   final String title;
   final int index;
   final bool downloaded;
+  final DateTime? uploadedAt;
+
+  /// When an update first found this chapter; legacy/imported chapters stay null.
+  final DateTime? discoveredAt;
+  final String scanlator;
+  final double? number;
 
   /// null keeps the existing sequential progress inference for older libraries.
   final bool? read;
@@ -19,12 +31,23 @@ class BookChapter {
     int? index,
     bool? downloaded,
     bool? read,
+    DateTime? uploadedAt,
+    DateTime? discoveredAt,
+    bool clearDiscoveredAt = false,
+    String? scanlator,
+    double? number,
   }) => BookChapter(
     id: id ?? this.id,
     title: title ?? this.title,
     index: index ?? this.index,
     downloaded: downloaded ?? this.downloaded,
     read: read ?? this.read,
+    uploadedAt: uploadedAt ?? this.uploadedAt,
+    discoveredAt: clearDiscoveredAt
+        ? null
+        : (discoveredAt ?? this.discoveredAt),
+    scanlator: scanlator ?? this.scanlator,
+    number: number ?? this.number,
   );
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -32,6 +55,10 @@ class BookChapter {
     'index': index,
     'downloaded': downloaded,
     if (read != null) 'read': read,
+    if (uploadedAt != null) 'uploadedAt': uploadedAt!.toIso8601String(),
+    if (discoveredAt != null) 'discoveredAt': discoveredAt!.toIso8601String(),
+    if (scanlator.isNotEmpty) 'scanlator': scanlator,
+    if (number != null) 'number': number,
   };
   factory BookChapter.fromJson(Map<String, dynamic> json) => BookChapter(
     id: json['id'] as String,
@@ -39,6 +66,14 @@ class BookChapter {
     index: (json['index'] as num).toInt(),
     downloaded: json['downloaded'] as bool? ?? false,
     read: json['read'] as bool?,
+    uploadedAt: json['uploadedAt'] == null
+        ? null
+        : DateTime.parse(json['uploadedAt'] as String),
+    discoveredAt: json['discoveredAt'] == null
+        ? null
+        : DateTime.parse(json['discoveredAt'] as String),
+    scanlator: json['scanlator'] as String? ?? '',
+    number: (json['number'] as num?)?.toDouble(),
   );
 }
 
@@ -46,26 +81,44 @@ class LibraryBook {
   LibraryBook({
     required this.id,
     required this.title,
+    List<String> alternativeTitles = const [],
     this.author = '',
     this.artist = '',
     List<String> genres = const [],
     this.notes = '',
+    this.externalBackupMetadata,
     this.series = '',
     this.description = '',
     this.kind = 'novel',
     this.engine = 'local',
     this.sourceId = '',
+    this.sourceName = '',
     this.sourceRef = '',
     this.cover = '',
+    this.originalCover = '',
+    this.customCover = false,
     List<BookChapter> chapters = const [],
     this.currentChapter = 0,
     this.progress = 0,
     this.lastRead,
     this.favorite = false,
     this.completed = false,
-    this.collection = 'Mặc định',
+    this.status = 0,
+    this.readingState = '',
+    this.rating,
+    String collection = 'Mặc định',
+    List<String>? categories,
+    this.createdAt,
+    this.lastUpdated,
+    Map<String, dynamic> readerPreferences = const {},
+    Map<String, dynamic> chapterListPreferences = const {},
     List<String> bookmarks = const [],
-  }) : genres = List.unmodifiable(genres),
+  }) : alternativeTitles = List.unmodifiable(alternativeTitles),
+       genres = List.unmodifiable(genres),
+       categories = List.unmodifiable(_categoryNames(categories, collection)),
+       collection = _categoryNames(categories, collection).first,
+       readerPreferences = Map.unmodifiable(readerPreferences),
+       chapterListPreferences = Map.unmodifiable(chapterListPreferences),
        chapters = List.unmodifiable(chapters),
        bookmarks = List.unmodifiable(bookmarks);
   final String id,
@@ -78,99 +131,165 @@ class LibraryBook {
       kind,
       engine,
       sourceId,
+      sourceName,
       sourceRef,
       cover,
+      originalCover,
+      readingState,
       collection;
+  final List<String> alternativeTitles;
+  final bool customCover;
+  final double? rating;
   final List<BookChapter> chapters;
   final List<String> genres;
+  final ExternalBackupMetadata? externalBackupMetadata;
+
+  /// The first membership remains the legacy `collection` for older consumers.
+  final List<String> categories;
+  final Map<String, dynamic> readerPreferences;
+  final Map<String, dynamic> chapterListPreferences;
   final List<String> bookmarks;
   final int currentChapter;
   final double progress;
   final DateTime? lastRead;
+  final DateTime? createdAt, lastUpdated;
   final bool favorite, completed;
+  final int status;
   LibraryBook copyWith({
     String? id,
     String? title,
+    List<String>? alternativeTitles,
     String? author,
     String? artist,
     List<String>? genres,
     String? notes,
+    ExternalBackupMetadata? externalBackupMetadata,
     String? series,
     String? description,
     String? kind,
     String? engine,
     String? sourceId,
+    String? sourceName,
     String? sourceRef,
     String? cover,
+    String? originalCover,
+    bool? customCover,
     List<BookChapter>? chapters,
     int? currentChapter,
     double? progress,
     DateTime? lastRead,
     bool? favorite,
     bool? completed,
+    int? status,
+    String? readingState,
+    double? rating,
+    bool clearRating = false,
     String? collection,
+    List<String>? categories,
+    DateTime? createdAt,
+    DateTime? lastUpdated,
+    Map<String, dynamic>? readerPreferences,
+    Map<String, dynamic>? chapterListPreferences,
     List<String>? bookmarks,
     bool clearLastRead = false,
   }) => LibraryBook(
     id: id ?? this.id,
     title: title ?? this.title,
+    alternativeTitles: alternativeTitles ?? this.alternativeTitles,
     author: author ?? this.author,
     artist: artist ?? this.artist,
     genres: genres ?? this.genres,
     notes: notes ?? this.notes,
+    externalBackupMetadata:
+        externalBackupMetadata ?? this.externalBackupMetadata,
     series: series ?? this.series,
     description: description ?? this.description,
     kind: kind ?? this.kind,
     engine: engine ?? this.engine,
     sourceId: sourceId ?? this.sourceId,
+    sourceName: sourceName ?? this.sourceName,
     sourceRef: sourceRef ?? this.sourceRef,
     cover: cover ?? this.cover,
+    originalCover: originalCover ?? this.originalCover,
+    customCover: customCover ?? this.customCover,
     chapters: chapters ?? this.chapters,
     currentChapter: currentChapter ?? this.currentChapter,
     progress: progress ?? this.progress,
     lastRead: clearLastRead ? null : (lastRead ?? this.lastRead),
     favorite: favorite ?? this.favorite,
     completed: completed ?? this.completed,
+    status: status ?? this.status,
+    readingState: readingState ?? this.readingState,
+    rating: clearRating ? null : (rating ?? this.rating),
     collection: collection ?? this.collection,
+    categories: categories ?? (collection == null ? this.categories : null),
+    createdAt: createdAt ?? this.createdAt,
+    lastUpdated: lastUpdated ?? this.lastUpdated,
+    readerPreferences: readerPreferences ?? this.readerPreferences,
+    chapterListPreferences:
+        chapterListPreferences ?? this.chapterListPreferences,
     bookmarks: bookmarks ?? this.bookmarks,
   );
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
+    if (alternativeTitles.isNotEmpty) 'alternativeTitles': alternativeTitles,
     'author': author,
     'artist': artist,
     'genres': genres,
     'notes': notes,
+    if (externalBackupMetadata != null)
+      'externalBackupMetadata': externalBackupMetadata!.toJson(),
     'series': series,
     'description': description,
     'kind': kind,
     'engine': engine,
     'sourceId': sourceId,
+    if (sourceName.isNotEmpty) 'sourceName': sourceName,
     'sourceRef': sourceRef,
     'cover': cover,
+    if (originalCover.isNotEmpty) 'originalCover': originalCover,
+    if (customCover) 'customCover': true,
     'chapters': chapters.map((value) => value.toJson()).toList(),
     'currentChapter': currentChapter,
     'progress': progress,
     'lastRead': lastRead?.toIso8601String(),
     'favorite': favorite,
     'completed': completed,
+    'status': status,
+    if (readingState.isNotEmpty) 'readingState': readingState,
+    if (rating != null) 'rating': rating,
     'collection': collection,
+    'categories': categories,
+    if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+    if (lastUpdated != null) 'lastUpdated': lastUpdated!.toIso8601String(),
+    if (readerPreferences.isNotEmpty) 'readerPreferences': readerPreferences,
+    if (chapterListPreferences.isNotEmpty)
+      'chapterListPreferences': chapterListPreferences,
     'bookmarks': bookmarks,
   };
   factory LibraryBook.fromJson(Map<String, dynamic> json) => LibraryBook(
     id: json['id'] as String,
     title: json['title'] as String,
+    alternativeTitles: (json['alternativeTitles'] as List? ?? const [])
+        .cast<String>(),
     author: json['author'] as String? ?? '',
     artist: json['artist'] as String? ?? '',
     genres: (json['genres'] as List? ?? const []).cast<String>(),
     notes: json['notes'] as String? ?? '',
+    externalBackupMetadata: json.containsKey('externalBackupMetadata')
+        ? ExternalBackupMetadata.fromJson(json['externalBackupMetadata'])
+        : null,
     series: json['series'] as String? ?? '',
     description: json['description'] as String? ?? '',
     kind: json['kind'] as String? ?? 'novel',
     engine: json['engine'] as String? ?? 'local',
     sourceId: json['sourceId'] as String? ?? '',
+    sourceName: json['sourceName'] as String? ?? '',
     sourceRef: json['sourceRef'] as String? ?? '',
     cover: json['cover'] as String? ?? '',
+    originalCover: json['originalCover'] as String? ?? '',
+    customCover: json['customCover'] as bool? ?? false,
     chapters: (json['chapters'] as List? ?? [])
         .map(
           (value) =>
@@ -184,9 +303,35 @@ class LibraryBook {
         : DateTime.parse(json['lastRead'] as String),
     favorite: json['favorite'] as bool? ?? false,
     completed: json['completed'] as bool? ?? false,
+    status: (json['status'] as num?)?.toInt() ?? 0,
+    readingState: json['readingState'] as String? ?? '',
+    rating: (json['rating'] as num?)?.toDouble(),
     collection: json['collection'] as String? ?? 'Mặc định',
+    categories: (json['categories'] as List?)?.cast<String>(),
+    createdAt: json['createdAt'] == null
+        ? null
+        : DateTime.parse(json['createdAt'] as String),
+    lastUpdated: json['lastUpdated'] == null
+        ? null
+        : DateTime.parse(json['lastUpdated'] as String),
+    readerPreferences: Map<String, dynamic>.from(
+      json['readerPreferences'] as Map? ?? const {},
+    ),
+    chapterListPreferences: Map<String, dynamic>.from(
+      json['chapterListPreferences'] as Map? ?? const {},
+    ),
     bookmarks: (json['bookmarks'] as List? ?? []).cast<String>(),
   );
+}
+
+List<String> _categoryNames(List<String>? categories, String collection) {
+  if (categories == null) return [collection];
+  final values = categories
+      .map((name) => name.trim())
+      .where((name) => name.isNotEmpty)
+      .toSet()
+      .toList();
+  return values.isEmpty ? ['Mặc định'] : values;
 }
 
 class ReaderContent {

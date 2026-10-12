@@ -103,8 +103,8 @@ void main() {
       final controller = container.read(downloadQueueProvider.notifier);
       await controller.enqueue('book', ['a', 'b', 'c']);
       await controller.start();
-      await _until(() => calls.length == 2);
-      expect(calls, ['a', 'b']);
+      await _until(() => calls.length == 1);
+      expect(calls, ['a']);
       expect(
         DownloadQueueRepository(prefs)
             .load()
@@ -115,17 +115,22 @@ void main() {
       );
       controller.pause();
       blockers['a']!.complete();
-      blockers['b']!.complete();
       await _until(
-        () => container.read(downloadQueueProvider).tasks.length == 1,
+        () => container.read(downloadQueueProvider).tasks.length == 2,
       );
-      expect(calls, ['a', 'b']);
+      expect(calls, ['a']);
       expect(container.read(downloadQueueProvider).running, false);
       final restarted = ProviderContainer(
         overrides: [preferencesProvider.overrideWithValue(prefs)],
       );
       addTearDown(restarted.dispose);
-      expect(restarted.read(downloadQueueProvider).tasks.single.chapterId, 'c');
+      expect(
+        restarted
+            .read(downloadQueueProvider)
+            .tasks
+            .map((task) => task.chapterId),
+        ['b', 'c'],
+      );
       expect(restarted.read(downloadQueueProvider).running, false);
     },
   );

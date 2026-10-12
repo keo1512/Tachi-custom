@@ -8,6 +8,8 @@ import 'package:sqlite3/sqlite3.dart';
 
 import 'bounded_archive.dart';
 import 'external_library.dart';
+import 'protobuf_writer.dart';
+import '../../domain/external_backup_metadata.dart';
 
 /// Verified against a user-provided Tachimanga 5.0 / build511 .tmb.
 /// Only the library tables are read. Preferences/JARs/account tables are ignored.
@@ -103,16 +105,32 @@ ConvertedBackup _readLibrary(Database db) {
       throw const FormatException('Schema bảng Tachimanga chưa được hỗ trợ.');
     }
   }
+  final mangaColumns = db
+      .select('PRAGMA table_info("Manga")')
+      .map((row) => row['name'])
+      .toSet();
+  final optionalStatus = [
+    for (final column in ['status', 'memo', 'artist', 'genre'])
+      if (mangaColumns.contains(column)) ',$column',
+  ].join();
   final manga = db.select(
-    'SELECT id,url,title,author,description,thumbnail_url,source '
+    'SELECT id,url,title,author,description,thumbnail_url,source$optionalStatus '
     'FROM Manga WHERE in_library=1 ORDER BY id LIMIT 10001',
   );
   if (manga.length > 10000) {
     throw const FormatException('Backup có quá nhiều truyện trong thư viện.');
   }
+  final chapterColumns = db
+      .select('PRAGMA table_info("Chapter")')
+      .map((row) => row['name'])
+      .toSet();
+  final optionalChapterColumns = [
+    for (final column in ['date_upload', 'chapter_number', 'scanlator'])
+      if (chapterColumns.contains(column)) ',c.$column',
+  ].join();
   final chapters = db.select(
     'SELECT c.id,c.manga,c.url,c.name,c.read,c.bookmark,c.last_page_read,'
-    'c.last_read_at,c.source_order,c.page_count FROM Chapter c JOIN Manga m ON c.manga=m.id '
+    'c.last_read_at,c.source_order,c.page_count$optionalChapterColumns FROM Chapter c JOIN Manga m ON c.manga=m.id '
     'WHERE m.in_library=1 ORDER BY c.id LIMIT 100001',
   );
   if (chapters.length > 100000) {
@@ -147,6 +165,7 @@ ConvertedBackup _readLibrary(Database db) {
   for (final row in history) {
     latest.putIfAbsent(_integer(row['manga_id']), () => row);
   }
+  final tracking = _tracking(db);
   final titles = <ExternalTitle>[];
   for (final row in manga) {
     final id = _integer(row['id']);
@@ -171,9 +190,34 @@ ConvertedBackup _readLibrary(Database db) {
     titles.add(
       ExternalTitle(
         source: _integer(row['source']).toString(),
+        status: mangaColumns.contains('status') ? _integer(row['status']) : 0,
         url: _string(row['url']),
         title: _string(row['title']),
         author: _string(row['author'], optional: true),
+        artist: mangaColumns.contains('artist')
+            ? _string(row['artist'], optional: true)
+            : '',
+        genres: mangaColumns.contains('genre')
+            ? _genres(row['genre'])
+            : const [],
+        externalBackupMetadata:
+            !mangaColumns.contains('memo') && (tracking[id]?.isEmpty ?? true)
+            ? null
+            : ExternalBackupMetadata(
+                format: 'tachimanga-build511',
+                engine: 'tachimanga',
+                sourceId: _integer(row['source']).toString(),
+                sourceRef: _string(row['url']),
+                tracking: [
+                  for (final value in tracking[id] ?? const []) value.$1,
+                ],
+                trackingArchive: [
+                  for (final value in tracking[id] ?? const []) value.$2,
+                ],
+                memo: mangaColumns.contains('memo')
+                    ? base64Encode(utf8.encode(_string(row['memo'])))
+                    : null,
+              ),
         description: _string(row['description'], optional: true),
         cover: _string(row['thumbnail_url'], optional: true),
         categories: selected
@@ -193,6 +237,15 @@ ConvertedBackup _readLibrary(Database db) {
                 // Tachimanga uses -1 for an unknown page count.
                 pageCount: _pageCount(chapter['page_count']),
                 lastRead: _integer(chapter['last_read_at']),
+                uploadedAt: chapterColumns.contains('date_upload')
+                    ? _integer(chapter['date_upload'])
+                    : 0,
+                scanlator: chapterColumns.contains('scanlator')
+                    ? _string(chapter['scanlator'], optional: true)
+                    : '',
+                number: chapterColumns.contains('chapter_number')
+                    ? _number(chapter['chapter_number'])
+                    : null,
               ),
             )
             .toList(),
@@ -200,6 +253,117 @@ ConvertedBackup _readLibrary(Database db) {
     );
   }
   return convertExternalLibrary('Tachimanga 5.0 (build511)', titles);
+}
+
+/// The optional TrackRecord columns were verified in the provided build511
+/// database. Only active library rows are read, without account/session tables.
+Map<int, List<(String, String)>> _tracking(Database db) {
+  final schema = db.select(
+    "SELECT type FROM sqlite_master WHERE name='TrackRecord'",
+  );
+  if (schema.isEmpty) return {};
+  final columns = db
+      .select('PRAGMA table_info("TrackRecord")')
+      .map((row) => row['name'])
+      .toSet();
+  const required = [
+    'manga_id',
+    'sync_id',
+    'remote_id',
+    'library_id',
+    'title',
+    'last_chapter_read',
+    'total_chapters',
+    'status',
+    'score',
+    'remote_url',
+    'start_date',
+    'finish_date',
+    'is_delete',
+  ];
+  if (schema.length != 1 ||
+      schema.single['type'] != 'table' ||
+      !columns.containsAll(required)) {
+    throw const FormatException(
+      'Schema tracker Tachimanga chưa được xác minh.',
+    );
+  }
+  final rows = db.select(
+    'SELECT t.* FROM TrackRecord t JOIN Manga m ON m.id=t.manga_id '
+    'WHERE m.in_library=1 AND t.is_delete=0 ORDER BY t.manga_id,t.sync_id '
+    'LIMIT 100001',
+  );
+  if (rows.length > 100000) {
+    throw const FormatException('Sao lưu có quá nhiều liên kết tracker.');
+  }
+  final result = <int, List<(String, String)>>{};
+  final identities = <String>{};
+  for (final row in rows) {
+    final mangaId = _integer(row['manga_id']);
+    final sync = _integer(row['sync_id']);
+    final total = _integer(row['total_chapters']);
+    final status = _integer(row['status']);
+    if (!identities.add('$mangaId:$sync') ||
+        [sync, total, status].any((n) => n < -0x80000000 || n > 0x7fffffff)) {
+      throw const FormatException(
+        'Liên kết tracker trùng hoặc số vượt giới hạn.',
+      );
+    }
+    final writer = ProtoWriter()
+      ..int64(1, sync)
+      ..int64(2, row['library_id'] == null ? 0 : _integer(row['library_id']))
+      ..string(4, _string(row['remote_url']))
+      ..string(5, _string(row['title']))
+      ..float32(6, _requiredNumber(row['last_chapter_read']))
+      ..int64(7, total)
+      ..float32(8, _requiredNumber(row['score']))
+      ..int64(9, status)
+      ..int64(10, _integer(row['start_date']))
+      ..int64(11, _integer(row['finish_date']))
+      ..int64(100, _integer(row['remote_id']));
+    final values = result.putIfAbsent(mangaId, () => []);
+    if (values.length >= ExternalBackupMetadata.maxTrackers) {
+      throw const FormatException(
+        'Sao lưu có quá nhiều tracker cho một truyện.',
+      );
+    }
+    final archive = jsonEncode({
+      for (final key in required)
+        if (key != 'manga_id' && key != 'is_delete')
+          key: row[key] is int ? (row[key] as int).toString() : row[key],
+    });
+    values.add((
+      base64Encode(writer.finish()),
+      base64Encode(utf8.encode(archive)),
+    ));
+  }
+  return result;
+}
+
+List<String> _genres(Object? value) {
+  final text = _string(value, optional: true);
+  // Verified Suwayomi build511 stores this column as comma-separated text.
+  return text
+      .split(',')
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toList();
+}
+
+double _requiredNumber(Object? value) {
+  final result = _number(value);
+  if (result == null) {
+    throw const FormatException('Tracker thiếu số thực bắt buộc.');
+  }
+  return result;
+}
+
+double? _number(Object? value) {
+  if (value == null) return null;
+  if (value is! num || !value.isFinite) {
+    throw const FormatException('Số chương trong backup không hợp lệ.');
+  }
+  return value.toDouble();
 }
 
 int _pageCount(Object? value) {

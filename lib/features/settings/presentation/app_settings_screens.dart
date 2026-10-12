@@ -10,6 +10,16 @@ import '../settings_controller.dart';
 import 'backup_settings_screen.dart';
 import 'connection_dialog.dart';
 import 'settings_widgets.dart';
+import 'navigation_settings_screen.dart';
+import 'library_update_settings_screen.dart';
+import '../../library/presentation/library_categories_screen.dart';
+import '../../privacy/presentation/privacy_settings.dart';
+import 'library_diagnostics_screen.dart';
+import '../../tasks/presentation/task_settings_screen.dart';
+import 'network_tools_screen.dart';
+import 'log_diagnostics_screen.dart';
+import 'storage_maintenance_screen.dart';
+import '../../library/presentation/local_comic_library_screen.dart';
 
 class GeneralSettingsScreen extends ConsumerStatefulWidget {
   const GeneralSettingsScreen({super.key});
@@ -43,24 +53,57 @@ class _GeneralSettingsState extends ConsumerState<GeneralSettingsScreen> {
       SettingsRow(
         icon: CupertinoIcons.doc_on_doc,
         title: 'Nhập sách & truyện',
-        subtitle: 'EPUB, TXT, CBZ, ZIP',
+        subtitle: 'EPUB, TXT, CBZ, ZIP và ảnh truyện',
         trailing: importing ? const CupertinoActivityIndicator() : null,
         onTap: importing ? null : importBooks,
       ),
       SettingsRow(
         icon: CupertinoIcons.link,
-        title: 'Kết nối nguồn',
-        subtitle: 'Tachimanga / Suwayomi và vBook',
+        title: 'Máy chủ nguồn tùy chọn',
+        subtitle: 'Dùng khi bạn muốn kết nối máy chủ riêng',
         onTap: () => showConnections(context, ref),
       ),
+      SettingsRow(
+        title: 'Truyện từ thư mục trên máy',
+        icon: CupertinoIcons.folder,
+        subtitle: 'Chọn Files, quét truyện và nhận chương mới khi quét lại',
+        onTap: () => openSettingsPage(context, const LocalComicLibraryScreen()),
+      ),
       const Divider(height: 24, thickness: .5),
+      SettingsRow(
+        title: 'Chẩn đoán thư viện',
+        icon: CupertinoIcons.checkmark_shield,
+        onTap: () =>
+            openSettingsPage(context, const LibraryDiagnosticsScreen()),
+      ),
+      SettingsRow(
+        title: 'Thông báo và tác vụ',
+        icon: CupertinoIcons.bell,
+        onTap: () => openSettingsPage(context, const TaskSettingsScreen()),
+      ),
+      SettingsRow(
+        title: 'Bộ nhớ & cache',
+        icon: CupertinoIcons.archivebox,
+        onTap: () =>
+            openSettingsPage(context, const StorageMaintenanceScreen()),
+      ),
+      SettingsRow(
+        title: 'WebView & mạng',
+        icon: CupertinoIcons.globe,
+        onTap: () => openSettingsPage(context, const NetworkToolsScreen()),
+      ),
+      SettingsRow(
+        title: 'Nhật ký & chẩn đoán',
+        icon: CupertinoIcons.doc_text_search,
+        onTap: () => openSettingsPage(context, const LogDiagnosticsScreen()),
+      ),
       const SettingsRow(
         title: 'TachiBooks',
         icon: CupertinoIcons.book,
         subtitle: 'Phiên bản 1.0.0 · iPhone và iPad',
       ),
       const SettingsNote(
-        'Thư viện chung cho truyện tranh, truyện chữ và ebook. Sách đã nhập hoặc chương đã tải có thể đọc offline.',
+        'Thư viện chung cho truyện tranh, truyện chữ và ebook. ZIP/CBZ có thể chứa thư mục chương, details.json và cover.jpg. HEIF, AVIF và JPEG XL cần bộ giải mã của thiết bị; trang lỗi sẽ báo rõ. Sách đã nhập hoặc chương đã tải có thể đọc offline.',
       ),
       SettingsRow(
         title: 'Giấy phép phần mềm',
@@ -80,21 +123,36 @@ class AppearanceSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dark = ref.watch(settingsProvider).dark;
+    final appearance = ref.watch(settingsProvider).appearance;
     return SettingsPage(
       title: 'Giao diện',
       children: [
         SettingsRow(
-          title: 'Giao diện tối',
-          icon: CupertinoIcons.moon,
-          trailing: CupertinoSwitch(
-            value: dark,
-            onChanged: (value) => perform(
+          title: 'Thanh tab',
+          icon: CupertinoIcons.square_grid_2x2,
+          onTap: () =>
+              openSettingsPage(context, const NavigationSettingsScreen()),
+        ),
+        for (final pair in const {
+          'system': 'Theo hệ thống',
+          'light': 'Sáng',
+          'dark': 'Tối / đen thuần',
+        }.entries)
+          SettingsRow(
+            title: pair.value,
+            icon: pair.key == 'dark'
+                ? CupertinoIcons.moon
+                : CupertinoIcons.sun_max,
+            trailing: appearance == pair.key
+                ? const Icon(CupertinoIcons.checkmark)
+                : null,
+            onTap: () => perform(
               context,
-              () => ref.read(settingsProvider.notifier).update(dark: value),
+              () => ref
+                  .read(settingsProvider.notifier)
+                  .update(appearance: pair.key),
             ),
           ),
-        ),
         const SettingsNote(
           'Lựa chọn giao diện được lưu trên thiết bị. Phông chữ và nền trang của reader được thiết lập riêng trong Độc giả.',
         ),
@@ -113,6 +171,18 @@ class LibrarySettingsScreen extends ConsumerWidget {
     return SettingsPage(
       title: 'Thư viện',
       children: [
+        SettingsRow(
+          title: 'Danh mục',
+          icon: CupertinoIcons.folder,
+          onTap: () =>
+              openSettingsPage(context, const LibraryCategoriesScreen()),
+        ),
+        SettingsRow(
+          title: 'Cập nhật & tải tự động',
+          icon: CupertinoIcons.arrow_2_circlepath,
+          onTap: () =>
+              openSettingsPage(context, const LibraryUpdateSettingsScreen()),
+        ),
         SettingsRow(
           title: 'Số cột hiển thị',
           subtitle: '$columns cột',
@@ -159,11 +229,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    final mode = switch (settings.mangaMode) {
-      'paged' => 'Lật trang',
-      'rtl' => 'Phải → trái',
-      _ => 'Cuộn dọc',
-    };
+    const mode = 'Cuộn dọc liên tục';
     return SettingsPage(
       title: 'Độc giả',
       children: [
@@ -221,12 +287,12 @@ class ExtensionSettingsScreen extends ConsumerWidget {
         onTap: () => context.go('/browse'),
       ),
       SettingsRow(
-        title: 'Kết nối nguồn',
+        title: 'Máy chủ nguồn tùy chọn',
         icon: CupertinoIcons.link,
         onTap: () => showConnections(context, ref),
       ),
       const SettingsNote(
-        'Nguồn APK dùng Suwayomi và nguồn vBook dùng runtime vBook đã cấu hình. Hai runtime hiện chạy ngoài thiết bị. Nội dung đã tải vẫn đọc được offline.',
+        'Thêm URL kho trong Duyệt → Phần mở rộng, chọn extension và cài. Bộ chạy nguồn Tachimanga/vBook được tích hợp trong app iOS. Máy chủ ngoài là tùy chọn; mỗi extension có thể có yêu cầu riêng.',
       ),
     ],
   );
@@ -265,9 +331,10 @@ class PrivacySettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) => const SettingsPage(
     title: 'Bảo mật',
     children: [
+      PrivacySettings(),
       SettingsHeading('Dữ liệu trên thiết bị'),
       SettingsNote(
-        'Thư viện, nội dung đã tải, tiến độ và dấu trang được lưu trong dữ liệu riêng của ứng dụng. App chưa có khóa bằng mật khẩu hoặc Face ID. Bản sao lưu JSON chưa được mã hóa.',
+        'Thư viện, nội dung đã tải, tiến độ và dấu trang được lưu trong dữ liệu riêng của ứng dụng. Bản sao lưu JSON chưa được mã hóa. Khóa ứng dụng không mã hóa file sao lưu.',
       ),
       SettingsHeading('Kết nối nguồn'),
       SettingsNote(
@@ -275,7 +342,7 @@ class PrivacySettingsScreen extends StatelessWidget {
       ),
       SettingsHeading('Phần mở rộng'),
       SettingsNote(
-        'Chỉ cài extension từ nguồn tin cậy. Extension được thực thi ở runtime bên ngoài thiết bị; runtime này có thể truy cập mạng và dữ liệu của nó.',
+        'Chỉ cài extension từ nguồn tin cậy. Extension chạy trong bộ nguồn của app, có thể truy cập mạng và dữ liệu của bộ chạy nguồn.',
       ),
     ],
   );
@@ -322,7 +389,7 @@ class DownloadSettingsScreen extends ConsumerWidget {
         'Mở chi tiết truyện, chọn tải một chương hoặc các chương chưa lưu. Manga lưu ảnh vào dữ liệu ứng dụng; truyện chữ lưu nội dung chương và ảnh đính kèm.',
       ),
       const SettingsNote(
-        'Nhập EPUB, TXT hoặc CBZ để đọc offline từ file. App hiện chưa có bộ lập lịch tải tự động hoặc lựa chọn chỉ tải qua Wi-Fi.',
+        'Có thể tải trước khi đọc và tải chương mới theo danh mục đã cho phép trong Cập nhật & tải tự động. Tác vụ tự động được thực hiện khi app đang hoạt động.',
       ),
     ],
   );

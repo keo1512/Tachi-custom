@@ -34,6 +34,8 @@ def value(source):
         return {"stringValue": source}
     if isinstance(source, int):
         return {"integerValue": str(source)}
+    if isinstance(source, float):
+        return {"doubleValue": source}
     if isinstance(source, list):
         return {"arrayValue": {"values": [value(item) for item in source]}}
     if isinstance(source, dict):
@@ -199,6 +201,59 @@ class FirestoreRulesTest(unittest.TestCase):
         self.assertEqual(status, 200)
         status, _ = self.commit([deletion])
         self.assertEqual(status, 200)
+
+    def test_incremental_manifest_retains_legacy_snapshot_and_format_is_bound(self):
+        old = self.seed()
+        new = {**head('d' * 32), 'format': 2}
+        status, _ = self.commit([
+            update(f"{ROOT}/snapshots/{new['id']}", {**new, 'schema': 'tachi-books-cloud-2'}, 'createdAt'),
+            update(f"{ROOT}/snapshots/{new['id']}/parts/0", {'data': 'eA=='}),
+        ])
+        self.assertEqual(status, 200)
+        fields = {**new, 'schema': 'tachi-books-cloud-2', 'retained': [new, old]}
+        status, _ = self.commit([update(f'{ROOT}/sync/head', fields, 'updatedAt')])
+        self.assertEqual(status, 200)
+        fields['retained'] = [{**new, 'format': 1}, old]
+        status, _ = self.commit([update(f'{ROOT}/sync/head', fields, 'updatedAt')])
+        self.assertEqual(status, 403)
+
+    def test_immutable_blobs_are_owner_only_and_cannot_be_overwritten_or_deleted(self):
+        path = f"{ROOT}/blobs/{'a' * 64}"
+        status, _ = self.commit([update(path, {'bytes': 1, 'data': 'eA=='})])
+        self.assertEqual(status, 200)
+        status, _ = request('GET', f'/v1/{DOCS}/{path}')
+        self.assertEqual(status, 200)
+        for uid in [None, 'bob']:
+            status, _ = request('GET', f'/v1/{DOCS}/{path}', uid=uid)
+            self.assertEqual(status, 403)
+        for write in [update(path, {'bytes': 1, 'data': 'eQ=='}), {'delete': f'{DOCS}/{path}'}]:
+            status, _ = self.commit([write])
+            self.assertEqual(status, 403)
+
+    def test_format_requires_an_integer_for_manifests_and_current_or_retained_heads(self):
+        for index, number in enumerate([1.0, 2.0]):
+            item = {**head(('e', 'f')[index] * 32), 'format': number}
+            schema = SCHEMA if number == 1.0 else 'tachi-books-cloud-2'
+            status, _ = self.commit([
+                update(f"{ROOT}/snapshots/{item['id']}", {**item, 'schema': schema}, 'createdAt'),
+            ])
+            self.assertEqual(status, 403)
+        current = self.seed()
+        for fields in [
+            {**current, 'format': 1.0, 'schema': SCHEMA, 'retained': [current]},
+            {**current, 'schema': SCHEMA, 'retained': [{**current, 'format': 1.0}]},
+        ]:
+            status, _ = self.commit([update(f'{ROOT}/sync/head', fields, 'updatedAt')])
+            self.assertEqual(status, 403)
+    def test_blob_limits_and_paths_are_denied(self):
+        for digest, fields in [
+            ('bad-hash', {'bytes': 1, 'data': 'eA=='}),
+            ('b' * 64, {'bytes': 393217, 'data': 'eA=='}),
+            ('c' * 64, {'bytes': 1, 'data': 'A' * 524289}),
+            ('d' * 64, {'bytes': 1, 'data': 'eA==', 'extra': 1}),
+        ]:
+            status, _ = self.commit([update(f'{ROOT}/blobs/{digest}', fields)])
+            self.assertEqual(status, 403)
 
 
 if __name__ == "__main__":

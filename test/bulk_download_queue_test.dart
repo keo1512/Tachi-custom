@@ -188,7 +188,8 @@ void main() {
   test('queued batches retain concurrency/pause behavior and skip chapters completed by another download', () async {
     final prefs = await SharedPreferences.getInstance(),
         repo = MemoryLibraryRepository();
-    final a = _book('a', count: 2), b = _book('b', count: 2);
+    final a = _book('a', count: 2),
+        b = _book('b', count: 2).copyWith(sourceId: 'another-source');
     await repo.save(a);
     await repo.save(b);
     final calls = <String>[], release = Completer<void>();
@@ -209,7 +210,7 @@ void main() {
     for (var i = 0; i < 30 && calls.length < 2; i++) {
       await Future<void>.delayed(Duration.zero);
     }
-    expect(calls.length, 2);
+    expect(calls, ['a/chapter-0', 'b/chapter-0']);
     queue.pause();
     release.complete();
     for (
@@ -237,7 +238,7 @@ void main() {
     expect(container.read(downloadQueueProvider).tasks, isEmpty);
     expect(
       calls.length,
-      2,
+      3,
       reason: 'Already completed offline chapters do not download again.',
     );
   });

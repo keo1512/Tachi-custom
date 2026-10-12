@@ -17,7 +17,12 @@ Uint8List backupZip(Map<String, List<int>> entries) {
 }
 
 /// Synthetic, redacted schema fixture. Never includes a user's backup bytes.
-Uint8List tmbFixture({int version = 511, bool badChecksum = false}) {
+Uint8List tmbFixture({
+  int version = 511,
+  bool badChecksum = false,
+  bool chapterMetadata = false,
+  bool trackerMetadata = false,
+}) {
   final directory = Directory.systemTemp.createTempSync('tachi-tmb-fixture-');
   Database? db;
   try {
@@ -54,6 +59,37 @@ Uint8List tmbFixture({int version = 511, bool badChecksum = false}) {
       '',
       '',
     ]);
+    if (trackerMetadata) {
+      db.execute(
+        "ALTER TABLE Manga ADD COLUMN memo TEXT NOT NULL DEFAULT '{}'",
+      );
+      db.execute('UPDATE Manga SET memo=? WHERE id=1', [
+        '{"source":{"nonce":7}}',
+      ]);
+      db.execute(
+        'CREATE TABLE TrackRecord (manga_id INTEGER, sync_id INTEGER, '
+        'remote_id INTEGER, library_id INTEGER, title TEXT, '
+        'last_chapter_read REAL, total_chapters INTEGER, status INTEGER, '
+        'score REAL, remote_url TEXT, start_date INTEGER, finish_date INTEGER, '
+        'is_delete INTEGER)',
+      );
+      db.execute(
+        'INSERT INTO TrackRecord VALUES (1,2,?,NULL,?,1.1,34,1,8.1,?,100,200,0)',
+        [
+          9223372036854775807,
+          'Tên trên tracker',
+          'https://tracker.test/title/1',
+        ],
+      );
+      db.execute(
+        'INSERT INTO TrackRecord VALUES (1,3,11,NULL,?,0,0,0,0,?,0,0,1)',
+        ['Đã xóa', ''],
+      );
+      db.execute(
+        'INSERT INTO TrackRecord VALUES (2,4,12,NULL,?,0,0,0,0,?,0,0,0)',
+        ['Ngoài thư viện', ''],
+      );
+    }
     db.execute('INSERT INTO Chapter VALUES (10,1,?,?,1,0,4,1000,2,5)', [
       '/c1',
       'Chương 1',
@@ -70,6 +106,17 @@ Uint8List tmbFixture({int version = 511, bool badChecksum = false}) {
       '/cached/1',
       'Chương ngoài thư viện',
     ]);
+    if (chapterMetadata) {
+      db.execute(
+        'ALTER TABLE Chapter ADD COLUMN date_upload INTEGER DEFAULT 0',
+      );
+      db.execute('ALTER TABLE Chapter ADD COLUMN chapter_number REAL');
+      db.execute('ALTER TABLE Chapter ADD COLUMN scanlator TEXT');
+      db.execute(
+        'UPDATE Chapter SET date_upload=1700000000000,chapter_number=1.5,scanlator=? WHERE id=10',
+        ['Nhóm dịch mẫu'],
+      );
+    }
     db.execute('INSERT INTO Category VALUES (1,?,2,0),(2,?,1,0),(3,?,0,1)', [
       'Nhóm sau',
       'Nhóm đầu',
@@ -124,8 +171,19 @@ List<int> messageField(int field, List<int> value) => [
 ];
 List<int> stringField(int field, String value) =>
     messageField(field, utf8.encode(value));
+List<int> floatField(int field, double value) {
+  final data = ByteData(4)..setFloat32(0, value, Endian.little);
+  return [
+    ...varint(BigInt.from((field << 3) | 5)),
+    ...data.buffer.asUint8List(),
+  ];
+}
 
-Uint8List mihonFixture({bool empty = false}) {
+Uint8List mihonFixture({
+  bool empty = false,
+  bool multipleCategories = false,
+  bool chapterMetadata = false,
+}) {
   List<int> chapter(
     String url,
     int order,
@@ -138,6 +196,9 @@ Uint8List mihonFixture({bool empty = false}) {
     ...integerField(4, read),
     ...integerField(5, bookmark),
     ...integerField(6, page),
+    if (chapterMetadata) ...stringField(3, 'Nhóm dịch mẫu'),
+    if (chapterMetadata) ...integerField(8, 1700000000000),
+    if (chapterMetadata) ...floatField(9, 1.5),
     ...integerField(10, order),
   ];
   final category = [
@@ -159,6 +220,7 @@ Uint8List mihonFixture({bool empty = false}) {
     ...messageField(16, chapter('/c2', 1, 0, bookmark: 1, page: 2)),
     ...messageField(16, chapter('/c3', 0, 1)),
     ...messageField(17, varint(BigInt.from(42))),
+    if (multipleCategories) ...messageField(17, varint(BigInt.from(43))),
     ...messageField(104, [...stringField(1, '/c2'), ...integerField(2, 2000)]),
   ];
   final historyOnly = [
@@ -171,6 +233,12 @@ Uint8List mihonFixture({bool empty = false}) {
     if (!empty) ...messageField(1, manga),
     if (!empty) ...messageField(1, historyOnly),
     ...messageField(2, category),
+    if (multipleCategories)
+      ...messageField(2, [
+        ...stringField(1, 'Nhóm bổ sung'),
+        ...integerField(2, 1),
+        ...integerField(3, 43),
+      ]),
   ];
   return Uint8List.fromList(GZipEncoder().encode(root));
 }

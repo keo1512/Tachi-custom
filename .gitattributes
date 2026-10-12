@@ -2,3 +2,6 @@
 tools/*.sh text eol=lf
 ios/Podfile text eol=lf
 .github/workflows/*.yml text eol=lf
+# Keep pinned upstream license bytes unchanged, including their line endings.
+assets/licenses/unrarkit-2.10-unrar-license.txt -text whitespace=-blank-at-eol
+packages/vbook_runtime/ios/Resources/crypto-js.LICENSE -text whitespace=-blank-at-eol

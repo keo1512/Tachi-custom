@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tachi_books/features/settings/settings_controller.dart';
+import 'package:tachi_books/features/privacy/application/app_lock_controller.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
@@ -10,6 +13,7 @@ import 'package:tachi_books/features/sync/data/google_session.dart';
 import 'package:tachi_books/features/sync/domain/sync_engine.dart';
 
 import 'support/sync_fakes.dart';
+import 'support/unlocked_app_lock.dart';
 
 void main() {
   Future<ProviderContainer> mount(
@@ -18,6 +22,8 @@ void main() {
     required FakeSyncRemote remote,
     bool enabled = true,
   }) async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
     final auth = FakeSyncAuth()..user = const SyncUser(uid: 'alice');
     remote.seed(local.bytes);
     local.savedLink = SyncLink(
@@ -29,6 +35,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          preferencesProvider.overrideWithValue(preferences),
+          appLockProvider.overrideWith(UnlockedAppLock.new),
           libraryRepositoryProvider.overrideWithValue(
             MemoryLibraryRepository(),
           ),

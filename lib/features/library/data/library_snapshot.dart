@@ -5,12 +5,19 @@ import 'package:crypto/crypto.dart';
 import 'package:html/parser.dart' as html_parser;
 
 import '../domain/library_book.dart';
+import 'backup_configuration.dart';
+import '../../sources/domain/extension_backup.dart';
 
 /// A consistent library image. Attachment references must already be hydrated.
 class LibrarySnapshot {
-  LibrarySnapshot(Iterable<LibrarySnapshotEntry> entries)
-    : entries = List.unmodifiable(entries);
+  LibrarySnapshot(
+    Iterable<LibrarySnapshotEntry> entries, {
+    this.configuration,
+    this.extensions,
+  }) : entries = List.unmodifiable(entries);
   final List<LibrarySnapshotEntry> entries;
+  final BackupConfiguration? configuration;
+  final ExtensionBackup? extensions;
   static const maxBytes = 128 * 1024 * 1024;
 
   Map<String, dynamic> toJson({bool canonicalMedia = false}) {
@@ -19,6 +26,9 @@ class LibrarySnapshot {
     return {
       'schema': 'tachi-books-backup',
       'version': 1,
+      if (configuration != null)
+        'configuration': configuration!.toJson(canonical: canonicalMedia),
+      if (extensions != null) 'extensions': extensions!.toJson(),
       'entries': ordered
           .map((entry) => entry.toJson(canonicalMedia: canonicalMedia))
           .toList(),
@@ -48,7 +58,12 @@ class LibrarySnapshotEntry {
   final Map<int, ReaderContent> contents;
 
   Map<String, dynamic> toJson({bool canonicalMedia = false}) => {
-    'book': {...book.toJson(), if (canonicalMedia) 'cover': _image(book.cover)},
+    'book': {
+      ...book.toJson(),
+      if (canonicalMedia) 'cover': _image(book.cover),
+      if (canonicalMedia && book.originalCover.isNotEmpty)
+        'originalCover': _image(book.originalCover),
+    },
     'contents': contents.map(
       (index, content) => MapEntry('$index', {
         ...content.toJson(),

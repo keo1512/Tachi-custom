@@ -166,10 +166,12 @@ _Predicate _atom(String value) {
       'src',
       'series',
       'collection',
+      'category',
+      'categories',
     ].contains(field)) {
       return (book) {
         final texts = switch (field) {
-          'title' => [book.title],
+          'title' => [book.title, ...book.alternativeTitles],
           'author' => [book.author],
           'artist' => [book.artist],
           'description' || 'desc' => [book.description],
@@ -177,7 +179,7 @@ _Predicate _atom(String value) {
           'genre' || 'tag' => book.genres,
           'source' || 'src' => [book.engine],
           'series' => [book.series],
-          _ => [book.collection],
+          _ => book.categories,
         };
         if (input.isEmpty) {
           return texts.isEmpty || texts.every((text) => text.isEmpty);
@@ -189,13 +191,14 @@ _Predicate _atom(String value) {
   final text = value.toLowerCase();
   return (book) => [
     book.title,
+    ...book.alternativeTitles,
     book.author,
     book.artist,
     book.description,
     book.notes,
     book.engine,
     book.series,
-    book.collection,
+    ...book.categories,
     ...book.genres,
   ].any((field) => field.toLowerCase().contains(text));
 }

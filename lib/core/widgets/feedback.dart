@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../format/error_messages.dart';
+import '../diagnostics/diagnostic_log.dart';
+
+export '../format/error_messages.dart' show userFacingError;
+
 void message(BuildContext context, Object text) {
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
@@ -17,7 +22,8 @@ Future<T?> perform<T>(
     if (success != null && context.mounted) message(context, success);
     return result;
   } catch (e) {
-    if (context.mounted) message(context, '$e');
+    DiagnosticLogs.error('app', e);
+    if (context.mounted) message(context, userFacingError(e));
     return null;
   }
 }

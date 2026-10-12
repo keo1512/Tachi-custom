@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 enum SourceEngine { tachimanga, vbook }
 
 enum ContentKind { manga, novel }
+
+enum SourceBrowseMode { popular, latest }
 
 class CatalogueSource {
   const CatalogueSource({
@@ -34,6 +38,7 @@ class CatalogueBook {
     this.genres = const [],
     this.description = '',
     this.coverUrl = '',
+    this.status = 0,
     required this.sourceId,
     required this.kind,
     required this.engine,
@@ -47,6 +52,7 @@ class CatalogueBook {
   final String description;
   final String coverUrl;
   final String sourceId;
+  final int status;
   final ContentKind kind;
   final SourceEngine engine;
 
@@ -58,12 +64,42 @@ class CatalogueChapter {
     required this.ref,
     required this.title,
     required this.index,
+    this.number,
+    this.uploadedAt,
+    this.scanlator = '',
   });
 
   final String ref;
   final String title;
   final int index;
+  final double? number;
+  final DateTime? uploadedAt;
+  final String scanlator;
 }
+
+DateTime? catalogueUploadDate(Object? value) {
+  if (value is! num ||
+      !value.isFinite ||
+      value <= 0 ||
+      value > 8640000000000000) {
+    return null;
+  }
+  return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+}
+
+double? catalogueChapterNumber(Object? value) =>
+    value is num && value.isFinite && value >= 0 ? value.toDouble() : null;
+
+int catalogueStatus(Object? value) => switch (value) {
+  int number when number >= 0 && number <= 6 => number,
+  'ONGOING' => 1,
+  'COMPLETED' => 2,
+  'LICENSED' => 3,
+  'PUBLISHING_FINISHED' => 4,
+  'CANCELLED' => 5,
+  'ON_HIATUS' => 6,
+  _ => 0,
+};
 
 class ChapterContent {
   const ChapterContent({
@@ -86,6 +122,13 @@ class ChapterContent {
   };
 }
 
+class SourceImageData {
+  const SourceImageData({required this.bytes, required this.mimeType});
+
+  final Uint8List bytes;
+  final String mimeType;
+}
+
 class CatalogueExtension {
   const CatalogueExtension({
     required this.id,
@@ -94,8 +137,11 @@ class CatalogueExtension {
     required this.engine,
     this.installed = false,
     this.packageUrl = '',
+    this.iconUrl = '',
     this.lang = '',
     this.limitations = const [],
+    this.sourceIds = const [],
+    this.loadError = '',
   });
 
   final String id;
@@ -104,8 +150,11 @@ class CatalogueExtension {
   final SourceEngine engine;
   final bool installed;
   final String packageUrl;
+  final String iconUrl;
   final String lang;
   final List<String> limitations;
+  final List<String> sourceIds;
+  final String loadError;
 
   String get installRef => engine == SourceEngine.tachimanga ? id : packageUrl;
 }

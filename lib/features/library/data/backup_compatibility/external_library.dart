@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../../domain/library_book.dart';
+import '../../domain/external_backup_metadata.dart';
 import '../library_snapshot.dart';
 
 class ExternalChapter {
@@ -15,8 +16,14 @@ class ExternalChapter {
     this.lastPage = 0,
     this.pageCount = 0,
     this.lastRead = 0,
+    this.uploadedAt = 0,
+    this.fetchedAt = 0,
+    this.scanlator = '',
+    this.number,
   });
-  final String url, title;
+  final String url, title, scanlator;
+  final int uploadedAt, fetchedAt;
+  final double? number;
   final int order, lastPage, pageCount, lastRead;
   final bool read, bookmarked;
   double get progress => read
@@ -35,12 +42,15 @@ class ExternalTitle {
     this.artist = '',
     this.genres = const [],
     this.notes = '',
+    this.externalBackupMetadata,
     this.description = '',
     this.cover = '',
     this.categories = const [],
     this.chapters = const [],
     this.lastRead = 0,
     this.lastChapter = '',
+    this.status = 0,
+    this.createdAt = 0,
   });
   final String source,
       url,
@@ -52,9 +62,12 @@ class ExternalTitle {
       cover,
       lastChapter;
   final List<String> genres;
+  final ExternalBackupMetadata? externalBackupMetadata;
   final List<String> categories;
   final List<ExternalChapter> chapters;
   final int lastRead;
+  final int status;
+  final int createdAt;
 }
 
 class ConvertedBackup {
@@ -71,7 +84,6 @@ ConvertedBackup convertExternalLibrary(
 }) {
   final result = <LibrarySnapshotEntry>[];
   final ids = <String>{};
-  var multipleCategories = 0;
   var localSources = 0;
   var unknownPagePositions = 0;
   for (final title in titles) {
@@ -89,7 +101,6 @@ ConvertedBackup convertExternalLibrary(
       throw const FormatException('Sao lưu có truyện trùng nguồn và URL.');
     }
     if (title.source == '0') localSources++;
-    if (title.categories.length > 1) multipleCategories++;
     // Both verified schemas use source_order=0 for the newest chapter.
     final ordered = title.chapters.indexed.toList()
       ..sort((a, b) {
@@ -144,13 +155,17 @@ ConvertedBackup convertExternalLibrary(
           artist: title.artist,
           genres: title.genres,
           notes: title.notes,
+          externalBackupMetadata: title.externalBackupMetadata,
           description: title.description,
           cover: title.cover,
           kind: 'manga',
           engine: 'tachimanga',
           sourceId: title.source,
           sourceRef: title.url,
+          status: title.status,
+          createdAt: _date(title.createdAt),
           collection: title.categories.firstOrNull ?? 'Mặc định',
+          categories: title.categories,
           currentChapter: current,
           progress: chapters.isEmpty
               ? 0
@@ -167,6 +182,10 @@ ConvertedBackup convertExternalLibrary(
                 read: chapters[i].read,
                 // Source backups contain metadata, never the offline page bytes.
                 downloaded: false,
+                uploadedAt: _date(chapters[i].uploadedAt),
+                discoveredAt: _date(chapters[i].fetchedAt),
+                scanlator: chapters[i].scanlator,
+                number: chapters[i].number,
               ),
           ],
           bookmarks: [
@@ -183,14 +202,24 @@ ConvertedBackup convertExternalLibrary(
     'Chỉ nhập thư viện, chương, trạng thái đọc, dấu trang và lịch sử gần nhất. '
         'Nội dung offline từ app gốc không được nhập qua adapter này. '
         'Các chương được đánh dấu chưa tải; cần nguồn tương ứng để tải lại.',
-    'Extension, thiết lập, tài khoản, tracker và thời gian đọc chi tiết không được nhập.',
-    if (multipleCategories > 0)
-      '$multipleCategories truyện có nhiều danh mục: '
-          'chỉ giữ danh mục đầu tiên theo thứ tự vì thư viện hiện dùng một bộ sưu tập cho mỗi truyện.',
+    'Dữ liệu tracker và memo nguồn được giữ để sao lưu/chuyển dữ liệu, '
+        'không tự đăng nhập tracker hoặc thực thi memo. Extension, thiết lập, '
+        'tài khoản và thời gian đọc chi tiết không được nhập.',
     if (localSources > 0)
       '$localSources truyện thuộc nguồn local: file gốc không có trong backup này.',
     if (unknownPagePositions > 0)
       '$unknownPagePositions chương thiếu số trang nên không thể đổi '
           'vị trí trang thành phần trăm; trạng thái đọc và chương hiện tại vẫn được giữ.',
   ]);
+}
+
+DateTime? _date(int value) {
+  if (value <= 0) return null;
+  try {
+    return DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
+  } on ArgumentError {
+    throw const FormatException(
+      'Ngày phát hành chương trong sao lưu không hợp lệ.',
+    );
+  }
 }

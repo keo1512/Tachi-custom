@@ -8,16 +8,18 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
     function validHead(h) {
-      return h.keys().hasOnly(['id', 'parts', 'digest', 'bytes'])
+      return h.keys().hasOnly(['id', 'parts', 'digest', 'bytes', 'format'])
         && h.id is string && h.id.matches('^[a-f0-9]{32}$')
         && h.digest is string && h.digest.matches('^[a-f0-9]{64}$')
         && h.parts is int && h.parts >= 1 && h.parts <= 256
-        && h.bytes is int && h.bytes >= 1 && h.bytes <= 134217728;
+        && h.bytes is int && h.bytes >= 1 && h.bytes <= 134217728
+        && h.get('format', 1) is int && h.get('format', 1) in [1, 2];
     }
     function manifestMatches(uid, h) {
       let manifest = get(/databases/$(database)/documents/tachiBooksUsers/$(uid)/snapshots/$(h.id)).data;
       return manifest.id == h.id && manifest.parts == h.parts
-        && manifest.bytes == h.bytes && manifest.digest == h.digest;
+        && manifest.bytes == h.bytes && manifest.digest == h.digest
+        && manifest.get('format', 1) == h.get('format', 1);
     }
     function notRetained(uid, snapshotId) {
       let path = /databases/$(database)/documents/tachiBooksUsers/$(uid)/sync/head;
@@ -30,8 +32,10 @@ service cloud.firestore {
     match /tachiBooksUsers/{uid}/sync/head {
       allow read: if owner(uid);
       allow create, update: if owner(uid)
-        && request.resource.data.keys().hasOnly(['schema', 'id', 'parts', 'digest', 'bytes', 'retained', 'updatedAt'])
-        && request.resource.data.schema == 'tachi-books-cloud-1'
+        && request.resource.data.keys().hasOnly(['schema', 'id', 'parts', 'digest', 'bytes', 'format', 'retained', 'updatedAt'])
+        && request.resource.data.get('format', 1) is int
+        && request.resource.data.schema in ['tachi-books-cloud-1', 'tachi-books-cloud-2']
+        && ((request.resource.data.schema == 'tachi-books-cloud-2') == (request.resource.data.get('format', 1) == 2))
         && request.resource.data.updatedAt == request.time
         && request.resource.data.retained is list
         && request.resource.data.retained.size() >= 1
@@ -41,6 +45,7 @@ service cloud.firestore {
         && request.resource.data.retained[0].parts == request.resource.data.parts
         && request.resource.data.retained[0].bytes == request.resource.data.bytes
         && request.resource.data.retained[0].digest == request.resource.data.digest
+        && request.resource.data.retained[0].get('format', 1) == request.resource.data.get('format', 1)
         && manifestMatches(uid, request.resource.data.retained[0])
         && (request.resource.data.retained.size() < 2
           || (validHead(request.resource.data.retained[1])
@@ -56,8 +61,10 @@ service cloud.firestore {
       allow read: if owner(uid);
       allow create: if owner(uid)
         && snapshotId.matches('^[a-f0-9]{32}$')
-        && request.resource.data.keys().hasOnly(['schema', 'id', 'parts', 'digest', 'bytes', 'createdAt'])
-        && request.resource.data.schema == 'tachi-books-cloud-1'
+        && request.resource.data.keys().hasOnly(['schema', 'id', 'parts', 'digest', 'bytes', 'format', 'createdAt'])
+        && request.resource.data.schema in ['tachi-books-cloud-1', 'tachi-books-cloud-2']
+        && request.resource.data.get('format', 1) is int
+        && ((request.resource.data.schema == 'tachi-books-cloud-2') == (request.resource.data.get('format', 1) == 2))
         && request.resource.data.id == snapshotId
         && request.resource.data.digest is string && request.resource.data.digest.matches('^[a-f0-9]{64}$')
         && request.resource.data.parts is int && request.resource.data.parts >= 1 && request.resource.data.parts <= 256
@@ -78,6 +85,18 @@ service cloud.firestore {
         allow update: if false;
         allow delete: if owner(uid) && notRetained(uid, snapshotId);
       }
+    }
+    // Immutable media pieces are shared by retained snapshots. They cannot be
+    // deleted without a separately verified reference inventory.
+    match /tachiBooksUsers/{uid}/blobs/{digest} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && digest.matches('^[a-f0-9]{64}$')
+        && request.resource.data.keys().hasOnly(['bytes', 'data'])
+        && request.resource.data.bytes is int
+        && request.resource.data.bytes >= 1 && request.resource.data.bytes <= 393216
+        && request.resource.data.data is string
+        && request.resource.data.data.size() > 0 && request.resource.data.data.size() <= 524288;
+      allow update, delete: if false;
     }
     match /{document=**} {
       allow read, write: if false;

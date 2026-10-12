@@ -5,6 +5,8 @@ Input bytes remain unchanged. The helper changes only the destination iOS projec
 """
 
 import argparse
+import base64
+import binascii
 import os
 from pathlib import Path
 import plistlib
@@ -105,12 +107,27 @@ def configure(config_path: Path, ios_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Configure TachiBooks Firebase iOS without exposing config values.")
-    parser.add_argument("--config", type=Path, required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--config", type=Path)
+    source.add_argument("--config-env", action="store_true",
+                        help="Read TACHI_GOOGLE_SERVICE_INFO_PLIST_BASE64 without printing it")
     parser.add_argument("--ios-dir", type=Path, default=Path(__file__).resolve().parent.parent / "ios")
     args = parser.parse_args()
     try:
-        configure(args.config.resolve(), args.ios_dir.resolve())
-    except (ValueError, OSError, plistlib.InvalidFileException):
+        if args.config_env:
+            encoded = os.environ.get("TACHI_GOOGLE_SERVICE_INFO_PLIST_BASE64", "")
+            if not encoded or len(encoded) > 90_000:
+                raise ValueError("Missing or oversized Firebase config")
+            payload = base64.b64decode(encoded, validate=True)
+            if len(payload) > 65_536:
+                raise ValueError("Oversized Firebase config")
+            with tempfile.TemporaryDirectory(prefix="tachibooks-firebase-") as temporary:
+                config_path = Path(temporary) / CONFIG_NAME
+                config_path.write_bytes(payload)
+                configure(config_path, args.ios_dir.resolve())
+        else:
+            configure(args.config.resolve(), args.ios_dir.resolve())
+    except (ValueError, OSError, plistlib.InvalidFileException, binascii.Error):
         raise SystemExit("Firebase iOS configuration was not installed. Check the matching TachiBooks plist and project structure.") from None
     print("TachiBooks Firebase iOS configuration installed. Config values were not printed.")
 

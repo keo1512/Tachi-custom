@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import UserNotifications
 
 class SceneDelegate: FlutterSceneDelegate {
   override func scene(
@@ -8,7 +9,22 @@ class SceneDelegate: FlutterSceneDelegate {
     options connectionOptions: UIScene.ConnectionOptions
   ) {
     super.scene(scene, willConnectTo: session, options: connectionOptions)
+    for context in connectionOptions.urlContexts {
+      TachiDeepLinkInbox.shared.accept(context.url)
+    }
+    if let response = connectionOptions.notificationResponse,
+      response.actionIdentifier == UNNotificationDefaultActionIdentifier,
+      let url = TaskNotificationSummary.destination(
+        identifier: response.notification.request.identifier,
+        userInfo: response.notification.request.content.userInfo) {
+      TachiDeepLinkInbox.shared.accept(url)
+    }
     installNativeTabsIfNeeded()
+  }
+
+  override func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+    let remaining = Set(URLContexts.filter { !TachiDeepLinkInbox.shared.accept($0.url) })
+    if !remaining.isEmpty { super.scene(scene, openURLContexts: remaining) }
   }
 
   override func sceneDidBecomeActive(_ scene: UIScene) {

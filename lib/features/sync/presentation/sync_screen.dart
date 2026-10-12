@@ -7,6 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../settings/presentation/settings_widgets.dart';
 import '../../settings/presentation/backup_settings_screen.dart';
 import '../application/sync_controller.dart';
+import '../domain/sync_engine.dart';
+import '../data/sync_platform.dart';
+import 'sync_merge_screen.dart';
+import '../../../core/format/vietnamese_format.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -29,6 +33,15 @@ class AccountScreen extends ConsumerWidget {
             trailing: state.busy ? const CupertinoActivityIndicator() : null,
             onTap: state.busy ? null : controller.signIn,
           ),
+          SettingsRow(
+            title: 'Khôi phục tài khoản Google',
+            subtitle: 'Mở hướng dẫn xác minh và đặt lại mật khẩu của Google',
+            onTap: state.busy
+                ? null
+                : () => controller.openGoogleAccount(
+                    action: GoogleAccountAction.recovery,
+                  ),
+          ),
         ] else ...[
           SettingsRow(
             title: user.name ?? 'Tài khoản Google',
@@ -43,6 +56,29 @@ class AccountScreen extends ConsumerWidget {
             onTap: () => openSettingsPage(context, const SyncScreen()),
           ),
           SettingsRow(
+            title: 'Quản lý tài khoản Google',
+            subtitle: 'Hồ sơ, mật khẩu và khôi phục tài khoản',
+            icon: CupertinoIcons.person_crop_circle,
+            onTap: () => controller.openGoogleAccount(),
+          ),
+          SettingsRow(
+            title: 'Đổi mật khẩu Google',
+            subtitle: 'Xác minh và thay đổi trên trang bảo mật Google',
+            onTap: state.busy
+                ? null
+                : () => controller.openGoogleAccount(
+                    action: GoogleAccountAction.password,
+                  ),
+          ),
+          SettingsRow(
+            title: 'Khôi phục tài khoản Google',
+            onTap: state.busy
+                ? null
+                : () => controller.openGoogleAccount(
+                    action: GoogleAccountAction.recovery,
+                  ),
+          ),
+          SettingsRow(
             title: 'Đăng xuất',
             icon: CupertinoIcons.square_arrow_right,
             onTap: state.busy ? null : controller.signOut,
@@ -50,6 +86,13 @@ class AccountScreen extends ConsumerWidget {
           ),
         ],
         if (state.message?.isNotEmpty == true) SettingsNote(state.message!),
+        if (state.progress != null)
+          SettingsNote(
+            '${state.progress!.direction == SyncTransferDirection.upload ? 'Tải lên' : 'Tải về'}: '
+            '${state.progress!.total == 0 ? 0 : (state.progress!.completed * 100 ~/ state.progress!.total)}% '
+            '· ${vietnameseNumber(state.progress!.completed / 1048576, decimals: 2)} / ${vietnameseNumber(state.progress!.total / 1048576, decimals: 2)} MiB'
+            '${state.progress!.reused == 0 ? '' : ' · Dùng lại ${vietnameseNumber(state.progress!.reused / 1048576, decimals: 2)} MiB'}',
+          ),
       ],
     );
   }
@@ -147,14 +190,31 @@ class SyncScreen extends ConsumerWidget {
           ),
           if (state.lastSyncedAt != null)
             SettingsNote(
-              'Lần đồng bộ thành công: ${state.lastSyncedAt!.toLocal().toString().split('.').first}',
+              'Lần đồng bộ thành công: ${vietnameseDateTime(state.lastSyncedAt!)}',
             ),
         ],
         if (state.message?.isNotEmpty == true) SettingsNote(state.message!),
+        if (state.progress != null)
+          SettingsNote(
+            '${state.progress!.direction == SyncTransferDirection.upload ? 'Tải lên' : 'Tải về'}: '
+            '${state.progress!.total == 0 ? 0 : (state.progress!.completed * 100 ~/ state.progress!.total)}% '
+            '· ${vietnameseNumber(state.progress!.completed / 1048576, decimals: 2)} / ${vietnameseNumber(state.progress!.total / 1048576, decimals: 2)} MiB'
+            '${state.progress!.reused == 0 ? '' : ' · Dùng lại ${vietnameseNumber(state.progress!.reused / 1048576, decimals: 2)} MiB'}',
+          ),
         if (state.conflict && conflict != null) ...[
           const SettingsHeading('Hai bản thư viện khác nhau'),
           SettingsNote(
             'Trên máy: ${_summary(conflict.local)}\nCloud: ${_summary(conflict.remote)}',
+          ),
+          SettingsRow(
+            title: 'Hợp nhất theo từng truyện',
+            icon: CupertinoIcons.arrow_merge,
+            onTap: state.busy || conflict.mergePlan == null
+                ? null
+                : () => openSettingsPage(
+                    context,
+                    SyncMergeScreen(conflict: conflict),
+                  ),
           ),
           SettingsRow(
             title: 'Giữ bản trên máy',
@@ -174,13 +234,13 @@ class SyncScreen extends ConsumerWidget {
           onTap: () => openSettingsPage(context, const BackupSettingsScreen()),
         ),
         const SettingsNote(
-          'Đồng bộ sách, tiến độ, dấu trang và toàn bộ nội dung chương đã lưu trong file sao lưu TachiBooks. Thiết lập ứng dụng và hàng đợi tải nằm riêng trên từng máy. Không tự cắt bỏ nội dung để giảm kích thước.',
+          'Đồng bộ sách, tiến độ, dấu trang, thiết lập công khai và toàn bộ nội dung chương đã lưu. Tài khoản nguồn, cookie, khóa app và hàng đợi tải giữ riêng trên từng máy. Không tự cắt bỏ nội dung để giảm kích thước.',
         ),
         const SettingsNote(
-          'Mỗi bản cloud chứa toàn bộ nội dung đã lưu, tối đa 128 MiB giống giới hạn file sao lưu. Ba bản cloud gần nhất được giữ; quá trình dọn bản cũ chỉ chạy khi xác minh được chúng không còn thuộc ba bản này. Firebase miễn phí có hạn mức tổng dung lượng và số thao tác. Bản tải lên dở dang có thể còn trên cloud; khi hết hạn mức, thư viện trên máy vẫn được giữ nguyên.',
+          'Mỗi bản cloud tham chiếu đầy đủ nội dung đã lưu, tối đa 128 MiB. Các phần nội dung không đổi được dùng lại giữa các bản và tải về từ cache đã kiểm tra. Định dạng cloud cũ vẫn đọc được; bản mới cần quy tắc Firestore cập nhật. Ba mục lục cloud gần nhất được giữ. Media dùng chung và bản tải dở chưa tự dọn để tránh mất nội dung. Khi hết hạn mức Firebase miễn phí, thư viện trên máy vẫn được giữ nguyên.',
         ),
         const SettingsNote(
-          'Khi bật đồng bộ, thay đổi được gửi sau một khoảng chờ và khi mở lại ứng dụng. Đồng bộ tự động chạy khi ứng dụng ở phía trước; iOS không được yêu cầu chạy tác vụ nền. Không thể cập nhật cloud khi mất mạng.',
+          'Khi bật đồng bộ, thay đổi được gửi sau một khoảng chờ, khi mở lại ứng dụng hoặc khi có mạng trở lại. Kiểm tra định kỳ mỗi 15 phút khi app ở phía trước; các lượt tự động cách nhau ít nhất một phút. Không thể cập nhật cloud khi mất mạng hoặc iOS đình chỉ app.',
         ),
       ],
     );

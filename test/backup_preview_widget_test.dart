@@ -25,7 +25,8 @@ void main() {
           expectedFingerprint: 'example',
           additions: 0,
         );
-        bool? decision;
+        BackupRestoreChoice? decision;
+        var returned = false;
         await tester.pumpWidget(
           MaterialApp(
             home: Builder(
@@ -33,11 +34,16 @@ void main() {
                 body: Center(
                   child: TextButton(
                     onPressed: () async {
-                      decision = await Navigator.of(context).push<bool>(
-                        CupertinoPageRoute(
-                          builder: (_) => BackupPreviewScreen(preview: preview),
-                        ),
-                      );
+                      decision = null;
+                      returned = false;
+                      decision = await Navigator.of(context)
+                          .push<BackupRestoreChoice>(
+                            CupertinoPageRoute(
+                              builder: (_) =>
+                                  BackupPreviewScreen(preview: preview),
+                            ),
+                          );
+                      returned = true;
                     },
                     child: const Text('Mở'),
                   ),
@@ -51,11 +57,13 @@ void main() {
         expect(find.text('Xem trước khôi phục'), findsOneWidget);
         expect(find.textContaining('Nội dung offline'), findsOneWidget);
         expect(decision, isNull);
+        expect(returned, false);
         await tester.scrollUntilVisible(find.text('Hủy'), 100);
         expect(tester.takeException(), isNull);
         await tester.tap(find.text('Hủy'));
         await tester.pumpAndSettle();
-        expect(decision, isFalse);
+        expect(decision, isNull);
+        expect(returned, true);
         await tester.tap(find.text('Mở'));
         await tester.pumpAndSettle();
         await tester.scrollUntilVisible(find.text('Khôi phục 0 sách mới'), 100);
@@ -63,7 +71,9 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Khôi phục 0 sách mới'));
         await tester.pumpAndSettle();
-        expect(decision, isTrue);
+        expect(decision, isA<BackupRestoreChoice>());
+        expect(decision?.restoreConfiguration, false);
+        expect(returned, true);
         expect(tester.takeException(), isNull);
       },
     );

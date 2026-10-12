@@ -1,21 +1,44 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../library/data/backup_service.dart';
+import '../../library/application/backup_service_provider.dart';
+import '../../library/application/extension_recovery_controller.dart';
+import '../../privacy/application/app_lock_controller.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../../settings/settings_controller.dart';
 import '../data/backup_sync_local.dart';
 import '../data/firestore_sync_remote.dart';
 import '../data/google_session.dart';
 import '../data/sync_link_store.dart';
+import '../data/sync_platform.dart';
 import '../domain/sync_engine.dart';
 
 final syncAuthProvider = Provider<SyncAuth>((ref) => GoogleSession());
 final syncClockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
 final syncLocalProvider = Provider<SyncLocal>(
   (ref) => BackupSyncLocal(
-    backup: BackupService(ref.read(libraryRepositoryProvider)),
+    backup: ref.read(backupServiceProvider),
     links: SyncLinkStore(ref.read(preferencesProvider)),
+    beforeSnapshot: () async {
+      await ref.read(appLockProvider.notifier).initialize();
+      final lock = ref.read(appLockProvider);
+      if (!lock.initialized || lock.locked || !lock.configurationValid) {
+        throw const SyncFailure('Mở khóa ứng dụng trước khi đồng bộ.');
+      }
+      await ref.read(extensionRecoveryProvider.future);
+    },
+    beforeCapture: () {
+      final lock = ref.read(appLockProvider);
+      if (!lock.initialized || lock.locked || !lock.configurationValid) {
+        throw const SyncFailure('Mở khóa ứng dụng trước khi đồng bộ.');
+      }
+      final recovery = ref.read(extensionRecoveryProvider);
+      if (recovery.isLoading || recovery.hasError) {
+        throw const SyncFailure(
+          'Còn phục hồi extension chưa hoàn tất. Mở Sao lưu & Khôi phục và thử lại.',
+        );
+      }
+    },
   ),
 );
 final syncRemoteFactoryProvider = Provider<SyncRemote Function(String)>((ref) {
@@ -45,11 +68,13 @@ class SyncState {
     this.message,
     this.lastSyncedAt,
     this.initialized = false,
+    this.progress,
   });
   final SyncUser? user;
   final bool busy, enabled, conflict, error, initialized;
   final String? message;
   final DateTime? lastSyncedAt;
+  final SyncTransferProgress? progress;
 
   SyncState copyWith({
     SyncUser? user,
@@ -60,6 +85,8 @@ class SyncState {
     String? message,
     DateTime? lastSyncedAt,
     bool? initialized,
+    SyncTransferProgress? progress,
+    bool clearProgress = false,
   }) => SyncState(
     user: user ?? this.user,
     busy: busy ?? this.busy,
@@ -69,6 +96,7 @@ class SyncState {
     message: message ?? this.message,
     lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
     initialized: initialized ?? this.initialized,
+    progress: clearProgress ? null : progress ?? this.progress,
   );
 }
 
@@ -94,10 +122,18 @@ class SyncController extends Notifier<SyncState> {
 
   SyncEngine _forUser(SyncUser user) {
     if (_engine?.uid != user.uid) {
+      final remote = ref.read(syncRemoteFactoryProvider)(user.uid);
+      if (remote is SyncProgressRemote) {
+        (remote as SyncProgressRemote).onProgress = (progress) {
+          if (ref.mounted && state.busy && state.user?.uid == user.uid) {
+            state = state.copyWith(progress: progress);
+          }
+        };
+      }
       _engine = SyncEngine(
         uid: user.uid,
         local: ref.read(syncLocalProvider),
-        remote: ref.read(syncRemoteFactoryProvider)(user.uid),
+        remote: remote,
       );
     }
     return _engine!;
@@ -118,7 +154,12 @@ class SyncController extends Notifier<SyncState> {
 
   Future<void> _run(Future<void> Function() action) async {
     if (state.busy) return;
-    state = state.copyWith(busy: true, error: false, message: '');
+    state = state.copyWith(
+      busy: true,
+      error: false,
+      message: '',
+      clearProgress: true,
+    );
     try {
       await action();
       if (ref.mounted) state = state.copyWith(busy: false);
@@ -178,6 +219,10 @@ class SyncController extends Notifier<SyncState> {
           : 'Đã đăng nhập. Bạn có thể bật đồng bộ cho thư viện này.',
     );
   });
+
+  Future<void> openGoogleAccount({
+    GoogleAccountAction action = GoogleAccountAction.profile,
+  }) => _run(() => SyncPlatform.openGoogleAccount(action: action));
 
   Future<void> sync({bool enable = false, bool automatic = false}) =>
       _run(() async {
@@ -251,6 +296,15 @@ class SyncController extends Notifier<SyncState> {
       throw const SyncFailure('Tài khoản đã thay đổi. Hãy đăng nhập lại.');
     }
     final outcome = await _forUser(user).resolve(keepLocal: keepLocal);
+    await _afterOutcome(user, outcome);
+  });
+
+  Future<void> resolveRecords(Map<String, bool> choices) => _run(() async {
+    final user = ref.read(syncAuthProvider).currentUser;
+    if (user == null || user.uid != state.user?.uid) {
+      throw const SyncFailure('Tài khoản đã thay đổi. Hãy đăng nhập lại.');
+    }
+    final outcome = await _forUser(user).resolveRecords(choices);
     await _afterOutcome(user, outcome);
   });
 

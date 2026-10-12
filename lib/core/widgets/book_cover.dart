@@ -11,10 +11,13 @@ class BookCover extends StatelessWidget {
     this.unread = 0,
     this.downloaded = 0,
     this.showDownloadedBadge = false,
+    this.showTitle = true,
+    this.local = false,
   });
   final String title, cover, kind;
   final int unread, downloaded;
   final bool showDownloadedBadge;
+  final bool showTitle, local;
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +87,7 @@ class BookCover extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
+              if(showTitle) Positioned(
                 left: 5,
                 right: 5,
                 bottom: 5,
@@ -105,6 +108,7 @@ class BookCover extends StatelessWidget {
                 top: 8,
                 child: Row(
                   children: [
+                    if(local) const Icon(Icons.folder, size:16,color:Colors.white),
                     if (unread > 0)
                       Flexible(
                         child: FittedBox(

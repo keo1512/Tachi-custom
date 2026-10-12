@@ -5,6 +5,8 @@ import 'app_settings_screens.dart';
 import '../../sync/presentation/sync_screen.dart';
 import 'reading_info_screen.dart';
 import 'settings_widgets.dart';
+import 'help_licenses_screen.dart';
+import '../../library/presentation/upcoming_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -31,13 +33,13 @@ class MoreScreen extends StatelessWidget {
         children: [
           SettingsRow(
             leading: const PremiumCrown(),
-            title: 'Premium',
+            title: 'TachiBooks · Cá nhân',
             height: 68,
             showChevron: false,
             onTap: () => open(
               const FeatureStatusScreen(
-                title: 'Premium',
-                description: 'TachiBooks chưa có gói đăng ký Premium. Các chức năng đã triển khai hiện có sẵn trong ứng dụng; tài khoản hoặc quyền Premium của Tachimanga không được liên kết với app này.',
+                title: 'TachiBooks cá nhân',
+                description: 'Các chức năng trong app được mở sẵn cho bạn. Đăng nhập Google để dùng đồng bộ giữa các máy, hoặc xuất bản sao lưu đầy đủ trong Đồng bộ → Sao lưu & Khôi phục.',
               ),
             ),
           ),
@@ -108,9 +110,19 @@ class MoreScreen extends StatelessWidget {
             onTap: () => open(const ReadingInfoScreen()),
           ),
           SettingsRow(
+            icon: CupertinoIcons.calendar,
+            title: 'Lịch chương dự kiến',
+            onTap: () => open(const UpcomingScreen()),
+          ),
+          SettingsRow(
             icon: CupertinoIcons.arrow_down_to_line,
             title: 'Tải xuống Manga',
             onTap: () => open(const DownloadSettingsScreen()),
+          ),
+          SettingsRow(
+            icon: CupertinoIcons.question_circle,
+            title: 'Trợ giúp & Giấy phép',
+            onTap: () => open(const HelpLicensesScreen()),
           ),
         ],
       ),

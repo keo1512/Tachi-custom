@@ -52,13 +52,17 @@ final class NativeTabsController: UIViewController, UITabBarDelegate {
     view.addSubview(nativeTabBar)
   }
 
-  func configure(index: Int, visible: Bool, titles: [String], dark: Bool?, badges: [String?]) {
+  func configure(index: Int, visible: Bool, titles: [String], dark: Bool?, badges: [String?], order: [Int] = Array(0..<6)) {
     loadViewIfNeeded()
     if let dark = dark {
       overrideUserInterfaceStyle = dark ? .dark : .light
     }
     for (offset, item) in (nativeTabBar.items ?? []).enumerated() {
+      let identity = order[offset]
       item.title = titles[offset]
+      item.image = UIImage(systemName: Self.symbols[identity])
+      item.accessibilityIdentifier = "native_tab_\(Self.identifiers[identity])"
+      item.accessibilityLabel = Self.titles[identity]
       item.badgeValue = badges[offset]
     }
     select(index: index)
@@ -135,6 +139,7 @@ final class NativeTabsBridge {
   private var visible = false
   private var titles = NativeTabsController.titles
   private var dark: Bool?
+  private var order = Array(0..<6)
   private var badges = [String?](repeating: nil, count: NativeTabsController.titles.count)
 
   init(messenger: FlutterBinaryMessenger) {
@@ -153,7 +158,7 @@ final class NativeTabsBridge {
     controller.onSelectTab = { [weak self] index in
       guard let self = self else { return }
       self.index = index
-      self.channel.invokeMethod("selectTab", arguments: ["index": index])
+      self.channel.invokeMethod("selectTab", arguments: ["index": index, "tabId": self.order[index]])
     }
     applyConfiguration()
   }
@@ -187,6 +192,13 @@ final class NativeTabsBridge {
         return
       }
     }
+    if let value = arguments["order"] {
+      guard let list = value as? [Int], list.count == titles.count,
+        Set(list) == Set(0..<titles.count) else {
+        invalidArguments(result)
+        return
+      }
+    }
     if let value = arguments["badges"] {
       guard let list = value as? [Any], list.count == badges.count,
         list.allSatisfy({ $0 is String || $0 is NSNull }) else {
@@ -206,19 +218,20 @@ final class NativeTabsBridge {
     if let value = arguments["visible"] as? Bool { visible = value }
     if let value = arguments["dark"] as? Bool { dark = value }
     if let value = arguments["titles"] as? [String] { titles = value }
+    if let value = arguments["order"] as? [Int] { order = value }
     if let value = arguments["badges"] as? [Any] { badges = value.map { $0 as? String } }
     applyConfiguration()
     result(true)
   }
 
   private func applyConfiguration() {
-    controller?.configure(index: index, visible: visible, titles: titles, dark: dark, badges: badges)
+    controller?.configure(index: index, visible: visible, titles: titles, dark: dark, badges: badges, order: order)
   }
 
   private func invalidArguments(_ result: FlutterResult) {
     result(FlutterError(
       code: "native_tabs_invalid_arguments",
-      message: "Expected index 0...5, visible/dark booleans, and six titles/badges",
+      message: "Cần chỉ số 0...5, trạng thái hiển thị/giao diện và sáu tab theo thứ tự hợp lệ.",
       details: nil
     ))
   }

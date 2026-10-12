@@ -14,6 +14,76 @@ import 'package:tachi_books/features/sources/domain/catalogue.dart';
 import 'package:tachi_books/features/sources/presentation/source_preferences_dialog.dart';
 
 void main() {
+  for (final size in [const Size(320, 568), const Size(430, 932)]) {
+    testWidgets(
+      'source category and unsupported actions remain clear at $size',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = size;
+        addTearDown(tester.view.reset);
+        final repository = SourceRepository(
+          tachimangaUrl: 'https://server.test',
+          vbookUrl: '',
+          client: MockClient(
+            (_) async => http.Response(
+              jsonEncode([
+                {
+                  'type': 'PreferenceCategory',
+                  'props': {'title': 'Account'},
+                },
+                {
+                  'type': 'Preference',
+                  'props': {
+                    'title': 'OAuth login',
+                    'hasClickListener': true,
+                    'summary': 'Requires browser',
+                  },
+                },
+              ]),
+              200,
+            ),
+          ),
+        );
+        addTearDown(repository.dispose);
+        const source = CatalogueSource(
+          id: '1',
+          name: 'Source',
+          lang: 'all',
+          baseUrl: 'https://source.test',
+          kind: ContentKind.manga,
+          engine: SourceEngine.tachimanga,
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [sourceRepositoryProvider.overrideWithValue(repository)],
+            child: MaterialApp(
+              home: Builder(
+                builder: (context) => Scaffold(
+                  body: TextButton(
+                    onPressed: () => showSourcePreferences(context, source),
+                    child: const Text('Open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Account'), findsOneWidget);
+        expect(
+          find.textContaining('đăng nhập của nguồn này chưa'),
+          findsOneWidget,
+        );
+        expect(
+          find.widgetWithText(ListTile, 'OAuth login').evaluate().single.widget,
+          isA<ListTile>().having((tile) => tile.enabled, 'enabled', false),
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
   testWidgets(
     'hidden preferences preserve original positions and password values are obscured',
     (tester) async {

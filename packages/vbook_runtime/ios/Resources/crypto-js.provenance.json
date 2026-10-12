@@ -1,0 +1,10 @@
+{
+  "package": "crypto-js",
+  "version": "4.2.0",
+  "source": "https://registry.npmjs.org/crypto-js/-/crypto-js-4.2.0.tgz",
+  "tarballSha256": "2d288a658b3eae000d7fadfdfdf5fe2bec3952cb19212360db8c7686c2b6ce09",
+  "files": {
+    "crypto-js.js": "ee02257ffbaf0a9b481c7039b0f3bb20c360c9674fe4be8b38ae709b2ea59bbe",
+    "crypto-js.LICENSE": "f729d14b7e1bf8adca0dcc38b93b929d14d53fcd5db56c3d1c9b2daa7aa69396"
+  }
+}

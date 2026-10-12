@@ -2,10 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Mở khóa thư viện TachiBooks bằng Face ID.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Lưu trang truyện bạn chọn vào thư viện Ảnh.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<string>vi</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>vi</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>TachiBooks</string>
 	<key>CFBundleExecutable</key>
@@ -83,12 +91,32 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
+			<string>TachiBooks Links</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>tachibooks</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
 			<string>TachiBooks Google</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.340925094049-ejetl1t7bikpcpk6ss0i6o7gkn7f5gq2</string>
 			</array>
 		</dict>
+	</array>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>processing</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>dev.tachibooks.downloads.processing</string>
 	</array>
 </dict>
 </plist>

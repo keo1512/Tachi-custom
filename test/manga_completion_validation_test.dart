@@ -31,7 +31,7 @@ void main() {
 
   for (final legacy in [false, true]) {
     testWidgets(
-      'a 1000-page ${legacy ? 'legacy' : 'imported'} pager does not complete a pending or failed final page',
+      'a 1000-page ${legacy ? 'legacy' : 'imported'} vertical reader does not complete a pending or failed final page',
       (tester) async {
         final client = _PendingImageClient();
         debugNetworkImageHttpClientProvider = () => client;
@@ -49,10 +49,8 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 100));
         expect(client.requested, isTrue);
-        expect(
-          tester.widget<PageView>(find.byType(PageView)).controller!.page,
-          999,
-        );
+        expect(find.byType(PageView), findsNothing);
+        expect(find.byType(SingleChildScrollView), findsOneWidget);
         expect(
           (await fixture.repo.find('manga'))!.chapters.single.read,
           isFalse,

@@ -11,6 +11,7 @@ import 'package:tachi_books/features/library/presentation/library_view_model.dar
 import 'package:tachi_books/features/settings/presentation/app_settings_screens.dart';
 import 'package:tachi_books/features/settings/presentation/more_screen.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
+import 'package:tachi_books/features/sources/presentation/extension_repository_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -85,17 +86,21 @@ void main() {
       expect(find.text('Nguồn'), findsOneWidget);
       expect(find.text('Phần mở rộng'), findsOneWidget);
       expect(find.text('Di chuyển'), findsOneWidget);
-      expect(find.text('Kết nối Tachimanga'), findsOneWidget);
-      expect(find.text('Kết nối vBook'), findsOneWidget);
+      expect(find.text('Kết nối Tachimanga'), findsNothing);
+      expect(find.text('Kết nối vBook'), findsNothing);
       expect(find.text('Nguồn trong thiết bị'), findsOneWidget);
       await tester.tap(find.text('Phần mở rộng'));
       await tester.pumpAndSettle();
-      expect(find.text('Thêm kho extension bằng link'), findsOneWidget);
-      await tester.tap(find.text('Thêm kho extension bằng link'));
+      await tester.tap(find.byTooltip('Kho tiện ích mở rộng'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ExtensionRepositoryScreen), findsOneWidget);
+      await tester.tap(find.byTooltip('Thêm kho tiện ích mở rộng'));
       await tester.pumpAndSettle();
       expect(find.text('Tachimanga'), findsWidgets);
       expect(find.text('vBook'), findsWidgets);
       await tester.tap(find.text('Hủy'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Thêm').last);
       await tester.pumpAndSettle();
@@ -106,8 +111,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(GeneralSettingsScreen), findsOneWidget);
       expect(find.text('Nhập sách & truyện'), findsOneWidget);
-      expect(find.text('Kết nối nguồn'), findsOneWidget);
-      await tester.pageBack();
+      expect(find.text('Máy chủ nguồn tùy chọn'), findsOneWidget);
+      expect(find.text('Kết nối nguồn'), findsNothing);
+      await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Thư viện').last);
       await tester.pumpAndSettle();

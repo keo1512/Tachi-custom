@@ -1,0 +1,51 @@
+import 'dart:io';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../data/native_tachi_repository.dart';
+import '../data/native_vbook_repository.dart';
+import '../domain/catalogue.dart';
+import '../domain/native_source_engine.dart';
+import '../presentation/extension_catalogue_controller.dart';
+
+typedef NativeRuntimeFactory = NativeSourceEngine Function();
+
+/// Factories are separate so host tests can exercise the real lifetime owner.
+final nativeRuntimeFactoriesProvider =
+    Provider<Map<SourceEngine, NativeRuntimeFactory>>((ref) {
+      if (!Platform.isIOS) return const {};
+      return {
+        SourceEngine.vbook: NativeVbookRepository.new,
+        SourceEngine.tachimanga: () => NativeTachiRepository(
+          iconForPackage: (packageUrl) {
+            final indexes = ref.read(extensionCatalogueProvider).value;
+            for (final index in indexes ?? []) {
+              for (final entry in index.entries) {
+                if (entry.engine == SourceEngine.tachimanga &&
+                    entry.packageUrl == packageUrl) {
+                  return entry.iconUrl;
+                }
+              }
+            }
+            return '';
+          },
+        ),
+      };
+    });
+
+/// Installed on-device runtimes belong to the app container, not a companion
+/// URL's routing wrapper. Backup/recovery still need them while routing uses an
+/// external server, and settings restoration must not close their clients.
+final nativeSourceRuntimesProvider =
+    Provider<Map<SourceEngine, NativeSourceEngine>>((ref) {
+      final factories = ref.read(nativeRuntimeFactoriesProvider);
+      final runtimes = Map<SourceEngine, NativeSourceEngine>.unmodifiable({
+        for (final entry in factories.entries) entry.key: entry.value(),
+      });
+      ref.onDispose(() {
+        for (final runtime in runtimes.values.toSet()) {
+          runtime.dispose();
+        }
+      });
+      return runtimes;
+    });

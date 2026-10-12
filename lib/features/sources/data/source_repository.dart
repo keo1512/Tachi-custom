@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../domain/catalogue.dart';
+import '../domain/source_filters.dart';
 
 /// Client for two companion runtimes; it does not execute APK or JS on-device.
 class SourceRepository {
@@ -24,6 +25,58 @@ class SourceRepository {
   final bool _ownsClient;
   final Duration timeout;
   final Map<String, Future<String>> _restoredManga = {};
+
+  bool requiresExternalConnection(SourceEngine engine) => true;
+
+  bool usesNativeImageLoader(CatalogueBook book) => false;
+
+  bool canOpenNativeWebsite(CatalogueBook book) => false;
+
+  bool supportsCatalogueBrowsing(SourceEngine engine) => false;
+
+  bool supportsSourceFilters(SourceEngine engine) => false;
+  Future<SourceFilterSet> sourceFilters(CatalogueSource source) =>
+      throw const ApiException('Engine này chưa cung cấp bộ lọc của nguồn.');
+  Future<List<CatalogueBook>> searchFiltered(
+    CatalogueSource source,
+    String query,
+    SourceFilterSet filters, {
+    int page = 1,
+  }) => throw const ApiException('Engine này chưa hỗ trợ tìm kiếm với bộ lọc.');
+
+  Future<List<CatalogueBook>> browse(
+    CatalogueSource source, {
+    required SourceBrowseMode mode,
+    int page = 1,
+  }) => throw const ApiException(
+    'Engine này chưa cung cấp danh sách phổ biến hoặc mới nhất.',
+  );
+
+  bool supportsExtensionRemoval(SourceEngine engine) => false;
+
+  bool supportsExtensionFileImport(SourceEngine engine) => false;
+
+  Future<CatalogueExtension> installExtensionBytes(
+    SourceEngine engine,
+    Uint8List bytes,
+  ) => throw const ApiException(
+    'Engine này chưa hỗ trợ nhập extension từ Files.',
+  );
+
+  Future<void> uninstallExtension(SourceEngine engine, String packageId) =>
+      throw const ApiException(
+        'Engine này chưa hỗ trợ gỡ extension trong ứng dụng.',
+      );
+
+  Future<void> openWebsite(CatalogueBook book) =>
+      throw UnsupportedError('This engine has no native source browser.');
+
+  Future<SourceImageData> fetchImage(
+    CatalogueBook book,
+    CatalogueChapter chapter,
+    int page,
+    String url,
+  ) => throw UnsupportedError('This engine uses ordinary HTTP images.');
 
   bool _externalManga(CatalogueBook book) =>
       book.engine == SourceEngine.tachimanga &&
@@ -317,6 +370,7 @@ class SourceRepository {
         description: detail.description,
         coverUrl: detail.coverUrl,
         sourceId: detail.sourceId,
+        status: detail.status,
         kind: detail.kind,
         engine: detail.engine,
       );
@@ -373,6 +427,13 @@ class SourceRepository {
               'tên chương',
             ),
             index: index,
+            number: book.engine == SourceEngine.tachimanga
+                ? catalogueChapterNumber(item['chapterNumber'])
+                : null,
+            uploadedAt: book.engine == SourceEngine.tachimanga
+                ? catalogueUploadDate(item['dateUpload'])
+                : null,
+            scanlator: _text(item['scanlator']),
           );
         })
         .toList(growable: false);
@@ -683,6 +744,7 @@ class SourceRepository {
         'thumbnail',
       ]).toString(),
       sourceId: item['sourceId'] == null ? sourceId : _id(item['sourceId']),
+      status: catalogueStatus(item['status']),
       kind: ContentKind.manga,
       engine: SourceEngine.tachimanga,
     );

@@ -18,6 +18,12 @@ void main() {
     expect(FirestoreSyncRemote.namespace, 'tachiBooksUsers');
   });
 
+  test('legacy and incremental heads keep explicit format compatibility', () {
+    expect(FirestoreSyncRemote.parseHead(head()).format, 1);
+    expect(FirestoreSyncRemote.parseHead({...head(), 'format': 1}).format, 1);
+    expect(FirestoreSyncRemote.parseHead({...head(), 'format': 2}).format, 2);
+  });
+
   test('oversize, inconsistent count and path-shaped IDs are rejected before allocating payload', () {
     for (final malformed in [
       head(bytes: 128 * 1024 * 1024 + 1, parts: 256),
@@ -26,6 +32,10 @@ void main() {
       {...head(), 'id': '../another-user'},
       {...head(), 'bytes': 100.0},
       {...head(), 'digest': 'not-a-digest'},
+      {...head(), 'format': 1.0},
+      {...head(), 'format': 2.0},
+      {...head(), 'format': null},
+      {...head(), 'format': 3},
     ]) {
       expect(
         () => FirestoreSyncRemote.parseHead(malformed),

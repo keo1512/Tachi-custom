@@ -33,6 +33,7 @@ void main() {
       final fixture = await _openDetail(tester);
       await tester.tap(find.byTooltip('Tùy chọn'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Ghi chú cá nhân'));
       await tester.tap(find.text('Ghi chú cá nhân'));
       await tester.pumpAndSettle();
       await tester.enterText(
@@ -50,6 +51,7 @@ void main() {
       expect(saved.progress, fixture.book.progress);
       await tester.tap(find.byTooltip('Tùy chọn'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Ghi chú cá nhân').last);
       await tester.tap(find.text('Ghi chú cá nhân').last);
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(CupertinoTextField), '');
@@ -90,8 +92,10 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('downloadQueueV1'), contains('original-middle'));
       expect(
-        (await fixture.repository.find(fixture.book.id))!.toJson(),
-        fixture.book.toJson(),
+        (await fixture.repository.find(fixture.book.id))!
+            .copyWith(chapterListPreferences: const {})
+            .toJson(),
+        fixture.book.copyWith(chapterListPreferences: const {}).toJson(),
       );
       expect(
         (await fixture.repository.find(fixture.otherBook.id))!.toJson(),
@@ -119,11 +123,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Sắp xếp'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Chương mới trước'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Tùy chọn chương'));
+      await tester.ensureVisible(find.text('Giảm dần'));
+      await tester.tap(find.text('Giảm dần'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Đóng'));
       await tester.pumpAndSettle();
@@ -133,8 +134,10 @@ void main() {
         'Chương một: Mở đầu',
       ]);
       expect(
-        (await fixture.repository.find(fixture.book.id))!.toJson(),
-        fixture.book.toJson(),
+        (await fixture.repository.find(fixture.book.id))!
+            .copyWith(chapterListPreferences: const {})
+            .toJson(),
+        fixture.book.copyWith(chapterListPreferences: const {}).toJson(),
         reason: 'Changing the visible chapter list must not write reading progress.',
       );
       await tester.tap(find.text('Chương ba: Kết thúc'));
@@ -157,8 +160,10 @@ void main() {
 
       expect(_chapterTitles(tester), ['Chương hai: Bước ngoặt']);
       expect(
-        (await fixture.repository.find(fixture.book.id))!.toJson(),
-        fixture.book.toJson(),
+        (await fixture.repository.find(fixture.book.id))!
+            .copyWith(chapterListPreferences: const {})
+            .toJson(),
+        fixture.book.copyWith(chapterListPreferences: const {}).toJson(),
         reason: 'Searching chapters must preserve stored progress and chapter order.',
       );
       await tester.tap(find.text('Chương hai: Bước ngoặt'));
@@ -196,8 +201,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Tùy chọn chương'));
-      await tester.pumpAndSettle();
       await tester.tap(find.text('Đóng'));
       await tester.pumpAndSettle();
       expect(_chapterTitles(tester), ['Chương hai: Bước ngoặt']);
@@ -225,11 +228,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Sắp xếp'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Chương mới trước'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Tùy chọn chương'));
+      await tester.ensureVisible(find.text('Giảm dần'));
+      await tester.tap(find.text('Giảm dần'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Đóng'));
       await tester.pumpAndSettle();
@@ -243,8 +243,10 @@ void main() {
       await tester.tap(find.text('Hủy'));
       await tester.pumpAndSettle();
       expect(
-        (await fixture.repository.find(fixture.book.id))!.toJson(),
-        fixture.book.toJson(),
+        (await fixture.repository.find(fixture.book.id))!
+            .copyWith(chapterListPreferences: const {})
+            .toJson(),
+        fixture.book.copyWith(chapterListPreferences: const {}).toJson(),
       );
       await tester.longPress(find.text('Chương ba: Kết thúc'));
       await tester.pumpAndSettle();
@@ -290,8 +292,6 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Tùy chọn chương'));
-      await tester.pumpAndSettle();
       await tester.tap(find.text('Đóng'));
       await tester.pumpAndSettle();
       await tester.longPress(find.text('Chương hai: Bước ngoặt'));
@@ -301,7 +301,9 @@ void main() {
       expect(_chapterTitles(tester), isEmpty);
       expect(find.text('Không có chương phù hợp'), findsOneWidget);
       expect(
-        (await fixture.repository.find(fixture.book.id))!.toJson(),
+        (await fixture.repository.find(fixture.book.id))!
+            .copyWith(chapterListPreferences: const {})
+            .toJson(),
         saved
             .copyWith(
               chapters: [
@@ -362,14 +364,14 @@ Future<void> _expectReadAction(
 ) async {
   final saved = (await fixture.repository.find(fixture.book.id))!;
   expect(
-    saved.toJson(),
+    saved.copyWith(chapterListPreferences: const {}).toJson(),
     fixture.book
         .copyWith(
           chapters: [
             for (var i = 0; i < fixture.book.chapters.length; i++)
               i == index
                   ? fixture.book.chapters[i].copyWith(read: read)
-                  : fixture.book.chapters[i],
+                  : fixture.book.chapters[i].copyWith(read: false),
           ],
         )
         .toJson(),

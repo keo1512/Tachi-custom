@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tachi_books/features/settings/settings_controller.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/data/library_mutation.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
@@ -59,6 +60,20 @@ class OversizedImageClient extends http.BaseClient {
   }
 }
 
+class RejectedImageClient extends http.BaseClient {
+  RejectedImageClient(this.status, this.contentType);
+  final int status;
+  final String contentType;
+  bool cancelled = false;
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async =>
+      http.StreamedResponse(
+        StreamController<List<int>>(onCancel: () => cancelled = true).stream,
+        status,
+        headers: {'content-type': contentType},
+      );
+}
+
 class PausingRepository extends MemoryLibraryRepository {
   final started = Completer<void>();
   final release = Completer<void>();
@@ -102,6 +117,90 @@ LibraryBook fixtureBook({String kind = 'novel'}) => LibraryBook(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('a stale book cannot read or download a different current source with the same IDs', () async {
+    for (final cached in [false, true]) {
+      final repo = MemoryLibraryRepository();
+      final original = fixtureBook();
+      final changed = original.copyWith(
+        sourceId: 'changed-source',
+        sourceRef: 'changed-book-ref',
+      );
+      await repo.save(changed);
+      if (cached) {
+        await repo.saveChapter(
+          changed.id,
+          0,
+          ReaderContent(kind: 'novel', html: '<p>Current source cache</p>'),
+        );
+      }
+      final source = FixtureSource(['a', 'b', 'c']);
+      final container = ProviderContainer(
+        overrides: [
+          libraryRepositoryProvider.overrideWithValue(repo),
+          sourceRepositoryProvider.overrideWithValue(source),
+        ],
+      );
+      await container.read(libraryProvider.future);
+      final vm = container.read(libraryProvider.notifier);
+      await expectLater(vm.getContent(original, 0), throwsStateError);
+      await expectLater(
+        vm.getContent(original, 0, download: true),
+        throwsStateError,
+      );
+      expect(source.chapterCalls, 0);
+      expect((await repo.find(changed.id))!.sourceRef, changed.sourceRef);
+      expect(
+        (await repo.readChapter(changed.id, 0))?.html,
+        cached ? '<p>Current source cache</p>' : null,
+      );
+      expect((await vm.getContent(changed, 0)).html, contains('<p>'));
+      container.dispose();
+    }
+  });
+
+  test(
+    'rejected image status and MIME cancel the open response body before retry',
+    () async {
+      for (final rejection in [(503, 'image/png'), (200, 'text/html')]) {
+        final repo = MemoryLibraryRepository();
+        final book = fixtureBook(kind: 'manga').copyWith(
+          chapters: [const BookChapter(id: 'a', title: 'a', index: 0)],
+        );
+        await repo.save(book);
+        final source = FixtureSource(
+          ['a'],
+          content: const ChapterContent(
+            kind: ContentKind.manga,
+            images: ['https://fixture.example/image.png'],
+          ),
+        );
+        final client = RejectedImageClient(rejection.$1, rejection.$2);
+        final container = ProviderContainer(
+          overrides: [
+            libraryRepositoryProvider.overrideWithValue(repo),
+            sourceRepositoryProvider.overrideWithValue(source),
+            chapterHttpClientProvider.overrideWithValue(client),
+          ],
+        );
+        await container.read(libraryProvider.future);
+        await expectLater(
+          container
+              .read(libraryProvider.notifier)
+              .getContent(book, 0, download: true),
+          throwsStateError,
+        );
+        expect(
+          client.cancelled,
+          isTrue,
+          reason: 'Rejected bodies must release their connection.',
+        );
+        expect(await repo.readChapter(book.id, 0), isNull);
+        expect((await repo.find(book.id))!.chapters.single.downloaded, isFalse);
+        container.dispose();
+      }
+    },
+  );
 
   test('queued metadata and history edits preserve downloaded chapters, progress and bookmarks', () async {
     final repo = PausingRepository();
@@ -163,6 +262,8 @@ void main() {
     );
   });
   test('reordering updates moves cache, read position and bookmarks by chapter identity', () async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
     final repo = MemoryLibraryRepository();
     final original = fixtureBook().copyWith(
       chapters: [
@@ -182,6 +283,7 @@ void main() {
     final source = FixtureSource(['new', 'c', 'b', 'a']);
     final container = ProviderContainer(
       overrides: [
+        preferencesProvider.overrideWithValue(preferences),
         libraryRepositoryProvider.overrideWithValue(repo),
         sourceRepositoryProvider.overrideWithValue(source),
       ],

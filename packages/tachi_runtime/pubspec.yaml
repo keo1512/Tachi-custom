@@ -1,0 +1,14 @@
+name: tachi_runtime
+description: On-device interpreted APK extension runtime for TachiBooks iOS.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: ^3.13.3
+dependencies:
+  flutter:
+    sdk: flutter
+flutter:
+  plugin:
+    platforms:
+      ios:
+        pluginClass: TachiRuntimePlugin

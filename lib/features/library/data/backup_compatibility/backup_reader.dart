@@ -26,15 +26,11 @@ Future<ConvertedBackup> readCompatibleBackup(
     converted = await readMihonBackup(bytes);
   } else {
     try {
-      final entries = BackupValidator(repository).validate(bytes);
-      return ConvertedBackup(
-        'TachiBooks JSON v1',
-        LibrarySnapshot(entries),
-        const [
-          'Nhập toàn bộ nội dung đã lưu trong bản sao lưu, gồm EPUB/TXT/CBZ đã nhập. '
-              'Sách đã có trong thư viện hiện tại được giữ nguyên.',
-        ],
-      );
+      final snapshot = BackupValidator(repository).validateSnapshot(bytes);
+      return ConvertedBackup('TachiBooks JSON v1', snapshot, const [
+        'Nhập toàn bộ nội dung đã lưu trong bản sao lưu, gồm EPUB/TXT/CBZ đã nhập. '
+            'Sách đã có trong thư viện hiện tại được giữ nguyên.',
+      ]);
     } on FormatException catch (error) {
       throw FormatException(
         '${error.message} '

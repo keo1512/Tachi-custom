@@ -17,6 +17,7 @@ import 'package:tachi_books/features/library/domain/library_reading.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/sources/data/source_repository.dart';
 import 'package:tachi_books/features/sources/domain/catalogue.dart';
+import 'package:tachi_books/features/settings/settings_controller.dart';
 
 const item = CatalogueBook(
   ref: 'title',
@@ -66,9 +67,12 @@ void main() {
     test(
       'source add pending before ${replace ? 'replacement' : 'another add'} preserves the existing title',
       () async {
+        SharedPreferences.setMockInitialValues({});
+        final preferences = await SharedPreferences.getInstance();
         final repo = MemoryLibraryRepository(), source = _PausedSource();
         final container = ProviderContainer(
           overrides: [
+            preferencesProvider.overrideWithValue(preferences),
             libraryRepositoryProvider.overrideWithValue(repo),
             sourceRepositoryProvider.overrideWithValue(source),
           ],

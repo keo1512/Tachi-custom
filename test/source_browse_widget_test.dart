@@ -16,6 +16,7 @@ import 'package:tachi_books/features/settings/settings_controller.dart';
 import 'package:tachi_books/features/sources/data/source_repository.dart';
 import 'package:tachi_books/features/sources/data/extension_index.dart';
 import 'package:tachi_books/features/sources/domain/catalogue.dart';
+import 'package:tachi_books/features/sources/domain/source_languages.dart';
 import 'package:tachi_books/features/sources/presentation/browse_screen.dart';
 import 'package:tachi_books/features/sources/presentation/browse_widgets.dart';
 import 'package:tachi_books/features/sources/presentation/extension_catalogue_controller.dart';
@@ -29,6 +30,60 @@ void main() {
   });
 
   for (final size in const [Size(320, 568), Size(430, 932)]) {
+    testWidgets(
+      'multiple languages filter installed sources and survive saved changes at $size',
+      (tester) async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'sourceLanguagesV1',
+          const SourceLanguages({'vi', 'en'}).encode(),
+        );
+        final repo = SourceRepository(
+          tachimangaUrl: 'http://tachi.test',
+          vbookUrl: '',
+          client: MockClient(
+            (request) async => http.Response(
+              jsonEncode([
+                for (final code in ['vi', 'en', 'ja'])
+                  {
+                    'id': code,
+                    'name': 'Source $code',
+                    'lang': code,
+                    'baseUrl': 'https://$code.test',
+                  },
+              ]),
+              200,
+            ),
+          ),
+        );
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = size;
+        addTearDown(tester.view.reset);
+        final router = await mountBrowse(tester, prefs, repo);
+        expect(find.text('Source vi'), findsOneWidget);
+        expect(find.text('Source en'), findsOneWidget);
+        expect(find.text('Source ja'), findsNothing);
+        await tester.tap(find.byTooltip('Ngôn ngữ'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Chọn nhiều ngôn ngữ và lưu'));
+        await tester.pumpAndSettle();
+        final english = find.widgetWithText(CheckboxListTile, 'English');
+        await tester.ensureVisible(english);
+        await tester.tap(english);
+        await tester.tap(find.text('Lưu'));
+        await tester.pumpAndSettle();
+        expect(
+          SourceLanguages.decode(prefs.getString('sourceLanguagesV1')).enabled,
+          {'vi'},
+        );
+        expect(find.text('Source en'), findsNothing);
+        expect(find.text('Đã bật 1 ngôn ngữ'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        router.dispose();
+        repo.dispose();
+      },
+    );
     testWidgets(
       'one failed engine preserves sources, pinning and recent navigation at $size',
       (tester) async {
@@ -292,7 +347,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Cài'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('chưa có engine vBook'), findsOneWidget);
+      expect(find.textContaining('Chưa có engine vBook'), findsWidgets);
       expect(find.text('Đã cài'), findsNothing);
       expect(engineRequests, 0);
       expect(tester.takeException(), isNull);
@@ -329,7 +384,7 @@ void main() {
       await tester.tap(find.text('Di chuyển'));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('Chuyển nguồn tự động chưa được hỗ trợ.'),
+        find.textContaining('Chỉ ghép chương có số hoặc tên khớp duy nhất'),
         findsOneWidget,
       );
       expect(find.text('Online book'), findsOneWidget);
@@ -339,7 +394,7 @@ void main() {
       await tester.tap(find.text('Tìm ở nguồn khác'));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('Chưa có nguồn khác phù hợp.'),
+        find.textContaining('Chưa có nguồn thay thế phù hợp.'),
         findsOneWidget,
       );
       final kept = await library.find('online');

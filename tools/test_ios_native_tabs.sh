@@ -96,7 +96,7 @@ xcodebuild test \
   -configuration Debug \
   -destination "platform=iOS Simulator,id=$tachi_simulator" \
   -destination-timeout 60 \
-  -only-testing:RunnerTests/RunnerTests/testNativeTabsShareFlutterEngineAndSynchronizeNavigation \
+  -only-testing:RunnerTests \
   -parallel-testing-enabled NO \
   -maximum-concurrent-test-simulator-destinations 1 \
   -resultBundlePath "$tachi_result" \

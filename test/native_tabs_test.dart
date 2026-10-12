@@ -118,7 +118,7 @@ void main() {
       expect(find.byType(BookDetailScreen), findsOneWidget);
       expect(_last(outbound)['visible'], false);
       expect(_last(outbound)['index'], 0);
-      await tester.pageBack();
+      await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
       expect(find.byType(LibraryScreen), findsOneWidget);
       expect(_last(outbound)['visible'], true);
@@ -128,7 +128,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(GeneralSettingsScreen), findsOneWidget);
       expect(_last(outbound)['visible'], false);
-      await tester.pageBack();
+      await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
       expect(find.byType(MoreScreen), findsOneWidget);
       expect(_last(outbound)['visible'], true);
@@ -153,7 +153,7 @@ void main() {
       final previousConfigurations = outbound
           .where((call) => call.method == 'configure')
           .length;
-      await tester.tap(find.byType(CupertinoSwitch));
+      await tester.tap(find.text('Sáng'));
       await tester.pumpAndSettle();
       expect(prefs.getBool('dark'), false);
       expect(
@@ -167,7 +167,7 @@ void main() {
       expect(configuration['titles'], mainTabLabels);
       expect(configuration['visible'], false);
       expect(configuration['index'], 5);
-      await tester.pageBack();
+      await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
       expect(_last(outbound)['index'], 5);
       expect(_last(outbound)['visible'], true);

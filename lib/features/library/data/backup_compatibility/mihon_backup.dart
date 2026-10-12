@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -6,6 +7,8 @@ import 'package:archive/archive.dart';
 import 'bounded_archive.dart';
 import 'external_library.dart';
 import 'protobuf_reader.dart';
+import 'mihon_tracking.dart';
+import '../../domain/external_backup_metadata.dart';
 
 // Schema: Mihon official Kotlin @ProtoNumber models, pinned at
 // https://github.com/mihonapp/mihon/tree/dd46413e1017c145df660f0ac714fe30bff69d0e/app/src/main/java/eu/kanade/tachiyomi/data/backup/models
@@ -34,6 +37,7 @@ ConvertedBackup _read(Uint8List bytes) {
   var historyOnly = 0;
   var unknownCategories = 0;
   var sourceMemos = 0;
+  var trackers = 0;
   for (final manga in root.messages(1)) {
     if (!manga.boolean(100, fallback: true)) {
       historyOnly++;
@@ -52,17 +56,53 @@ ConvertedBackup _read(Uint8List bytes) {
       }
     }
     final last = history.firstOrNull;
-    if (manga.fields.containsKey(112)) sourceMemos++;
+    final url = manga.string(2, required: true);
+    final trackingFields = manga.fields[18] ?? const <ProtoField>[];
+    if (trackingFields.length > ExternalBackupMetadata.maxTrackers) {
+      throw const FormatException(
+        'Sao lưu có quá nhiều tracker cho một truyện.',
+      );
+    }
+    final tracking = <String>[];
+    for (final field in trackingFields) {
+      if (field.wire != 2) {
+        throw const FormatException('Message tracker protobuf không hợp lệ.');
+      }
+      final bytes = field.value as Uint8List;
+      validateMihonTracking(bytes, manga.budget);
+      tracking.add(base64Encode(bytes));
+    }
+    trackers += tracking.length;
+    final memoField = manga.one(112);
+    if (memoField != null && memoField.wire != 2) {
+      throw const FormatException('Memo nguồn protobuf không hợp lệ.');
+    }
+    final memo = memoField == null
+        ? null
+        : base64Encode(memoField.value as Uint8List);
+    if (memo != null) sourceMemos++;
     titles.add(
       ExternalTitle(
         source: source,
-        url: manga.string(2, required: true),
+        url: url,
         title: manga.string(3),
         author: manga.string(5),
         artist: manga.string(4),
         genres: manga.strings(7),
         notes: manga.string(110),
+        externalBackupMetadata: tracking.isEmpty && memo == null
+            ? null
+            : ExternalBackupMetadata(
+                format: 'mihon-protobuf-v0.20.4',
+                engine: 'tachimanga',
+                sourceId: source,
+                sourceRef: url,
+                tracking: tracking,
+                memo: memo,
+              ),
         description: manga.string(6),
+        status: manga.integer(8).toInt(),
+        createdAt: manga.integer(13).toInt(),
         cover: manga.string(9),
         categories: categoryNames,
         lastRead: last?.integer(2, required: true).toInt() ?? 0,
@@ -77,6 +117,10 @@ ConvertedBackup _read(Uint8List bytes) {
                 read: chapter.boolean(4),
                 bookmarked: chapter.boolean(5),
                 lastPage: chapter.integer(6).toInt(),
+                fetchedAt: chapter.integer(7).toInt(),
+                uploadedAt: chapter.integer(8).toInt(),
+                scanlator: chapter.string(3),
+                number: chapter.floatingPoint(9),
               ),
             )
             .toList(),
@@ -92,7 +136,11 @@ ConvertedBackup _read(Uint8List bytes) {
       if (unknownCategories > 0)
         '$unknownCategories liên kết danh mục không tìm thấy tên, được bỏ qua.',
       if (sourceMemos > 0)
-        '$sourceMemos truyện có dữ liệu memo riêng của nguồn, chưa hỗ trợ nhập. Ghi chú cá nhân vẫn được giữ.',
+        '$sourceMemos memo riêng của nguồn được giữ nguyên bytes cùng nguồn gốc, '
+            'không thực thi hoặc áp dụng cho nguồn khác.',
+      if (trackers > 0)
+        '$trackers liên kết tracker được giữ trong sao lưu; chưa tự đồng bộ '
+            'với dịch vụ theo dõi.',
     ],
   );
 }

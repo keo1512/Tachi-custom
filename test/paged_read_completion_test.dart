@@ -31,36 +31,35 @@ void main() {
 
   for (final mode in ['paged', 'rtl']) {
     testWidgets(
-      '$mode marks the decoded last page read while preserving resume position',
+      'legacy $mode preference uses continuous pages and completes only at the decoded end',
       (tester) async {
         final images = await _images(tester, 3);
         final fixture = await _open(tester, images, mode: mode);
         await _waitForImages(tester);
         expect((await fixture.repo.find('paged'))!.chapters.first.read, false);
 
-        final pager = tester.widget<PageView>(find.byType(PageView));
-        expect(pager.reverse, mode == 'rtl');
-        await tester.drag(
-          find.byType(PageView),
-          Offset(mode == 'rtl' ? 750 : -750, 0),
+        expect(find.byType(PageView), findsNothing);
+        final scroll = tester
+            .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+            .controller!;
+        // Old paged/RTL preferences cannot replace the requested continuous flow.
+        expect(
+          fixture.container.read(preferencesProvider).getString('mangaMode'),
+          mode,
         );
+        scroll.jumpTo(tester.getSize(find.byType(Image).first).height + 10);
+        await tester.pump(const Duration(milliseconds: 600));
         await tester.pumpAndSettle();
-        await _waitForImages(tester);
-        expect(pager.controller!.page, closeTo(1, .01));
         expect((await fixture.repo.find('paged'))!.chapters.first.read, false);
 
-        await tester.drag(
-          find.byType(PageView),
-          Offset(mode == 'rtl' ? 750 : -750, 0),
-        );
+        scroll.jumpTo(scroll.position.maxScrollExtent);
+        await tester.pump(const Duration(milliseconds: 600));
         await tester.pumpAndSettle();
-        await _waitForImages(tester);
         final saved = (await fixture.repo.find('paged'))!;
-        expect(pager.controller!.page, closeTo(2, .01));
         expect(saved.chapters.first.read, true);
         expect(saved.chapters.last.read, false);
         expect(saved.currentChapter, 0);
-        expect(saved.progress, closeTo(1 / 3, .0001));
+        expect(saved.progress, closeTo(.5, .0001));
 
         await _dispose(tester, fixture.container);
         final reopened = await _open(
@@ -70,13 +69,13 @@ void main() {
           repo: fixture.repo,
         );
         await _waitForImages(tester);
-        expect(
-          tester.widget<PageView>(find.byType(PageView)).controller!.page,
-          closeTo(2, .01),
-        );
+        final restored = tester
+            .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+            .controller!;
+        expect(restored.offset, closeTo(restored.position.maxScrollExtent, 1));
         expect(
           (await fixture.repo.find('paged'))!.progress,
-          closeTo(1 / 3, .0001),
+          closeTo(.5, .0001),
         );
         await _dispose(tester, reopened.container);
       },
@@ -101,8 +100,9 @@ void main() {
       expect(saved.chapters.first.read, true);
       expect(
         saved.progress,
-        0,
-        reason: 'The saved page index remains zero for a single page.',
+        .5,
+        reason:
+            'The continuous reader retains the previously saved end fraction.',
       );
       await _dispose(tester, fixture.container);
     },
@@ -137,7 +137,11 @@ void main() {
           .read(settingsProvider.notifier)
           .update(incognitoMode: false);
       await tester.pumpAndSettle();
-      await tester.drag(find.byType(PageView), const Offset(-750, 0));
+      final scroll = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .controller!;
+      scroll.jumpTo(scroll.position.maxScrollExtent);
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
       await _waitForImages(tester);
       expect((await fixture.repo.find('paged'))!.toJson(), original);
@@ -156,9 +160,16 @@ void main() {
           .copyWith(title: 'Restored title', progress: .1);
       await fixture.repo.clear();
       await fixture.repo.save(replacement);
-      await tester.drag(find.byType(PageView), const Offset(-750, 0));
+      final scroll = tester
+          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .controller!;
+      scroll.jumpTo(scroll.position.maxScrollExtent);
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
       await _waitForImages(tester);
+      // Let the failed progress toast leave before explicitly testing bookmark.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Đánh dấu trang'));
       await tester.pumpAndSettle();
       expect(
@@ -237,7 +248,8 @@ Future<_Fixture> _open(
     ),
   );
   await tester.pumpAndSettle();
-  expect(find.byType(PageView), findsOneWidget);
+  expect(find.byType(PageView), findsNothing);
+  expect(find.byType(SingleChildScrollView), findsOneWidget);
   return (repo: library, container: container);
 }
 

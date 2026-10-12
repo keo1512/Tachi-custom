@@ -12,6 +12,47 @@ import 'package:tachi_books/features/settings/settings_controller.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
+  testWidgets(
+    'a group dialog opened before restore cannot regroup a replacement book',
+    (tester) async {
+      final repo = MemoryLibraryRepository();
+      await repo.save(
+        LibraryBook(id: '1', title: 'Original', collection: 'Original shelf'),
+      );
+      await mountLibrary(tester, repo, const Size(430, 932));
+      await tester.longPress(find.byKey(const ValueKey('library-book-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Gom nhóm sách đã chọn'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('group-name')),
+        'Stale shelf',
+      );
+      final replacement = LibraryBook(
+        id: '1',
+        title: 'Replacement',
+        collection: 'Restored shelf',
+      );
+      await repo.clear();
+      await repo.save(replacement);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(LibraryScreen)),
+      );
+      await container.read(libraryProvider.notifier).refresh();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Áp dụng'));
+      await tester.pumpAndSettle();
+      expect((await repo.find('1'))!.toJson(), replacement.toJson());
+      expect(
+        find.textContaining('Thư viện đã được thay đổi hoặc khôi phục'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
+
   for (final size in const [Size(320, 568), Size(430, 932)]) {
     testWidgets(
       'multi-select assigns an explicit series without replacing manual shelves at $size',

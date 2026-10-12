@@ -108,11 +108,22 @@ void main() {
         repo,
         const UpdatesScreen(),
       );
+      await tester.tap(find.byTooltip('Tùy chọn cập nhật'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.ancestor(
+          of: find.text('Xem cả chương chưa đọc đã có'),
+          matching: find.byType(CheckedPopupMenuItem<String>),
+        ),
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Chương chưa đọc trước tiến độ'), findsNWidgets(2));
       expect(find.text('Chương đã đọc sau tiến độ'), findsNothing);
       await tester.tap(find.byTooltip('Tùy chọn cập nhật'));
       await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(CheckedPopupMenuItem<String>, 'Kệ A'));
+      await tester.tap(
+        find.widgetWithText(CheckedPopupMenuItem<String>, 'Kệ A'),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Chương chưa đọc trước tiến độ'), findsOneWidget);
       expect(find.text('Truyện first'), findsOneWidget);
@@ -206,10 +217,26 @@ LibraryBook _book(String id, String title) => LibraryBook(
   progress: .5,
   lastRead: DateTime.now().subtract(const Duration(days: 2)),
   bookmarks: const ['1:0.5000'],
-  chapters: const [
-    BookChapter(id: 'first', title: 'Chương đầu', index: 7),
-    BookChapter(id: 'second', title: 'Chương giữa', index: 8),
-    BookChapter(id: 'third', title: 'Chương cuối', index: 9, downloaded: true),
+  chapters: [
+    BookChapter(
+      id: 'first',
+      title: 'Chương đầu',
+      index: 7,
+      discoveredAt: DateTime(2026, 10, 10),
+    ),
+    BookChapter(
+      id: 'second',
+      title: 'Chương giữa',
+      index: 8,
+      discoveredAt: DateTime(2026, 10, 10),
+    ),
+    BookChapter(
+      id: 'third',
+      title: 'Chương cuối',
+      index: 9,
+      downloaded: true,
+      discoveredAt: DateTime(2026, 10, 10),
+    ),
   ],
 );
 

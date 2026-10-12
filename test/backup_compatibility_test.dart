@@ -18,12 +18,16 @@ void main() {
     expect(preview.format, contains('build511'));
     expect(preview.books, 1);
     expect(preview.cachedChapters, 0);
-    expect(preview.warnings.join(' '), contains('nhiều danh mục'));
+    expect(
+      preview.warnings.join(' '),
+      isNot(contains('chỉ giữ danh mục đầu tiên')),
+    );
     expect(await service.mergePreview(preview), 1);
     final book = (await repository.list()).single;
     expect(book.sourceId, fixtureSource);
     expect(book.sourceRef, '/title');
     expect(book.collection, 'Nhóm đầu');
+    expect(book.categories, ['Nhóm đầu', 'Nhóm sau']);
     expect(book.chapters.map((chapter) => chapter.id), ['/c1', '/c2', '/c3']);
     expect(book.chapters.map((chapter) => chapter.read), [true, false, true]);
     expect(book.chapters.every((chapter) => !chapter.downloaded), isTrue);
@@ -35,6 +39,31 @@ void main() {
       DateTime.fromMillisecondsSinceEpoch(2000, isUtc: true),
     );
     expect(await repository.readChapter(book.id, 0), isNull);
+  });
+
+  test('Mihon and TMB preserve all categories and original publication metadata through a native backup', () async {
+    for (final bytes in [
+      mihonFixture(multipleCategories: true, chapterMetadata: true),
+      tmbFixture(chapterMetadata: true),
+    ]) {
+      final repository = MemoryLibraryRepository();
+      final service = BackupService(repository);
+      await service.merge(bytes);
+      final book = (await repository.list()).single;
+      expect(book.categories, hasLength(2));
+      expect(
+        book.chapters.first.uploadedAt,
+        DateTime.fromMillisecondsSinceEpoch(1700000000000, isUtc: true),
+      );
+      expect(book.chapters.first.number, 1.5);
+      expect(book.chapters.first.scanlator, 'Nhóm dịch mẫu');
+      final restored = MemoryLibraryRepository();
+      await BackupService(restored).replace(
+        await service.export(),
+        expectedFingerprint: (await restored.snapshot()).fingerprint,
+      );
+      expect((await restored.list()).single.toJson(), book.toJson());
+    }
   });
 
   test('Mihon gzip protobuf shares identities, preserves read/bookmarks, warns about absent page counts', () async {
@@ -129,6 +158,21 @@ void main() {
       expect(preview.format, 'Tachimanga 5.0 (build511)');
       expect(preview.books, greaterThan(0));
       expect(preview.cachedChapters, 0);
+      expect(preview.books, 728);
+      expect(
+        preview.snapshot.entries.where((entry) {
+          final memo = entry.book.externalBackupMetadata?.memo;
+          return memo != null && utf8.decode(base64Decode(memo)) != '{}';
+        }),
+        hasLength(122),
+      );
+      expect(
+        preview.snapshot.entries.every(
+          (entry) =>
+              entry.book.externalBackupMetadata?.tracking.isEmpty ?? true,
+        ),
+        true,
+      );
       expect(
         preview.snapshot.entries.every(
           (entry) =>

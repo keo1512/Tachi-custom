@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,14 +10,31 @@ import '../../../core/widgets/feedback.dart';
 import '../../downloads/presentation/download_queue_controller.dart';
 import '../domain/library_book.dart';
 import '../domain/library_grouping.dart';
+import '../domain/library_categories.dart';
 import '../domain/library_search.dart';
+import '../domain/library_reading.dart';
+import '../application/library_bulk_actions.dart';
+import '../data/coordinated_preferences.dart';
+import '../data/library_mutation.dart';
+import '../../deep_links/application/deep_link_queue.dart';
 import '../../settings/settings_controller.dart';
-import '../../settings/presentation/connection_dialog.dart';
+import '../../settings/presentation/settings_widgets.dart';
+import '../../sync/presentation/sync_screen.dart';
 import 'library_filter_sheet.dart';
+import 'library_filter_controller.dart';
+import 'library_category_controller.dart';
+import 'library_categories_screen.dart';
 import 'library_group_dialog.dart';
 import 'library_group_tabs.dart';
 import 'library_grouping_controller.dart';
+import 'library_group_order_controller.dart';
+import 'library_group_order_sheet.dart';
 import 'library_view_model.dart';
+import 'library_view_session.dart';
+import 'library_duplicate_sheet.dart';
+import 'library_filter_presets_bar.dart';
+import 'library_book_metadata.dart';
+import 'library_book_tile.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -30,9 +49,98 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   LibraryGrouping get grouping => ref.read(libraryGroupingProvider);
   String? selectedGroup;
   bool selecting = false, groupingBusy = false;
-  bool downloadingBusy = false;
-  bool get selectionBusy => groupingBusy || downloadingBusy;
+  bool downloadingBusy = false, bulkBusy = false;
+  bool get selectionBusy => groupingBusy || downloadingBusy || bulkBusy;
   final selectedIds = <String>{};
+  late final LibraryViewSession viewSession;
+  late final TextEditingController queryController;
+
+  @override
+  void initState() {
+    super.initState();
+    viewSession = ref.read(libraryViewSessionProvider);
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    if (viewSession.revision != revision) viewSession.reset(revision);
+    query = viewSession.query;
+    searching = viewSession.searching;
+    selectedGroup = viewSession.selectedGroup;
+    queryController = TextEditingController(text: query);
+  }
+
+  @override
+  void dispose() {
+    viewSession.query = query;
+    viewSession.searching = searching;
+    viewSession.selectedGroup = selectedGroup;
+    queryController.dispose();
+    super.dispose();
+  }
+
+  Future<void> reorderGroups(List<LibraryGroup> groups) async {
+    final mode = grouping;
+    final keys = await showLibraryGroupOrderSheet(context, groups);
+    if (keys == null || !mounted) return;
+    await perform(
+      context,
+      () => ref.read(libraryGroupOrderProvider.notifier).setOrder(mode, keys),
+    );
+  }
+
+  Future<void> resumeBook(LibraryBook book, int revision) async {
+    await perform(context, () async {
+      final repository = ref.read(libraryRepositoryProvider);
+      checkLibraryRevision(repository.replacementRevision, revision);
+      final latest = await repository.find(book.id);
+      checkLibraryRevision(repository.replacementRevision, revision);
+      if (latest == null || latest.chapters.isEmpty || !mounted) return;
+      final chapter = latest.currentChapter.clamp(
+        0,
+        latest.chapters.length - 1,
+      );
+      final uri = Uri(
+        pathSegments: ['', 'read', latest.id],
+        queryParameters: {'chapterId': latest.chapters[chapter].id},
+      );
+      context.push<void>(uri.toString(), extra: LibraryLinkHandoff(revision));
+    });
+  }
+
+  Future<void> refreshVisibleBooks(List<LibraryBook> visible) async {
+    final ids = visible.map((book) => book.id).toList(growable: false);
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    final result = await perform(
+      context,
+      () => ref
+          .read(libraryProvider.notifier)
+          .updateBooks(ids, expectedRevision: revision),
+    );
+    if (result == null || !mounted) return;
+    final summary = result.checkedBooks == 0 && !result.hasErrors
+        ? 'Không có truyện từ nguồn trực tuyến trong mục này.'
+        : 'Đã kiểm tra ${result.checkedBooks} truyện, '
+              'thêm ${result.addedChapters} chương mới.';
+    if (!result.hasErrors) {
+      message(context, summary);
+      return;
+    }
+    await showCupertinoDialog<void>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Kết quả cập nhật'),
+        content: Text(
+          '$summary\n${result.failures.length} truyện chưa cập nhật được.\n\n'
+          '${result.failures.take(3).map((failure) => '${failure.title}: ${failure.message}').join('\n\n')}'
+          '${result.failures.length > 3 ? '\n\nCòn ${result.failures.length - 3} truyện lỗi.' : ''}',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> changeGrouping(LibraryGrouping mode) async {
     await ref.read(libraryGroupingProvider.notifier).setGrouping(mode);
@@ -63,35 +171,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         .where(
           (book) =>
               (groupedIds == null || groupedIds.contains(book.id)) &&
-              (filter.kind == 'all' || book.kind == filter.kind) &&
-              search.matches(book) &&
-              switch (filter.category) {
-                'Đang đọc' => book.lastRead != null && !book.completed,
-                'Yêu thích' => book.favorite,
-                'Hoàn thành' => book.completed,
-                'Tất cả' => true,
-                _ => book.collection == filter.category,
-              },
+              filter.matches(book) &&
+              search.matches(book),
         )
         .toList()
-      ..sort((a, b) {
-        final result = switch (filter.order) {
-          LibraryOrder.recent => (b.lastRead ?? DateTime(1970)).compareTo(
-            a.lastRead ?? DateTime(1970),
-          ),
-          LibraryOrder.title => a.title.toLowerCase().compareTo(
-            b.title.toLowerCase(),
-          ),
-          LibraryOrder.unread =>
-            (b.chapters.length - readChapterCount(b)).compareTo(
-              a.chapters.length - readChapterCount(a),
-            ),
-        };
-        return filter.reverse ? -result : result;
-      });
+      ..sort(filter.compare);
   }
 
   Future<void> groupSelected(List<LibraryBook> books, Set<String> ids) async {
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
     final edit = await showLibraryGroupDialog(
       context,
       books: books,
@@ -111,6 +199,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 : null,
             author: edit.grouping == LibraryGrouping.author ? edit.value : null,
             series: edit.grouping == LibraryGrouping.series ? edit.value : null,
+            categories: edit.categories,
+            expectedRevision: revision,
           ),
     );
     if (!mounted) return;
@@ -191,10 +281,100 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     if (count != null && count > 0) message(context, 'Đã nhập $count file');
   }
 
+  Future<void> bulkAction(
+    String action,
+    List<LibraryBook> books,
+    Set<String> ids,
+  ) async {
+    if (selectionBusy || ids.isEmpty) return;
+    final repository = ref.read(libraryRepositoryProvider);
+    final revision = repository.replacementRevision;
+    final actions = LibraryBulkActions(repository);
+    setState(() => bulkBusy = true);
+    final count = await perform(context, () async {
+      if (action == 'delete') {
+        final preview = await actions.previewRemoval(ids, revision: revision);
+        if (!mounted || preview.books.isEmpty) return null;
+        final confirmed = await showCupertinoDialog<bool>(
+          context: context,
+          builder: (ctx) => CupertinoAlertDialog(
+            title: Text('Xóa ${preview.books.length} truyện khỏi thư viện?'),
+            content: Text(
+              'Các truyện đã chọn và ${preview.cachedChapters} chương đã lưu trong app sẽ bị xóa. File gốc đã nhập từ ứng dụng Tệp được giữ nguyên. Một bản khôi phục được lưu trước khi xóa.',
+            ),
+            actions: [
+              CupertinoDialogAction(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Hủy'),
+              ),
+              CupertinoDialogAction(
+                isDestructiveAction: true,
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Xóa truyện'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !mounted) return null;
+        final queue = ref.read(downloadQueueProvider.notifier);
+        final removed = await actions.remove(preview);
+        var pending = 0;
+        for (final book in preview.books) {
+          try {
+            await queue.cancelBook(book.id);
+          } catch (_) {
+            pending++;
+          }
+        }
+        if (mounted && pending > 0) {
+          message(
+            context,
+            'Đã xóa truyện. Còn $pending mục cần xóa khỏi hàng đợi tải; các lượt tải cũ không thể ghi lại truyện đã xóa.',
+          );
+        }
+        return removed;
+      }
+      if (action == 'read' || action == 'unread') {
+        return actions.markRead(ids, action == 'read', revision: revision);
+      }
+      if (action == 'favorite' || action == 'unfavorite') {
+        return actions.favorite(ids, action == 'favorite', revision: revision);
+      }
+      final result = await ref
+          .read(libraryProvider.notifier)
+          .updateBooks(ids, expectedRevision: revision);
+      if (mounted) {
+        message(
+          context,
+          'Đã kiểm tra ${result.checkedBooks} truyện, thêm ${result.addedChapters} chương. ${result.failures.length} truyện chưa cập nhật được.',
+        );
+      }
+      return result.checkedBooks;
+    });
+    if (!mounted) return;
+    await ref.read(libraryProvider.notifier).refresh();
+    if (!mounted) return;
+    setState(() {
+      bulkBusy = false;
+      if (count != null && action == 'delete') {
+        selecting = false;
+        selectedIds.clear();
+      }
+    });
+    if (count != null && action != 'refresh') {
+      message(context, 'Đã cập nhật $count truyện');
+    }
+  }
+
   void showFilters(List<LibraryBook> books) {
+    final preferences = ref.read(preferencesProvider);
+    final generation = preferences is CoordinatedPreferences
+        ? preferences.mutationGeneration
+        : 0;
+    final mode = grouping, groupKey = selectedGroup;
     final collections =
         books
-            .map((b) => b.collection)
+            .expand((b) => b.categories)
             .where((c) => c.isNotEmpty)
             .toSet()
             .toList()
@@ -207,13 +387,28 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       constraints: const BoxConstraints(maxWidth: 600),
       builder: (_) => LibraryFilterSheet(
         value: filter,
+        presetsBuilder: (filter, onApply) =>
+            LibraryFilterPresetsBar(filter: filter, onApply: onApply),
         collections: collections,
+        sources: {
+          for (final book in books)
+            if (book.engine != 'local')
+              '${book.engine}:${book.sourceId}':
+                  '${book.engine} · ${book.sourceId}',
+        },
         onChanged: (value) {
           if (mounted) {
-            setState(() {
-              filter = value;
-              selectedGroup = null;
-            });
+            perform(
+              context,
+              () => ref
+                  .read(libraryFilterProvider.notifier)
+                  .save(
+                    value,
+                    grouping: mode,
+                    groupKey: groupKey,
+                    expectedGeneration: generation,
+                  ),
+            );
           }
         },
       ),
@@ -225,8 +420,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final library = ref.watch(libraryProvider);
     final settings = ref.watch(settingsProvider);
     final grouping = ref.watch(libraryGroupingProvider);
+    filter = ref.watch(libraryFilterProvider).forGroup(grouping, selectedGroup);
     final books = library.value ?? <LibraryBook>[];
-    final groups = libraryGroups(books, grouping);
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    final groupOrders = ref.watch(libraryGroupOrderProvider);
+    final groups = orderLibraryGroups(
+      grouping == LibraryGrouping.collection
+          ? libraryCategoryGroups(books, ref.watch(libraryCategoriesProvider))
+          : libraryGroups(books, grouping),
+      groupOrders[grouping.name] ?? const [],
+    );
     final visible = visibleBooks(books, groups);
     final currentIds = selectedIds.intersection(
       books.map((book) => book.id).toSet(),
@@ -237,7 +440,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          tooltip: selecting ? 'Hủy chọn sách' : 'Kết nối nguồn',
+          tooltip: selecting ? 'Hủy chọn sách' : 'Đồng bộ',
           icon: Icon(
             selecting ? CupertinoIcons.xmark : Icons.cloud_done_outlined,
           ),
@@ -248,7 +451,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   selecting = false;
                   selectedIds.clear();
                 })
-              : () => showConnections(context, ref),
+              : () => openSettingsPage(context, const SyncScreen()),
         ),
         title: selecting
             ? Text(
@@ -258,6 +461,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               )
             : searching
             ? TextField(
+                controller: queryController,
                 autofocus: true,
                 onChanged: (v) => setState(() => query = v),
                 decoration: const InputDecoration(
@@ -314,12 +518,41 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     )
                   : const Icon(CupertinoIcons.folder_badge_plus),
             ),
+            PopupMenuButton<String>(
+              tooltip: 'Thao tác với sách đã chọn',
+              enabled: currentIds.isNotEmpty && !selectionBusy,
+              onSelected: (action) => bulkAction(action, books, currentIds),
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'read', child: Text('Đánh dấu đã đọc')),
+                PopupMenuItem(
+                  value: 'unread',
+                  child: Text('Đánh dấu chưa đọc'),
+                ),
+                PopupMenuItem(
+                  value: 'favorite',
+                  child: Text('Thêm vào yêu thích'),
+                ),
+                PopupMenuItem(value: 'unfavorite', child: Text('Bỏ yêu thích')),
+                PopupMenuItem(
+                  value: 'refresh',
+                  child: Text('Cập nhật truyện đã chọn'),
+                ),
+                PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Xóa truyện đã chọn'),
+                ),
+              ],
+            ),
           ] else ...[
             IconButton(
               tooltip: searching ? 'Đóng tìm kiếm' : 'Tìm trong thư viện',
               onPressed: () => setState(() {
                 searching = !searching;
-                if (!searching) query = '';
+                if (!searching) {
+                  query = '';
+                  queryController.clear();
+                }
               }),
               icon: Icon(
                 searching ? CupertinoIcons.xmark : CupertinoIcons.search,
@@ -363,14 +596,24 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   );
                 }
                 if (v == 'import') import();
+                if (v == 'categories') {
+                  openSettingsPage(context, const LibraryCategoriesScreen());
+                }
                 if (v == 'select') setState(() => selecting = true);
+                if (v == 'duplicates') showLibraryDuplicates(context, books);
+                if (v == 'random' && visible.isNotEmpty) {
+                  context.push(
+                    '/book/${visible[Random().nextInt(visible.length)].id}',
+                  );
+                }
+                if (v == 'reorder-groups') reorderGroups(groups);
                 for (final mode in LibraryGrouping.values) {
                   if (v == 'group-${mode.name}') {
                     perform(context, () => changeGrouping(mode));
                   }
                 }
                 if (v == 'refresh') {
-                  perform(context, ref.read(libraryProvider.notifier).refresh);
+                  refreshVisibleBooks(visible);
                 }
               },
               itemBuilder: (_) => [
@@ -383,7 +626,26 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   enabled: books.isNotEmpty,
                   child: const Text('Chọn nhiều sách'),
                 ),
+                PopupMenuItem(
+                  value: 'random',
+                  enabled: visible.isNotEmpty,
+                  child: const Text('Mở truyện ngẫu nhiên trong mục này'),
+                ),
+                PopupMenuItem(
+                  value: 'duplicates',
+                  enabled: books.isNotEmpty,
+                  child: const Text('Kiểm tra truyện trùng tên'),
+                ),
                 const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'categories',
+                  child: Text('Quản lý danh mục'),
+                ),
+                PopupMenuItem(
+                  value: 'reorder-groups',
+                  enabled: groups.length > 1,
+                  child: const Text('Sắp xếp các mục'),
+                ),
                 for (final mode in LibraryGrouping.values)
                   CheckedPopupMenuItem(
                     key: ValueKey('library-group-mode-${mode.name}'),
@@ -403,103 +665,216 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 ),
                 const PopupMenuItem(
                   value: 'refresh',
-                  child: Text('Làm mới thư viện'),
+                  child: Text('Cập nhật chương mới'),
                 ),
               ],
             ),
           ],
         ],
       ),
-      body: library.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => EmptyPanel(
-          icon: Icons.error_outline,
-          title: 'Không mở được thư viện',
-          description: '$e',
-          action: FilledButton(
-            onPressed: () => ref.invalidate(libraryProvider),
-            child: const Text('Thử lại'),
+      body: PageStorage(
+        bucket: ref.watch(mainPageStorageProvider),
+        child: library.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => EmptyPanel(
+            icon: Icons.error_outline,
+            title: 'Không mở được thư viện',
+            description: userFacingError(e),
+            action: FilledButton(
+              onPressed: () => ref.invalidate(libraryProvider),
+              child: const Text('Thử lại'),
+            ),
           ),
-        ),
-        data: (books) {
-          return Column(
-            children: [
-              if (books.isNotEmpty)
-                LibraryGroupTabs(
-                  groups: groups,
-                  selectedKey: selectedGroup,
-                  total: books.length,
-                  grouping: grouping,
-                  onSelected: (key) => setState(() {
-                    selectedGroup = key;
-                    filter = filter.copyWith(category: 'Tất cả');
-                  }),
-                ),
-              const Divider(height: 1),
-              Expanded(
-                child: visible.isEmpty
-                    ? EmptyPanel(
-                        icon: CupertinoIcons.book,
-                        title: books.isEmpty
-                            ? 'Tủ sách của bạn'
-                            : 'Chưa có sách trong kệ này',
-                        description: books.isEmpty
-                            ? 'Thêm manga, truyện chữ hoặc EPUB. Tiến độ và nội dung đã tải được giữ trong máy.'
-                            : 'Đổi bộ lọc hoặc thêm sách vào kệ.',
-                        action: books.isEmpty
-                            ? FilledButton.icon(
-                                onPressed: importing ? null : import,
-                                icon: const Icon(CupertinoIcons.plus),
-                                label: const Text('Nhập EPUB, TXT, CBZ'),
-                              )
-                            : null,
-                        secondary: books.isEmpty
-                            ? TextButton(
-                                onPressed: () => perform(
-                                  context,
-                                  () => ref
-                                      .read(libraryProvider.notifier)
-                                      .addExample(),
-                                ),
-                                child: const Text('Thử reader với sách mẫu'),
-                              )
-                            : null,
-                      )
-                    : LayoutBuilder(
-                        builder: (context, size) {
-                          final columns =
-                              (settings.libraryColumns +
-                                      (filter.compact ? 1 : 0))
-                                  .clamp(2, 8);
-                          return RefreshIndicator(
-                            onRefresh: ref
-                                .read(libraryProvider.notifier)
-                                .refresh,
-                            child: GridView.builder(
-                              padding: EdgeInsets.fromLTRB(
-                                10,
-                                4,
-                                10,
-                                MediaQuery.viewPaddingOf(context).bottom + 16,
-                              ),
-                              itemCount: visible.length,
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: columns,
-                                    crossAxisSpacing: 6,
-                                    mainAxisSpacing: 6,
-                                    childAspectRatio: .74,
-                                  ),
-                              itemBuilder: (_, i) {
-                                final b = visible[i];
-                                return Semantics(
-                                  label: b.title,
-                                  button: true,
-                                  selected: selecting
-                                      ? currentIds.contains(b.id)
+          data: (books) {
+            return Column(
+              children: [
+                if (books.isNotEmpty && filter.showCategoryTabs)
+                  LibraryGroupTabs(
+                    groups: groups,
+                    selectedKey: selectedGroup,
+                    total: books.length,
+                    grouping: grouping,
+                    onReorder: groups.length > 1
+                        ? () => reorderGroups(groups)
+                        : null,
+                    onSelected: (key) => setState(() {
+                      selectedGroup = key;
+                      filter = filter.copyWith(category: 'Tất cả');
+                    }),
+                  ),
+                const Divider(height: 1),
+                Expanded(
+                  child: visible.isEmpty
+                      ? RefreshIndicator(
+                          onRefresh: () => refreshVisibleBooks(visible),
+                          child: CustomScrollView(
+                            key: const PageStorageKey('library-empty'),
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            slivers: [
+                              SliverFillRemaining(
+                                hasScrollBody: false,
+                                child: EmptyPanel(
+                                  icon: CupertinoIcons.book,
+                                  title: books.isEmpty
+                                      ? 'Tủ sách của bạn'
+                                      : 'Chưa có sách trong kệ này',
+                                  description: books.isEmpty
+                                      ? 'Thêm manga, truyện chữ hoặc EPUB. Tiến độ và nội dung đã tải được giữ trong máy.'
+                                      : 'Đổi bộ lọc hoặc thêm sách vào kệ.',
+                                  action: books.isEmpty
+                                      ? FilledButton.icon(
+                                          onPressed: importing ? null : import,
+                                          icon: const Icon(CupertinoIcons.plus),
+                                          label: const Text(
+                                            'Nhập EPUB, TXT, CBZ',
+                                          ),
+                                        )
                                       : null,
-                                  child: InkWell(
-                                    key: ValueKey('library-book-${b.id}'),
+                                  secondary: books.isEmpty
+                                      ? TextButton(
+                                          onPressed: () => perform(
+                                            context,
+                                            () => ref
+                                                .read(libraryProvider.notifier)
+                                                .addExample(),
+                                          ),
+                                          child: const Text(
+                                            'Thử reader với sách mẫu',
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : LayoutBuilder(
+                          builder: (context, size) {
+                            if (filter.display == LibraryDisplay.list) {
+                              return RefreshIndicator(
+                                onRefresh: () => refreshVisibleBooks(visible),
+                                child: ListView.builder(
+                                  key: PageStorageKey(
+                                    'library-list:${grouping.name}:$selectedGroup',
+                                  ),
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  itemCount: visible.length,
+                                  itemBuilder: (context, index) {
+                                    final b = visible[index];
+                                    return ListTile(
+                                      key: ValueKey('library-book-${b.id}'),
+                                      minTileHeight: 100,
+                                      leading: SizedBox(
+                                        width: 60,
+                                        height: 90,
+                                        child: BookCover(
+                                          title: b.title,
+                                          cover: b.cover,
+                                          kind: b.kind,
+                                          showTitle: false,
+                                        ),
+                                      ),
+                                      title: Text(
+                                        b.title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      subtitle: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          if (b.author.isNotEmpty)
+                                            Text(b.author),
+                                          Text(b.categories.join(', ')),
+                                          LibraryBookMetadata(
+                                            book: b,
+                                            filter: filter,
+                                          ),
+                                        ],
+                                      ),
+                                      trailing: selecting
+                                          ? Icon(
+                                              currentIds.contains(b.id)
+                                                  ? CupertinoIcons
+                                                        .checkmark_circle_fill
+                                                  : CupertinoIcons.circle,
+                                            )
+                                          : filter.showResumeButton
+                                          ? IconButton(
+                                              key: ValueKey(
+                                                'library-resume-${b.id}',
+                                              ),
+                                              tooltip:
+                                                  !bookHasReadingProgress(b)
+                                                  ? 'Đọc chương đầu tiên'
+                                                  : 'Tiếp tục đọc',
+                                              onPressed:
+                                                  b.chapters.isEmpty ||
+                                                      selectionBusy
+                                                  ? null
+                                                  : () =>
+                                                        resumeBook(b, revision),
+                                              icon: const Icon(
+                                                CupertinoIcons.play_fill,
+                                              ),
+                                            )
+                                          : null,
+                                      onLongPress: selectionBusy
+                                          ? null
+                                          : () => toggleSelection(b.id),
+                                      onTap: selectionBusy
+                                          ? null
+                                          : selecting
+                                          ? () => toggleSelection(b.id)
+                                          : () => context.push('/book/${b.id}'),
+                                    );
+                                  },
+                                ),
+                              );
+                            }
+                            final columns =
+                                (settings.libraryColumns +
+                                        (filter.compact ? 1 : 0))
+                                    .clamp(2, 8);
+                            return RefreshIndicator(
+                              onRefresh: () => refreshVisibleBooks(visible),
+                              child: GridView.builder(
+                                key: PageStorageKey(
+                                  'library-grid:${grouping.name}:$selectedGroup',
+                                ),
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: EdgeInsets.fromLTRB(
+                                  10,
+                                  4,
+                                  10,
+                                  MediaQuery.viewPaddingOf(context).bottom + 16,
+                                ),
+                                itemCount: visible.length,
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: columns,
+                                      crossAxisSpacing: 6,
+                                      mainAxisSpacing: 6,
+                                      mainAxisExtent:
+                                          ((size.maxWidth -
+                                                      20 -
+                                                      (columns - 1) * 6) /
+                                                  columns) /
+                                              .74 +
+                                          LibraryBookTile.extraHeight(
+                                            context,
+                                            filter,
+                                          ),
+                                    ),
+                                itemBuilder: (_, i) {
+                                  final b = visible[i];
+                                  return LibraryBookTile(
+                                    book: b,
+                                    filter: filter,
+                                    selected: selecting
+                                        ? currentIds.contains(b.id)
+                                        : null,
                                     onLongPress: selectionBusy
                                         ? null
                                         : () => toggleSelection(b.id),
@@ -508,84 +883,21 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                         : selecting
                                         ? () => toggleSelection(b.id)
                                         : () => context.push('/book/${b.id}'),
-                                    child: ExcludeSemantics(
-                                      child: Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          BookCover(
-                                            title: b.title,
-                                            cover: b.cover,
-                                            kind: b.kind,
-                                            unread: b.completed
-                                                ? 0
-                                                : b.chapters.length -
-                                                      b.currentChapter,
-                                            downloaded: b.chapters
-                                                .where((c) => c.downloaded)
-                                                .length,
-                                          ),
-                                          if (selecting)
-                                            DecoratedBox(
-                                              decoration: BoxDecoration(
-                                                color: currentIds.contains(b.id)
-                                                    ? Theme.of(context)
-                                                          .colorScheme
-                                                          .primary
-                                                          .withValues(
-                                                            alpha: .18,
-                                                          )
-                                                    : Colors.transparent,
-                                                border: Border.all(
-                                                  color:
-                                                      currentIds.contains(b.id)
-                                                      ? Theme.of(context)
-                                                            .colorScheme
-                                                            .primary
-                                                      : Colors.transparent,
-                                                  width: 2,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(4),
-                                              ),
-                                              child: Align(
-                                                alignment:
-                                                    Alignment.bottomRight,
-                                                child: Padding(
-                                                  padding: const EdgeInsets.all(
-                                                    3,
-                                                  ),
-                                                  child: Icon(
-                                                    currentIds.contains(b.id)
-                                                        ? CupertinoIcons
-                                                              .checkmark_circle_fill
-                                                        : CupertinoIcons.circle,
-                                                    color:
-                                                        currentIds.contains(
-                                                          b.id,
-                                                        )
-                                                        ? Theme.of(context)
-                                                              .colorScheme
-                                                              .primary
-                                                        : Colors.white,
-                                                    size: 22,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          );
-        },
+                                    onResume:
+                                        b.chapters.isEmpty || selectionBusy
+                                        ? null
+                                        : () => resumeBook(b, revision),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

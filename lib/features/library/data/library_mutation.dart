@@ -4,6 +4,7 @@ import 'package:html/parser.dart' as html;
 
 import '../domain/library_book.dart';
 import '../domain/library_reading.dart';
+import '../domain/legacy_chapter_identity.dart';
 
 class LibraryChapterRead {
   const LibraryChapterRead({
@@ -89,9 +90,11 @@ ChapterOrderChange remapChapterOrder(
   LibraryBook book,
   List<BookChapter> incoming,
 ) {
+  final legacyIds = verifiedLegacyChapterIds(book, incoming);
   if (book.engine == 'tachimanga' &&
       book.chapters.any((chapter) => RegExp(r'^\d+$').hasMatch(chapter.id)) &&
-      incoming.any((chapter) => !RegExp(r'^\d+$').hasMatch(chapter.id))) {
+      incoming.any((chapter) => !RegExp(r'^\d+$').hasMatch(chapter.id)) &&
+      legacyIds.isEmpty) {
     throw StateError(
       'Truyện cũ dùng số thứ tự làm mã chương. Chưa thể xác minh chuyển sang '
       'URL chương; mục lục, nội dung đã tải và dấu trang được giữ nguyên.',
@@ -102,7 +105,7 @@ ChapterOrderChange remapChapterOrder(
   }
   final old = {
     for (var index = 0; index < book.chapters.length; index++)
-      book.chapters[index].id: index,
+      legacyIds[book.chapters[index].id] ?? book.chapters[index].id: index,
   };
   final previous = incoming.map((chapter) => old[chapter.id]).toList();
   final chapters = incoming.map((chapter) {
@@ -110,6 +113,11 @@ ChapterOrderChange remapChapterOrder(
     return chapter.copyWith(
       downloaded: oldIndex == null ? false : book.chapters[oldIndex].downloaded,
       read: oldIndex == null ? false : chapterIsRead(book, oldIndex),
+      discoveredAt: oldIndex == null
+          ? chapter.discoveredAt
+          : book.chapters[oldIndex].discoveredAt,
+      clearDiscoveredAt:
+          oldIndex != null && book.chapters[oldIndex].discoveredAt == null,
     );
   }).toList();
   final current = book.chapters.isEmpty
@@ -133,6 +141,7 @@ ChapterOrderChange remapChapterOrder(
   }
   return ChapterOrderChange(
     book.copyWith(
+      lastUpdated: DateTime.now(),
       chapters: chapters,
       completed: book.completed && previous.every((index) => index != null),
       currentChapter: newCurrent < 0 ? 0 : newCurrent,

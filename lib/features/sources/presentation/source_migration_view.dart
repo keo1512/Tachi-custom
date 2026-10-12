@@ -1,14 +1,15 @@
+import '../../../core/format/error_messages.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/widgets/feedback.dart';
 import '../../library/domain/library_book.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../domain/catalogue.dart';
 import 'browse_widgets.dart';
+import 'migration_source_selection.dart';
 
 class SourceMigrationView extends ConsumerWidget {
   const SourceMigrationView({
@@ -27,35 +28,20 @@ class SourceMigrationView extends ConsumerWidget {
           (source.kind == ContentKind.manga) == (book.kind == 'manga') &&
           source.identity != '${book.engine}:${book.sourceId}',
     );
-    final selected = await showCupertinoModalPopup<CatalogueSource>(
-      context: context,
-      builder: (ctx) => CupertinoActionSheet(
-        title: Text(book.title),
-        message: Text(
-          candidates.isEmpty
-              ? 'Chưa có nguồn khác phù hợp. Cài thêm extension trong Phần mở rộng.'
-              : 'Chọn nguồn khác để tìm lại truyện. Tên truyện sẽ được sao chép để dán vào ô tìm kiếm. Sách cũ được giữ nguyên.',
-        ),
-        actions: [
-          for (final source in candidates)
-            CupertinoActionSheetAction(
-              onPressed: () => Navigator.pop(ctx, source),
-              child: Text(
-                '${source.name} · ${sourceEngineName(source.engine)}',
-              ),
-            ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('Hủy'),
-        ),
-      ),
+    final selected = await chooseMigrationSources(
+      context,
+      candidates: candidates.toList(),
+      title: book.title,
     );
-    if (selected == null || !context.mounted) return;
-    await perform(context, () async {
-      await Clipboard.setData(ClipboardData(text: book.title));
-      if (context.mounted) await onOpenSource(selected);
-    });
+    if (selected == null || selected.isEmpty || !context.mounted) return;
+    await context.push(
+      '/migrate',
+      extra: <String, Object>{
+        'bookId': book.id,
+        'source': selected.first,
+        'sources': selected,
+      },
+    );
   }
 
   @override
@@ -63,7 +49,7 @@ class SourceMigrationView extends ConsumerWidget {
       .watch(libraryProvider)
       .when(
         loading: () => const Center(child: CupertinoActivityIndicator()),
-        error: (error, _) => Center(child: Text('$error')),
+        error: (error, _) => Center(child: Text(userFacingError(error))),
         data: (books) {
           final online = books.where(
             (book) =>
@@ -76,9 +62,18 @@ class SourceMigrationView extends ConsumerWidget {
             ),
             children: [
               const BrowseNote(
-                'Chuyển nguồn tự động chưa được hỗ trợ. Chọn truyện đang dùng nguồn online để tìm lại ở nguồn khác. Thao tác này không chuyển cache, tiến độ hoặc dấu trang sang sách mới.',
+                'Chọn truyện, tìm kết quả ở nguồn mới rồi xem trước dữ liệu được chuyển. Chỉ ghép chương có số hoặc tên khớp duy nhất; nội dung offline ở lại truyện cũ.',
               ),
               const BrowseHeading('Truyện trong thư viện'),
+              if (online.isNotEmpty)
+                ListTile(
+                  leading: const Icon(CupertinoIcons.square_stack),
+                  title: const Text('Chuyển nguồn hàng loạt'),
+                  subtitle: const Text(
+                    'Chọn và kiểm tra kết quả cho từng truyện',
+                  ),
+                  onTap: () => context.push('/migrate-batch', extra: sources),
+                ),
               if (online.isEmpty)
                 const BrowseNote(
                   'Không có truyện online phù hợp trong thư viện.',

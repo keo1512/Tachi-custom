@@ -1,0 +1,203 @@
+{
+  "version": 1,
+  "catalogue": {
+    "url": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json",
+    "sha256": "ddce0d72f06c3bc3bfa2e1bb2b9c11e8a39271d683fe25148172fbc255fccd25",
+    "observedDate": "2026-10-10",
+    "packageCount": 1428,
+    "checksumEvidence": "Original APK bytes downloaded from the pinned catalogue release; locally computed checksums, not a signature verification claim"
+  },
+  "scope": "Original APK installation/factory/preferences/restart only. No explicit website search/read/download calls; original factories may initiate startup requests. No iOS execution proof. Historical API1.5 is not covered by this matrix.",
+  "cases": [
+    {
+      "case": "truyenqq-current",
+      "packageName": "eu.kanade.tachiyomi.extension.vi.truyenqq",
+      "versionName": "1.6.25",
+      "api": "1.6",
+      "bytes": 53199,
+      "sha256": "f9d94900b2b4df666bb8fbcd4afe9797f83a984530ea84907ff621ba46cfb34d",
+      "url": "https://github.com/keiyoushi/extensions/releases/download/8ef06cd-2/tachiyomi-vi.truyenqq-v1.6.25.apk",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/keiyoushi/extensions-source@main/src/vi/truyenqq/res/mipmap-xhdpi/ic_launcher.png",
+      "sourceIds": [
+        "2553532324170433933"
+      ],
+      "categories": [
+        "api-1.6",
+        "64-bit-source-id",
+        "configurable-source"
+      ]
+    },
+    {
+      "case": "komga-current",
+      "packageName": "eu.kanade.tachiyomi.extension.all.komga",
+      "versionName": "1.6.71",
+      "api": "1.6",
+      "bytes": 92563,
+      "sha256": "d93ce4bf0d522bc84c21448aa5eb0b2de087e46b46e78211b7ebccfbcc319e4b",
+      "url": "https://github.com/keiyoushi/extensions/releases/download/a2d7e26/tachiyomi-all.komga-v1.6.71.apk",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/keiyoushi/extensions-source@main/src/all/komga/res/mipmap-xhdpi/ic_launcher.png",
+      "sourceIds": [
+        "4508733312114627536",
+        "8074481155021144106",
+        "5132811728275817394"
+      ],
+      "categories": [
+        "api-1.6",
+        "64-bit-source-id",
+        "multiple-sources",
+        "configurable-source"
+      ]
+    },
+    {
+      "case": "mangadex-current",
+      "packageName": "eu.kanade.tachiyomi.extension.all.mangadex",
+      "versionName": "1.6.0",
+      "api": "1.6",
+      "bytes": 98014,
+      "sha256": "12fde77601d48c8b231340694db8446fba5a555ced4109b231c9d2e3000915fb",
+      "url": "https://github.com/keiyoushi/extensions/releases/download/8ef06cd-0/tachiyomi-all.mangadex-v1.6.0.apk",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/keiyoushi/extensions-source@main/src/all/mangadex/res/mipmap-xhdpi/ic_launcher.png",
+      "sourceIds": [
+        "4638673959522768501",
+        "987803387023224960",
+        "3339599426223341161",
+        "9127464796236242233",
+        "1553736397938752611",
+        "3601180820582582605",
+        "4150470519566206911",
+        "5463447640980279236",
+        "1347402746269051958",
+        "5860541308324630662",
+        "5148895169070562838",
+        "1493666528525752601",
+        "2072928884077964642",
+        "8548374501079910130",
+        "3578612018159256808",
+        "425785191804166217",
+        "6750440049024086587",
+        "2499283573021220255",
+        "2819252027406613931",
+        "8773024089257004344",
+        "8578871918181236609",
+        "8254121249433835847",
+        "4505830566611664829",
+        "8952567078513962586",
+        "5098537545549490547",
+        "3260701926561129943",
+        "1424273154577029558",
+        "6840513937945146538",
+        "4284949320785450865",
+        "3686775439235747344",
+        "3807502156582598786",
+        "1952071260038453057",
+        "1411768577036936240",
+        "1573550798452063564",
+        "8884149958776527952",
+        "3285208643537017688",
+        "764587568075398530",
+        "737986167355114438",
+        "1471784905273036181",
+        "5967745367608513818",
+        "954368055061084457",
+        "4872213291993424667",
+        "3781216447842245147",
+        "8033579885162383068",
+        "2655149515337070132",
+        "5189216366882819742",
+        "4774459486579224459",
+        "2098905203823335614",
+        "3507378005483435886",
+        "2875503798326600410",
+        "4938773340256184018",
+        "6400665728063187402",
+        "1145824452519314725",
+        "4273071356706429527",
+        "6886894829142702925",
+        "1713554459881080228",
+        "3846770256925560569",
+        "5779037855201976894",
+        "72800122520214493",
+        "2838715564514827672",
+        "9194073792736219759"
+      ],
+      "categories": [
+        "api-1.6",
+        "64-bit-source-id",
+        "multiple-sources",
+        "configurable-source"
+      ]
+    },
+    {
+      "case": "mangaplus-current",
+      "packageName": "eu.kanade.tachiyomi.extension.all.mangaplus",
+      "versionName": "1.6.66",
+      "api": "1.6",
+      "bytes": 77390,
+      "sha256": "d25a647dfa2a68ec2e1d4aa8983a1d8d26594df7cc5a4fb8046be833b4b5837a",
+      "url": "https://github.com/keiyoushi/extensions/releases/download/2ba5b61/tachiyomi-all.mangaplus-v1.6.66.apk",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/keiyoushi/extensions-source@main/src/all/mangaplus/res/mipmap-xhdpi/ic_launcher.png",
+      "sourceIds": [
+        "1998944621602463790",
+        "1286073245950890830",
+        "7642759409549978864",
+        "932564577108614127",
+        "3444662672352788181",
+        "3520485566708512181",
+        "6345211913721743017",
+        "4696259977267090434",
+        "1893513843840146580"
+      ],
+      "categories": [
+        "api-1.6",
+        "64-bit-source-id",
+        "multiple-sources"
+      ]
+    },
+    {
+      "case": "webtoons-current",
+      "packageName": "eu.kanade.tachiyomi.extension.all.webtoons",
+      "versionName": "1.6.2",
+      "api": "1.6",
+      "bytes": 62811,
+      "sha256": "8a9842dc5db97f9d3939a35eb819b154d5805a5338f5e35706d62bd3f0476079",
+      "url": "https://github.com/keiyoushi/extensions/releases/download/4c8cda7/tachiyomi-all.webtoons-v1.6.2.apk",
+      "iconUrl": "https://cdn.jsdelivr.net/gh/keiyoushi/extensions-source@main/src/all/webtoons/res/mipmap-xhdpi/ic_launcher.png",
+      "sourceIds": [
+        "2522335540328470744",
+        "8749627068478740298",
+        "3330861233813615504",
+        "8664735734660636295",
+        "8251758253314457060",
+        "2959982438613576472",
+        "1486822823904297379"
+      ],
+      "categories": [
+        "api-1.6",
+        "64-bit-source-id",
+        "multiple-sources"
+      ]
+    },
+    {
+      "case": "komga-legacy-14",
+      "packageName": "eu.kanade.tachiyomi.extension.all.komga",
+      "versionName": "1.4.47",
+      "api": "1.4",
+      "bytes": 109918,
+      "sha256": "6f38dd36eebe00beb1b5bc074435855c13e3e214961e109eae7726540b2bb11d",
+      "localApk": "artifacts/minijvm-extension-spike/tachiyomi-all.komga-v1.4.47-original.apk",
+      "origin": "Original APK retained read-only from the supplied Tachimanga IPA, not its mod libraries",
+      "sourceIds": [
+        "4508733312114627536",
+        "8074481155021144106",
+        "5132811728275817394"
+      ],
+      "categories": [
+        "api-1.4",
+        "legacy-rx-bridge",
+        "multiple-sources",
+        "64-bit-source-id",
+        "configurable-source"
+      ]
+    }
+  ]
+}

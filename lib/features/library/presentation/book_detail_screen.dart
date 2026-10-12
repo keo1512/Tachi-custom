@@ -1,27 +1,46 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/widgets/book_cover.dart';
 import '../../../core/widgets/feedback.dart';
+import '../../../core/platform/book_cover_platform.dart';
+import '../application/book_cover_import.dart';
 import '../../downloads/presentation/download_queue_controller.dart';
+import '../../downloads/presentation/download_actions.dart';
+import '../../reader/presentation/reader_advanced_settings.dart';
+import '../../sources/domain/catalogue.dart';
+import '../../sources/presentation/global_search_screen.dart';
+import '../../sources/presentation/source_migration_view.dart';
+import '../../deep_links/domain/app_deep_link.dart';
+import 'library_group_dialog.dart';
+import '../domain/library_grouping.dart';
 import '../domain/library_book.dart';
 import '../domain/library_reading.dart';
+import '../domain/chapter_list_options.dart';
+import 'book_detail_header.dart';
+import 'book_metadata_editor.dart';
 import 'chapter_options_sheet.dart';
 import 'library_view_model.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget {
-  const BookDetailScreen({super.key, required this.id});
+  const BookDetailScreen({super.key, required this.id, this.expectedRevision});
   final String id;
+  final int? expectedRevision;
   @override
   ConsumerState<BookDetailScreen> createState() => _BookDetailState();
 }
 
 class _BookDetailState extends ConsumerState<BookDetailScreen> {
   final search = TextEditingController();
-  bool downloading = false, searching = false, newestFirst = false;
-  String readingFilter = 'all', downloadFilter = 'all';
+  bool downloading = false, searching = false, selecting = false;
+  bool descriptionExpanded = false;
+  ChapterListOptions options = const ChapterListOptions();
+  String? optionsBook;
+  int? optionsRevision;
+  final selectedIds = <String>{};
+  int? selectionRevision;
 
   @override
   void dispose() {
@@ -29,11 +48,95 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
     super.dispose();
   }
 
+  Future<void> copySource(LibraryBook book) => perform(
+    context,
+    () => Clipboard.setData(ClipboardData(text: book.sourceRef)),
+    success: 'Đã sao chép địa chỉ nguồn',
+  );
+
+  Future<List<CatalogueSource>> availableSources() async {
+    final repository = ref.read(sourceRepositoryProvider);
+    final values = await Future.wait([
+      for (final engine in SourceEngine.values)
+        repository
+            .listSources(engine)
+            .catchError((Object error) => <CatalogueSource>[]),
+    ]);
+    final result = values.expand((items) => items).toList();
+    if (result.isEmpty) {
+      throw StateError(
+        'Chưa tải được danh sách nguồn. Hãy kiểm tra extension đã cài trong Duyệt.',
+      );
+    }
+    return result;
+  }
+
+  Future<void> searchMetadata(String query) => perform(context, () async {
+    final sources = await availableSources();
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (_) =>
+            GlobalSearchScreen(sources: sources, initialQuery: query),
+      ),
+    );
+  });
+
   Future<void> bookActions(LibraryBook book) async {
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
     final action = await showCupertinoModalPopup<String>(
       context: context,
       builder: (ctx) => CupertinoActionSheet(
         actions: [
+          for (final pair in const {
+            'copy-link': 'Sao chép liên kết TachiBooks',
+            'metadata': 'Sửa thông tin và tên khác',
+            'cover': 'Chỉnh sửa ảnh bìa',
+            'categories': 'Gán nhiều danh mục',
+            'reader': 'Thiết lập đọc riêng',
+            'reset-reader': 'Đặt lại thiết lập đọc riêng',
+            'next-downloads': 'Tải các chương tiếp theo',
+            'cbz': 'Xuất chương đã tải thành CBZ',
+            'select': 'Chọn nhiều chương',
+            'refresh': 'Làm mới thông tin và chương',
+            'reset': 'Đặt lại trạng thái đọc',
+            'first': 'Đọc chương đầu tiên',
+          }.entries)
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, pair.key),
+              child: Text(pair.value),
+            ),
+          if (book.sourceRef.startsWith('https://') ||
+              book.sourceRef.startsWith('http://')) ...[
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, 'copy-source'),
+              child: const Text('Sao chép liên kết gốc'),
+            ),
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, 'share-source'),
+              child: const Text('Chia sẻ liên kết gốc'),
+            ),
+          ],
+          if (book.engine != 'local') ...[
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, 'refresh-info'),
+              child: const Text('Làm mới thông tin truyện'),
+            ),
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, 'refresh-chapters'),
+              child: const Text('Làm mới danh sách chương'),
+            ),
+          ],
+          if (book.chapters.isNotEmpty)
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, 'copy-reading-link'),
+              child: const Text('Sao chép liên kết chương đang đọc'),
+            ),
+          if (book.engine != 'local')
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, 'migrate'),
+              child: const Text('Chuyển nguồn truyện'),
+            ),
           CupertinoActionSheetAction(
             onPressed: () => Navigator.pop(ctx, 'collection'),
             child: const Text('Đổi bộ sưu tập'),
@@ -64,7 +167,146 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
     );
     if (action == null || !mounted) return;
     final vm = ref.read(libraryProvider.notifier);
-    if (action == 'collection') {
+    if (action == 'metadata') {
+      final edit = await showBookMetadataEditor(context, book);
+      if (edit != null && mounted) {
+        await perform(
+          context,
+          () => vm.updateMetadata(
+            book.id,
+            title: edit.title,
+            alternativeTitles: edit.alternativeTitles,
+            author: edit.author,
+            artist: edit.artist,
+            series: edit.series,
+            description: edit.description,
+            notes: edit.notes,
+            expectedRevision: revision,
+          ),
+          success: 'Đã lưu thông tin truyện',
+        );
+      }
+    } else if (action == 'cover') {
+      await editCover(book, revision);
+    } else if (action == 'copy-source') {
+      await copySource(book);
+    } else if (action == 'share-source') {
+      await perform(context, () => BookCoverPlatform.shareLink(book.sourceRef));
+    } else if (action == 'refresh-info') {
+      await perform(
+        context,
+        () => vm.refreshBookDetail(
+          book.id,
+          expectedRevision: revision,
+          refreshChapters: false,
+        ),
+        success: 'Đã cập nhật thông tin truyện',
+      );
+    } else if (action == 'refresh-chapters') {
+      await perform(context, () async {
+        final result = await vm.updateBooks([
+          book.id,
+        ], expectedRevision: revision);
+        if (result.hasErrors) throw StateError(result.failures.first.message);
+      }, success: 'Đã cập nhật danh sách chương');
+    } else if (action == 'reset-reader') {
+      await perform(
+        context,
+        () => vm.updateReaderPreferences(
+          book.id,
+          const {},
+          expectedRevision: revision,
+        ),
+        success: 'Truyện dùng thiết lập đọc chung',
+      );
+    } else if (action == 'copy-link' || action == 'copy-reading-link') {
+      await perform(
+        context,
+        () async {
+          final repository = ref.read(libraryRepositoryProvider);
+          final current = await repository.find(book.id);
+          if (current == null || repository.replacementRevision != revision) {
+            throw StateError(
+              'Thư viện đã thay đổi. Hãy mở lại truyện để sao chép liên kết.',
+            );
+          }
+          final reading = action == 'copy-reading-link';
+          if (reading && current.chapters.isEmpty) {
+            throw StateError('Truyện chưa có chương để tạo liên kết đọc.');
+          }
+          final link = LibraryDeepLink(
+            current.id,
+            reader: reading,
+            chapterId: reading
+                ? current
+                      .chapters[current.currentChapter.clamp(
+                        0,
+                        current.chapters.length - 1,
+                      )]
+                      .id
+                : null,
+          );
+          await Clipboard.setData(ClipboardData(text: link.identity));
+        },
+        success: 'Đã sao chép liên kết. Máy mở liên kết cần có truyện này trong thư viện.',
+      );
+    } else if (action == 'categories') {
+      final books = ref.read(libraryProvider).value ?? [];
+      final edit = await showLibraryGroupDialog(
+        context,
+        books: books,
+        selectedIds: {book.id},
+        grouping: LibraryGrouping.collection,
+      );
+      if (edit != null && mounted) {
+        await perform(
+          context,
+          () => vm.groupBooks(
+            [book.id],
+            collection: edit.categories == null ? edit.value : null,
+            categories: edit.categories,
+            expectedRevision: revision,
+          ),
+        );
+      }
+    } else if (action == 'reader') {
+      await showAdvancedReaderSettings(
+        context,
+        book: book,
+        expectedRevision: revision,
+      );
+    } else if (action == 'next-downloads') {
+      await enqueueNextDownloads(
+        context,
+        ref,
+        book,
+        expectedRevision: revision,
+      );
+    } else if (action == 'cbz') {
+      await saveDownloadedCbz(context, ref, book, expectedRevision: revision);
+    } else if (action == 'select') {
+      beginSelection();
+    } else if (action == 'refresh') {
+      await perform(
+        context,
+        () => vm.refreshBookDetail(book.id, expectedRevision: revision),
+        success: 'Đã cập nhật truyện',
+      );
+    } else if (action == 'reset') {
+      await resetReading(book, revision);
+    } else if (action == 'first') {
+      if (book.chapters.isNotEmpty) context.push('/read/${book.id}?chapter=0');
+    } else if (action == 'migrate') {
+      await perform(context, () async {
+        final sources = await availableSources();
+        if (!mounted) return;
+        await SourceMigrationView(
+          sources: sources,
+          onOpenSource: (_) async {},
+          query: '',
+        ).chooseSource(context, book);
+      });
+    } else if (action == 'collection') {
       var collection = book.collection;
       final name = await showCupertinoDialog<String>(
         context: context,
@@ -95,16 +337,24 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
       if (name != null && mounted) {
         await perform(
           context,
-          () => vm.updateMetadata(book.id, collection: name),
+          () => vm.updateMetadata(
+            book.id,
+            collection: name,
+            expectedRevision: revision,
+          ),
         );
       }
     } else if (action == 'completed') {
       await perform(
         context,
-        () => vm.updateMetadata(book.id, completed: !book.completed),
+        () => vm.updateMetadata(
+          book.id,
+          completed: !book.completed,
+          expectedRevision: revision,
+        ),
       );
     } else if (action == 'notes') {
-      await editNotes(book);
+      await editNotes(book, expectedRevision: revision);
     } else {
       final yes = await showCupertinoDialog<bool>(
         context: context,
@@ -126,14 +376,77 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
       );
       if (yes == true && mounted) {
         await perform(context, () async {
-          await vm.remove(book.id);
+          await vm.remove(book.id, expectedRevision: revision);
           if (mounted) context.pop();
         });
       }
     }
   }
 
-  Future<void> editNotes(LibraryBook book) async {
+  Future<void> editCover(LibraryBook book, int revision) async {
+    final action = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        title: const Text('Ảnh bìa'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'photos'),
+            child: const Text('Chọn từ Ảnh'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'files'),
+            child: const Text('Chọn từ Tệp'),
+          ),
+          if (book.chapters.isNotEmpty)
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, 'page'),
+              child: const Text('Sử dụng trang truyện làm bìa'),
+            ),
+          if (book.customCover)
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, 'restore'),
+              child: const Text('Khôi phục bìa gốc'),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Hủy'),
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    if (action == 'page') {
+      if (ref.read(libraryRepositoryProvider).replacementRevision != revision) {
+        message(context, 'Thư viện đã thay đổi. Hãy mở lại truyện.');
+        return;
+      }
+      message(context, 'Nhấn giữ trang truyện, chọn Đặt làm ảnh bìa.');
+      context.push(
+        '/read/${book.id}?chapter=${book.currentChapter.clamp(0, book.chapters.length - 1)}',
+      );
+      return;
+    }
+    await perform(context, () async {
+      final cover = action == 'restore'
+          ? null
+          : await chooseBookCover(fromPhotos: action == 'photos');
+      if (action != 'restore' && cover == null) return;
+      await ref
+          .read(libraryProvider.notifier)
+          .updateMetadata(
+            book.id,
+            cover: cover,
+            restoreOriginalCover: action == 'restore',
+            expectedRevision: revision,
+          );
+      if (mounted) message(context, 'Đã cập nhật ảnh bìa');
+    });
+  }
+
+  Future<void> editNotes(LibraryBook book, {int? expectedRevision}) async {
+    final revision =
+        expectedRevision ??
+        ref.read(libraryRepositoryProvider).replacementRevision;
     final controller = TextEditingController(text: book.notes);
     try {
       final notes = await showCupertinoDialog<String>(
@@ -152,6 +465,12 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
             ),
           ),
           actions: [
+            if (book.notes.isNotEmpty)
+              CupertinoDialogAction(
+                isDestructiveAction: true,
+                onPressed: () => Navigator.pop(ctx, ''),
+                child: const Text('Xóa ghi chú'),
+              ),
             CupertinoDialogAction(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Hủy'),
@@ -169,7 +488,11 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
           context,
           () => ref
               .read(libraryProvider.notifier)
-              .updateMetadata(book.id, notes: notes),
+              .updateMetadata(
+                book.id,
+                notes: notes,
+                expectedRevision: revision,
+              ),
         );
       }
     } finally {
@@ -178,6 +501,7 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
   }
 
   Future<void> downloadChapters(LibraryBook book) async {
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
     final count = await showCupertinoModalPopup<int>(
       context: context,
       builder: (ctx) => CupertinoActionSheet(
@@ -211,35 +535,195 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
       await queue.enqueue(book.id, [
         for (var i = start; i < end; i++)
           if (!book.chapters[i].downloaded) book.chapters[i].id,
-      ]);
+      ], expectedRevision: revision);
       await queue.start();
     }, success: 'Đã thêm vào hàng đợi tải');
     if (mounted) setState(() => downloading = false);
   }
 
-  Future<void> chapterOptions() => showChapterOptions(
-    context,
-    readingFilter: readingFilter,
-    downloadFilter: downloadFilter,
-    newestFirst: newestFirst,
-    onReadFilter: (value) => setState(() => readingFilter = value),
-    onDownloadFilter: (value) => setState(() => downloadFilter = value),
-    onSort: (value) => setState(() => newestFirst = value),
-  );
+  Future<void> chapterOptions(LibraryBook book) {
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    return showChapterOptions(
+      context,
+      options: options,
+      scanlators:
+          book.chapters
+              .map((chapter) => chapter.scanlator)
+              .where((name) => name.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort(),
+      onChanged: (value) {
+        perform(context, () async {
+          await ref
+              .read(libraryProvider.notifier)
+              .updateChapterListPreferences(
+                book.id,
+                value.toJson(),
+                expectedRevision: revision,
+              );
+          if (mounted &&
+              ref.read(libraryRepositoryProvider).replacementRevision ==
+                  revision) {
+            setState(() => options = value);
+          }
+        });
+      },
+    );
+  }
+
+  void beginSelection([String? chapterId]) => setState(() {
+    if (!selecting) {
+      selectionRevision = ref
+          .read(libraryRepositoryProvider)
+          .replacementRevision;
+    }
+    selecting = true;
+    if (chapterId != null) selectedIds.add(chapterId);
+  });
+  void endSelection() => setState(() {
+    selecting = false;
+    selectedIds.clear();
+    selectionRevision = null;
+  });
+
+  Future<void> resetReading(LibraryBook book, int revision) async {
+    final yes = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Đặt lại trạng thái đọc?'),
+        content: const Text(
+          'Các chương sẽ thành chưa đọc và vị trí đọc về đầu. Dấu trang và nội dung tải được giữ.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Đặt lại'),
+          ),
+        ],
+      ),
+    );
+    if (yes == true && mounted) {
+      await perform(
+        context,
+        () => ref
+            .read(libraryProvider.notifier)
+            .resetBookReading(book.id, expectedRevision: revision),
+      );
+    }
+  }
+
+  Future<void> batchAction(LibraryBook book, String action) async {
+    final ids = selectedIds.toSet(), revision = selectionRevision;
+    if (ids.isEmpty || revision == null) return;
+    if (action == 'delete') {
+      final yes = await showCupertinoDialog<bool>(
+        context: context,
+        builder: (ctx) => CupertinoAlertDialog(
+          title: Text('Xóa nội dung tải của ${ids.length} chương?'),
+          content: const Text(
+            'Dấu trang được bảo vệ theo thiết lập tải xuống.',
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Hủy'),
+            ),
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Xóa'),
+            ),
+          ],
+        ),
+      );
+      if (yes != true || !mounted) return;
+      await deleteDownloadedChapters(
+        context,
+        ref,
+        book,
+        ids,
+        expectedRevision: revision,
+      );
+    } else {
+      await perform(context, () async {
+        final vm = ref.read(libraryProvider.notifier);
+        if (action == 'read' || action == 'unread') {
+          await vm.markChaptersRead(
+            book.id,
+            ids,
+            action == 'read',
+            expectedRevision: revision,
+          );
+        } else if (action == 'bookmark' || action == 'unbookmark') {
+          await vm.setChapterBookmarks(
+            book.id,
+            ids,
+            action == 'bookmark',
+            expectedRevision: revision,
+          );
+        } else if (action == 'download') {
+          final queue = ref.read(downloadQueueProvider.notifier);
+          await queue.enqueue(
+            book.id,
+            ids.toList(),
+            expectedRevision: revision,
+          );
+          await queue.start();
+        } else if (action == 'cbz') {
+          await saveDownloadedCbz(
+            context,
+            ref,
+            book,
+            expectedRevision: revision,
+            chapterIds: ids,
+          );
+        }
+      });
+    }
+    if (mounted) endSelection();
+  }
 
   Future<void> chapterActions(LibraryBook book, int index) async {
     final chapter = book.chapters[index];
     final read = chapterIsRead(book, index);
     final revision = ref.read(libraryRepositoryProvider).replacementRevision;
-    final selected = await showCupertinoModalPopup<bool>(
+    final selected = await showCupertinoModalPopup<String>(
       context: context,
       builder: (ctx) => CupertinoActionSheet(
         title: Text(chapter.title),
         actions: [
           CupertinoActionSheetAction(
-            onPressed: () => Navigator.pop(ctx, !read),
+            onPressed: () => Navigator.pop(ctx, read ? 'unread' : 'read'),
             child: Text(read ? 'Đánh dấu chưa đọc' : 'Đánh dấu đã đọc'),
           ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'previous'),
+            child: const Text('Đánh dấu các chương trước đã đọc'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'bookmark'),
+            child: Text(
+              chapterHasBookmark(book, index)
+                  ? 'Bỏ dấu trang chương'
+                  : 'Đánh dấu chương',
+            ),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'select'),
+            child: const Text('Chọn nhiều chương'),
+          ),
+          if (chapter.downloaded && book.engine != 'local')
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, 'delete'),
+              isDestructiveAction: true,
+              child: const Text('Xóa chương đã tải'),
+            ),
         ],
         cancelButton: CupertinoActionSheetAction(
           onPressed: () => Navigator.pop(ctx),
@@ -248,14 +732,40 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
       ),
     );
     if (selected == null || !mounted) return;
+    if (selected == 'select') {
+      beginSelection(chapter.id);
+      return;
+    }
+    if (selected == 'delete') {
+      await deleteDownloadedChapters(context, ref, book, [
+        chapter.id,
+      ], expectedRevision: revision);
+      return;
+    }
+    if (selected == 'bookmark') {
+      await perform(
+        context,
+        () => ref
+            .read(libraryProvider.notifier)
+            .setChapterBookmarks(
+              book.id,
+              [chapter.id],
+              !chapterHasBookmark(book, index),
+              expectedRevision: revision,
+            ),
+      );
+      return;
+    }
     await perform(
       context,
       () => ref
           .read(libraryProvider.notifier)
-          .markChapterRead(
+          .markChaptersRead(
             book.id,
-            chapter.id,
-            selected,
+            selected == 'previous'
+                ? book.chapters.take(index).map((c) => c.id)
+                : [chapter.id],
+            selected != 'unread',
             expectedRevision: revision,
           ),
     );
@@ -264,12 +774,22 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(libraryProvider);
+    if (widget.expectedRevision != null &&
+        widget.expectedRevision !=
+            ref.read(libraryRepositoryProvider).replacementRevision) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Chi tiết')),
+        body: const Center(
+          child: Text('Thư viện đã đổi. Hãy mở lại liên kết.'),
+        ),
+      );
+    }
     return state.when(
       loading: () =>
           const Scaffold(body: Center(child: CupertinoActivityIndicator())),
       error: (e, _) => Scaffold(
         appBar: AppBar(title: const Text('Chi tiết')),
-        body: Center(child: Text('$e')),
+        body: Center(child: Text(userFacingError(e))),
       ),
       data: (books) {
         final matches = books.where((b) => b.id == widget.id);
@@ -280,7 +800,28 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
           );
         }
         final book = matches.first;
-        final primary = Theme.of(context).colorScheme.primary;
+        final revision = ref
+            .read(libraryRepositoryProvider)
+            .replacementRevision;
+        if (optionsBook != book.id || optionsRevision != revision) {
+          optionsBook = book.id;
+          optionsRevision = revision;
+          options = ChapterListOptions.fromJson(book.chapterListPreferences);
+          selectedIds.clear();
+          selecting = false;
+          selectionRevision = null;
+        }
+        final catalogueBook = ref
+            .read(libraryProvider.notifier)
+            .catalogue(book);
+        final sources = ref.read(sourceRepositoryProvider);
+        final sourceUri = Uri.tryParse(book.sourceRef);
+        final sourceUrl =
+            sourceUri != null &&
+            ['http', 'https'].contains(sourceUri.scheme) &&
+            sourceUri.hasAuthority;
+        final colors = Theme.of(context).colorScheme;
+        final primary = colors.primary;
         final secondary = CupertinoDynamicColor.resolve(
           CupertinoColors.secondaryLabel,
           context,
@@ -290,23 +831,100 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
           context,
         );
         final query = search.text.trim().toLowerCase();
-        final indices = [
-          for (var i = 0; i < book.chapters.length; i++)
-            if ((query.isEmpty ||
-                    book.chapters[i].title.toLowerCase().contains(query)) &&
-                (readingFilter == 'all' ||
-                    (readingFilter == 'read') == chapterIsRead(book, i)) &&
-                (downloadFilter == 'all' ||
-                    (downloadFilter == 'downloaded') ==
-                        book.chapters[i].downloaded))
-              i,
-        ];
-        if (newestFirst) indices.sort((a, b) => b.compareTo(a));
+        final indices = options.indices(book, query: query);
+        final duplicates = duplicateChapterIndices(book);
         final headerCount = searching ? 3 : 2;
         return Scaffold(
+          bottomNavigationBar: !selecting
+              ? null
+              : SafeArea(
+                  child: SizedBox(
+                    height: 52,
+                    child: Row(
+                      children: [
+                        IconButton(
+                          tooltip: 'Đóng lựa chọn',
+                          onPressed: endSelection,
+                          icon: const Icon(CupertinoIcons.xmark),
+                        ),
+                        Expanded(
+                          child: Text(
+                            '${selectedIds.length} đã chọn',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Chọn tất cả chương hiển thị',
+                          onPressed: () => setState(
+                            () => selectedIds.addAll(
+                              indices.map((i) => book.chapters[i].id),
+                            ),
+                          ),
+                          icon: const Icon(CupertinoIcons.checkmark_circle),
+                        ),
+                        IconButton(
+                          tooltip: 'Bỏ chọn tất cả',
+                          onPressed: () => setState(selectedIds.clear),
+                          icon: const Icon(CupertinoIcons.circle),
+                        ),
+                        PopupMenuButton<String>(
+                          tooltip: 'Thao tác các chương đã chọn',
+                          enabled: selectedIds.isNotEmpty,
+                          onSelected: (action) => batchAction(book, action),
+                          itemBuilder: (_) => [
+                            for (final entry in const {
+                              'read': 'Đánh dấu đã đọc',
+                              'unread': 'Đánh dấu chưa đọc',
+                              'bookmark': 'Đánh dấu chương',
+                              'unbookmark': 'Bỏ dấu trang chương',
+                            }.entries)
+                              PopupMenuItem(
+                                value: entry.key,
+                                child: Text(entry.value),
+                              ),
+                            if (book.engine != 'local')
+                              const PopupMenuItem(
+                                value: 'download',
+                                child: Text('Tải chương đã chọn'),
+                              ),
+                            if (book.engine != 'local')
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Xóa nội dung tải'),
+                              ),
+                            if (book.kind == 'manga')
+                              const PopupMenuItem(
+                                value: 'cbz',
+                                child: Text('Xuất CBZ chương đã chọn'),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          extendBodyBehindAppBar: true,
           appBar: AppBar(
-            title: const Text('Chi tiết'),
+            backgroundColor: Colors.transparent,
             actions: [
+              if (sourceUrl)
+                IconButton(
+                  tooltip: 'Sao chép địa chỉ nguồn',
+                  icon: const Icon(CupertinoIcons.square_arrow_up),
+                  onPressed: () => copySource(book),
+                ),
+              IconButton(
+                tooltip: 'Tải chương',
+                icon: downloading
+                    ? const CupertinoActivityIndicator(radius: 9)
+                    : const Icon(CupertinoIcons.arrow_down_to_line),
+                onPressed:
+                    book.engine == 'local' ||
+                        downloading ||
+                        book.chapters.isEmpty
+                    ? null
+                    : () => downloadChapters(book),
+              ),
               IconButton(
                 tooltip: 'Tùy chọn',
                 icon: const Icon(CupertinoIcons.ellipsis),
@@ -318,177 +936,42 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
             top: false,
             bottom: false,
             child: ListView.builder(
+              padding: EdgeInsets.zero,
               itemCount: headerCount + (indices.isEmpty ? 1 : indices.length),
               itemBuilder: (context, row) {
                 if (row == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              width: 106,
-                              height: 156,
-                              child: BookCover(
-                                title: book.title,
-                                cover: book.cover,
-                                kind: book.kind,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    book.title,
-                                    style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  if (book.author.isNotEmpty) ...[
-                                    const SizedBox(height: 7),
-                                    Text(
-                                      book.author,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        color: secondary,
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    book.kind == 'manga'
-                                        ? 'Truyện tranh'
-                                        : 'Truyện chữ / Ebook',
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    book.engine == 'local'
-                                        ? 'Trong thiết bị'
-                                        : book.engine == 'vbook'
-                                        ? 'vBook'
-                                        : 'Tachimanga',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: secondary,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Text(
-                                    '${(book.progress * 100).round()}% đã đọc',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: secondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: CupertinoButton.filled(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 10,
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                                onPressed: book.chapters.isEmpty
-                                    ? null
-                                    : () => context.push(
-                                        '/read/${book.id}?chapter=${book.currentChapter}',
-                                      ),
-                                child: Text(
-                                  book.lastRead == null
-                                      ? 'Bắt đầu đọc'
-                                      : 'Đọc tiếp',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              tooltip: 'Yêu thích',
-                              color: primary,
-                              icon: Icon(
-                                book.favorite
-                                    ? CupertinoIcons.heart_fill
-                                    : CupertinoIcons.heart,
-                              ),
-                              onPressed: () => perform(
-                                context,
-                                () => ref
-                                    .read(libraryProvider.notifier)
-                                    .updateMetadata(
-                                      book.id,
-                                      favorite: !book.favorite,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (book.artist.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            'Họa sĩ: ${book.artist}',
-                            style: TextStyle(color: secondary, fontSize: 14),
-                          ),
-                        ],
-                        if (book.genres.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            book.genres.join(' · '),
-                            style: TextStyle(color: secondary, fontSize: 14),
-                          ),
-                        ],
-                        if (book.description.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          Text(
-                            book.description,
-                            style: const TextStyle(fontSize: 15, height: 1.4),
-                          ),
-                        ],
-                        if (book.notes.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          GestureDetector(
-                            onTap: () => editNotes(book),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Ghi chú cá nhân',
-                                  style: TextStyle(
-                                    color: primary,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  book.notes,
-                                  maxLines: 4,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
+                  return BookDetailHeader(
+                    book: book,
+                    descriptionExpanded: descriptionExpanded,
+                    onToggleDescription: () => setState(
+                      () => descriptionExpanded = !descriptionExpanded,
                     ),
+                    onFavorite: () => perform(
+                      context,
+                      () => ref
+                          .read(libraryProvider.notifier)
+                          .updateMetadata(book.id, favorite: !book.favorite),
+                    ),
+                    onEditNotes: () => editNotes(book),
+                    onSearchTitle: () => searchMetadata(book.title),
+                    onSearchAuthor: book.author.isEmpty
+                        ? null
+                        : () => searchMetadata(book.author),
+                    onSearchGenre: (genre) => searchMetadata(genre),
+                    onCopySource: sourceUrl ? () => copySource(book) : null,
+                    onOpenWebsite:
+                        book.engine != 'local' &&
+                            sources.canOpenNativeWebsite(catalogueBook)
+                        ? () => perform(
+                            context,
+                            () => sources.openWebsite(catalogueBook),
+                          )
+                        : null,
+                    onResume: book.chapters.isEmpty
+                        ? null
+                        : () => context.push(
+                            '/read/${book.id}?chapter=${book.currentChapter.clamp(0, book.chapters.length - 1)}',
+                          ),
                   );
                 }
                 if (row == 1) {
@@ -509,39 +992,63 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
                               '${book.chapters.length} chương',
                               style: const TextStyle(
                                 fontSize: 15,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                           ),
                           IconButton(
                             tooltip: 'Tìm chương',
                             icon: const Icon(CupertinoIcons.search, size: 20),
-                            color: primary,
+                            color: searching ? primary : secondary,
                             onPressed: () => setState(() {
                               searching = !searching;
                               if (!searching) search.clear();
                             }),
                           ),
                           IconButton(
-                            tooltip: 'Tải chương',
-                            color: primary,
-                            onPressed:
-                                book.engine == 'local' ||
-                                    downloading ||
-                                    book.chapters.isEmpty
-                                ? null
-                                : () => downloadChapters(book),
-                            icon: downloading
-                                ? const CupertinoActivityIndicator(radius: 9)
-                                : const Icon(
-                                    CupertinoIcons.arrow_down,
-                                    size: 22,
-                                  ),
+                            tooltip: options.descending
+                                ? 'Chương cũ trước'
+                                : 'Chương mới trước',
+                            color: secondary,
+                            onPressed: () {
+                              final revision = ref
+                                  .read(libraryRepositoryProvider)
+                                  .replacementRevision;
+                              setState(
+                                () => options = options.patch({
+                                  'descending': !options.descending,
+                                }),
+                              );
+                              perform(
+                                context,
+                                () => ref
+                                    .read(libraryProvider.notifier)
+                                    .updateChapterListPreferences(
+                                      book.id,
+                                      options.toJson(),
+                                      expectedRevision: revision,
+                                    ),
+                              );
+                            },
+                            icon: Icon(
+                              options.descending
+                                  ? CupertinoIcons.arrow_up
+                                  : CupertinoIcons.arrow_down,
+                              size: 22,
+                            ),
                           ),
                           IconButton(
                             tooltip: 'Lọc và sắp xếp chương',
-                            color: primary,
-                            onPressed: chapterOptions,
+                            color:
+                                options.read != 'all' ||
+                                    options.download != 'all' ||
+                                    options.bookmarked != 'all' ||
+                                    options.hideDuplicates ||
+                                    options.scanlator.isNotEmpty ||
+                                    options.excludedScanlators.isNotEmpty
+                                ? primary
+                                : secondary,
+                            onPressed: () => chapterOptions(book),
                             icon: const Icon(
                               CupertinoIcons.line_horizontal_3_decrease,
                               size: 22,
@@ -579,19 +1086,51 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
                 return Column(
                   children: [
                     ListTile(
-                      minTileHeight: 54,
+                      selected: selecting && selectedIds.contains(chapter.id),
+                      leading: selecting
+                          ? Checkbox(
+                              value: selectedIds.contains(chapter.id),
+                              onChanged: (value) => setState(() {
+                                if (value == true) {
+                                  selectedIds.add(chapter.id);
+                                } else {
+                                  selectedIds.remove(chapter.id);
+                                }
+                              }),
+                            )
+                          : chapterHasBookmark(book, index)
+                          ? const Icon(CupertinoIcons.bookmark_fill, size: 16)
+                          : null,
+                      minTileHeight: 66,
                       contentPadding: const EdgeInsets.only(left: 16, right: 8),
                       title: Text(
                         chapter.title,
                         style: TextStyle(
                           fontSize: 15,
-                          color: read ? secondary : null,
+                          color: read ? secondary : colors.onSurface,
                         ),
                       ),
                       subtitle:
-                          book.lastRead != null &&
-                              index == book.currentChapter &&
-                              !read
+                          chapter.uploadedAt != null ||
+                              chapter.scanlator.isNotEmpty ||
+                              chapter.number != null ||
+                              duplicates.contains(index)
+                          ? Text(
+                              [
+                                if (validChapterNumber(chapter) != null)
+                                  'Số ${chapter.number}',
+                                if (duplicates.contains(index))
+                                  'Trùng số chương',
+                                if (chapter.uploadedAt != null)
+                                  '${chapter.uploadedAt!.day}/${chapter.uploadedAt!.month}/${chapter.uploadedAt!.year}',
+                                if (chapter.scanlator.isNotEmpty)
+                                  chapter.scanlator,
+                              ].join(' · '),
+                              style: TextStyle(fontSize: 12, color: secondary),
+                            )
+                          : book.lastRead != null &&
+                                index == book.currentChapter &&
+                                !read
                           ? Text(
                               'Đang đọc',
                               style: TextStyle(fontSize: 12, color: secondary),
@@ -633,8 +1172,17 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
                                       }
                                     },
                             ),
-                      onTap: () =>
-                          context.push('/read/${book.id}?chapter=$index'),
+                      onTap: () {
+                        if (selecting) {
+                          setState(() {
+                            if (!selectedIds.remove(chapter.id)) {
+                              selectedIds.add(chapter.id);
+                            }
+                          });
+                        } else {
+                          context.push('/read/${book.id}?chapter=$index');
+                        }
+                      },
                       onLongPress: () => chapterActions(book, index),
                     ),
                     Padding(

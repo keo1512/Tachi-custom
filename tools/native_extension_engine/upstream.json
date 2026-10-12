@@ -1,0 +1,80 @@
+{
+  "zero": {
+    "url": "https://github.com/PojavLauncherTeam/android-openjdk-build-multiarch/releases/download/jre8-99f3f8b/jre8-zero-aarch64-ios.tar.xz",
+    "bytes": 43884960,
+    "sha256": "d1ab7ea3860d0a50878a6786cafbb1336a3f44381538cb5a5d6c897a36a72559",
+    "sourceCommit": "99f3f8bf37150677058ab00b76f9b17a1ab23a70",
+    "sourceUrl": "https://github.com/PojavLauncherTeam/openjdk-multiarch-jdk8u/tree/99f3f8bf37150677058ab00b76f9b17a1ab23a70",
+    "sourceArchive": "https://github.com/PojavLauncherTeam/openjdk-multiarch-jdk8u/archive/99f3f8bf37150677058ab00b76f9b17a1ab23a70.tar.gz",
+    "version": "OpenJDK 64-Bit Zero VM native literal 25.71-b00; rt.jar runtime literal 1.8.0-internal-runner_2022_01_09_06_33-b00",
+    "sourceCorrespondenceVerified": false,
+    "execution": "interpreter without JIT",
+    "deviceRuntimeVerified": false
+  },
+  "reviewedAndroidSources": {
+    "sourceCommit": "40bc5da57820324ed0ae724cbbc020cc4673b594",
+    "sourceUrl": "https://github.com/Suwayomi/Suwayomi-Server/tree/40bc5da57820324ed0ae724cbbc020cc4673b594/AndroidCompat",
+    "license": "MPL-2.0",
+    "files": [
+      {
+        "path": "java/android/widget/EditText.java",
+        "upstreamPath": "AndroidCompat/src/main/java/android/widget/EditText.java",
+        "sha256": "a91eed24b424fd7d1146e0ef5683437200e918c802fae49b0e9c3a2245fa5bae"
+      }
+    ]
+  },
+  "portableZstd": {
+    "url": "https://repo.maven.apache.org/maven2/io/airlift/aircompressor/0.27/aircompressor-0.27.jar",
+    "bytes": 254937,
+    "sha256": "fdbef3137a28f63bb0cb93487803080ede746a4ec3d421e36c6f0c305c35e5e4",
+    "source": "https://github.com/airlift/aircompressor/tree/0.27",
+    "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+    "licenseSha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  },
+  "files": [
+    {
+      "name": "licenses/openjdk-LICENSE.txt",
+      "sourcePath": "LICENSE",
+      "sha256": "4b9abebc4338048a7c2dc184e9f800deb349366bdf28eb23c2677a77b4c87726"
+    },
+    {
+      "name": "licenses/openjdk-ASSEMBLY_EXCEPTION.txt",
+      "sourcePath": "ASSEMBLY_EXCEPTION",
+      "sha256": "a44eb7b5caf5534c6ef536b21edb40b4d6babf91bf97d9d45596868618b2c6fb"
+    },
+    {
+      "name": "licenses/openjdk-THIRD_PARTY_README.txt",
+      "sourcePath": "THIRD_PARTY_README",
+      "sha256": "31a288eb0171eb0520c04666b40a64e9fb90c7fc89060095569c02899bc7b8bb"
+    },
+    {
+      "name": "include/jni.h",
+      "sourcePath": "jdk/src/share/javavm/export/jni.h",
+      "sha256": "ed99792df48670072b78028faf704a8dcb6868fe140ccc7eced9b01dfa62fef4"
+    },
+    {
+      "name": "include/darwin/jni_md.h",
+      "sourcePath": "jdk/src/macosx/javavm/export/jni_md.h",
+      "sha256": "8f718071022e7e7f2fc9a229984b7e83582db91ed83861b49ce1461436fe8dc4"
+    }
+  ],
+  "derivedAndroidSources": {
+    "sourceCommit": "40bc5da57820324ed0ae724cbbc020cc4673b594",
+    "sourceUrl": "https://github.com/Suwayomi/Suwayomi-Server/tree/40bc5da57820324ed0ae724cbbc020cc4673b594/AndroidCompat",
+    "license": "MPL-2.0",
+    "files": [
+      {
+        "path": "java/androidx/preference/Preference.java",
+        "upstreamPath": "AndroidCompat/src/main/java/androidx/preference/Preference.java",
+        "upstreamSha256": "d050602c73daf0af5aa1c0828e32a7c59804724319fe716d31370df292ce3346",
+        "changes": "Java8 syntax/APIs, retained enabled/visible/click listener metadata, typed SharedPreferences values and null defaults; no Android view creation"
+      },
+      {
+        "path": "java/androidx/preference/MultiSelectListPreference.java",
+        "upstreamPath": "AndroidCompat/src/main/java/androidx/preference/MultiSelectListPreference.java",
+        "upstreamSha256": "4929aaa8f9cc41c88d98eb1fee5f36b203f34bafc859973e9fe61626f0d28b48",
+        "changes": "Implemented typed selected values, stable entry index lookup and preference storage for generic source updates; no Android view creation"
+      }
+    ]
+  }
+}

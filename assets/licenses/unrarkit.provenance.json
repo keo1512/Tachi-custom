@@ -1,0 +1,25 @@
+{
+  "version": "2.10",
+  "repository": "https://github.com/abbeycode/UnrarKit",
+  "commit": "41db8d7a005130d29d64a6e9684a4836b098e7e4",
+  "dependency": "UnrarKit 2.10 CocoaPods published specification",
+  "resources": [
+    {
+      "package": "UnrarKit 2.10",
+      "path": "unrarkit-2.10-LICENSE",
+      "url": "https://raw.githubusercontent.com/abbeycode/UnrarKit/41db8d7a005130d29d64a6e9684a4836b098e7e4/LICENSE",
+      "sha256": "75d6e361685eb2a1feadebf07aa6b6f1c97554803e4fcc05d46a91ae5bc5b459"
+    },
+    {
+      "package": "Unrar 5.9.3 bundled with UnrarKit 2.10",
+      "path": "unrarkit-2.10-unrar-license.txt",
+      "url": "https://raw.githubusercontent.com/abbeycode/UnrarKit/41db8d7a005130d29d64a6e9684a4836b098e7e4/Libraries/unrar/license.txt",
+      "sha256": "6ecc1687808b7d66b24f874755abfed7464d9751ed0001cd4e8e5d9bf397ff8a"
+    }
+  ],
+  "podspec": {
+    "url": "https://raw.githubusercontent.com/CocoaPods/Specs/master/Specs/7/3/0/UnrarKit/2.10/UnrarKit.podspec.json",
+    "sha256": "8accb837b4933f71287a5d63ee590d5378b2c9582aedea305bf01bd806cac095"
+  },
+  "unrarVersion": "5.91"
+}

@@ -1,0 +1,37 @@
+workflows:
+  ios-unsigned:
+    name: TachiBooks iPhone and iPad IPA
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      groups:
+        - tachibooks_firebase
+      vars:
+        FLUTTER_SWIFT_PACKAGE_MANAGER: "false"
+      flutter: 3.47.4
+      xcode: 27.0
+      java: 21
+      cocoapods: default
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/Library/Caches/CocoaPods
+        - $CM_BUILD_DIR/.dart_tool/tachi-runtime-cache
+    scripts:
+      - name: Configure Google login and Firebase
+        script: python3 tools/configure_firebase_ios.py --config-env
+      - name: Prepare verified on-device extension engine resources
+        script: python3 tools/configure_ios_tachi_runtime.py
+      - name: Verify native UIKit and vBook integration on the iOS simulator
+        script: bash tools/test_ios_native_tabs.sh
+      - name: Analyze, test, compile and package the unsigned device IPA
+        script: bash tools/build_ios.sh
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/ipa/*.sha256
+      - build/ios/ipa/*.json
+      - artifacts/native-tabs-smoke.xcresult
+      - artifacts/native-tabs-smoke.log
+      - artifacts/native-tabs-simulator.json
+      - artifacts/native-tabs-simulator.png
+      - /tmp/xcodebuild_logs/*.log

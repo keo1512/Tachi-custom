@@ -40,29 +40,64 @@ class NativeTabs extends ChangeNotifier {
   String? rootRoute, shellRoute;
   int _index = 0, _revision = 0;
   bool _visible = false, _dark = true, _sending = false, _disposed = false;
+  bool _blocked = false;
   bool? _sentDark;
+  List<int> _order = const [0, 1, 2, 3, 4, 5];
+  bool _showLabels = true;
+  int _configurationRevision = 0, _sentConfigurationRevision = -1;
 
   void initialize() {
     if (!enabled) return;
     channel.setMethodCallHandler((call) async {
-      if (call.method != 'selectTab' || _disposed) return;
+      if (call.method != 'selectTab' || _disposed || _blocked) return;
       final arguments = call.arguments;
+      final tabId = arguments is Map ? arguments['tabId'] : null;
+      if (tabId != null) {
+        if (tabId is int && tabId >= 0 && tabId < mainTabRoutes.length) {
+          onSelect(tabId);
+        }
+        return;
+      }
       final index = arguments is Map ? arguments['index'] : null;
       if (index is int && index >= 0 && index < mainTabRoutes.length) {
-        onSelect(index);
+        onSelect(_order[index]);
       }
     });
   }
 
-  void update({required String path, required bool dark}) {
+  void update({
+    required String path,
+    required bool dark,
+    bool blocked = false,
+    List<int> order = const [0, 1, 2, 3, 4, 5],
+    bool showLabels = true,
+  }) {
     if (!enabled || _disposed) return;
-    final index = mainTabRoutes.indexOf(path);
+    if (order.length != 6 ||
+        order.toSet().length != 6 ||
+        order.any((i) => i < 0 || i >= 6)) {
+      throw ArgumentError('Thứ tự thanh tab không hợp lệ.');
+    }
+    final changed = !listEquals(_order, order) || _showLabels != showLabels;
+    if (changed) {
+      _order = List.unmodifiable(order);
+      _showLabels = showLabels;
+      _configurationRevision++;
+    }
+    final routeIndex = mainTabRoutes.indexOf(path);
+    final index = routeIndex < 0 ? -1 : _order.indexOf(routeIndex);
     final visible =
+        !blocked &&
         index >= 0 &&
         rootRoute == 'main-shell' &&
         mainTabNames.contains(shellRoute);
     final selected = index >= 0 ? index : _index;
-    if (active && selected == _index && visible == _visible && dark == _dark) {
+    _blocked = blocked;
+    if (active &&
+        selected == _index &&
+        visible == _visible &&
+        dark == _dark &&
+        !changed) {
       return;
     }
     _index = selected;
@@ -80,14 +115,22 @@ class NativeTabs extends ChangeNotifier {
       while (!_disposed) {
         final revision = _revision;
         final sentDark = _dark;
-        final configure = !active || _sentDark != _dark;
+        final sentConfiguration = _configurationRevision;
+        final configure =
+            !active ||
+            _sentDark != _dark ||
+            _sentConfigurationRevision != _configurationRevision;
         try {
           final result = await channel.invokeMethod<bool>(
             configure ? 'configure' : 'select',
             {
               'index': _index,
               'visible': _visible,
-              if (configure) 'titles': mainTabLabels,
+              if (configure)
+                'titles': [
+                  for (final id in _order) _showLabels ? mainTabLabels[id] : '',
+                ],
+              if (configure) 'order': _order,
               if (configure) 'dark': _dark,
               if (configure) 'badges': List<String?>.filled(6, null),
             },
@@ -97,6 +140,7 @@ class NativeTabs extends ChangeNotifier {
           }
           if (_disposed) return;
           _sentDark = sentDark;
+          _sentConfigurationRevision = sentConfiguration;
           if (!active || error != null) {
             active = true;
             error = null;

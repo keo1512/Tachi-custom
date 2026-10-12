@@ -10,12 +10,14 @@ class LibraryGroupTabs extends StatelessWidget {
     required this.total,
     required this.onSelected,
     required this.grouping,
+    this.onReorder,
   });
   final List<LibraryGroup> groups;
   final String? selectedKey;
   final int total;
   final ValueChanged<String?> onSelected;
   final LibraryGrouping grouping;
+  final VoidCallback? onReorder;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -51,6 +53,7 @@ class LibraryGroupTabs extends StatelessWidget {
     return InkWell(
       key: ValueKey('library-group-${key ?? 'all'}'),
       onTap: () => onSelected(key),
+      onLongPress: onReorder,
       child: Container(
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 16),

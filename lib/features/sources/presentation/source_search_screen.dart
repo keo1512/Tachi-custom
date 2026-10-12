@@ -3,14 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/widgets/book_cover.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../library/presentation/library_view_model.dart';
+import '../../library/presentation/library_add_categories.dart';
+import '../../settings/settings_controller.dart';
 import '../domain/catalogue.dart';
+import '../domain/source_filters.dart';
+import 'source_filter_sheet.dart';
+import 'source_catalogue_tools.dart';
+import 'source_result_tile.dart';
 
 class SourceSearchScreen extends ConsumerStatefulWidget {
-  const SourceSearchScreen({super.key, required this.source});
+  const SourceSearchScreen({
+    super.key,
+    required this.source,
+    this.initialQuery = '',
+  });
   final CatalogueSource source;
+  final String initialQuery;
   @override
   ConsumerState<SourceSearchScreen> createState() => _SearchState();
 }
@@ -23,10 +33,89 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
   String submittedQuery = '';
   bool busy = false, searched = false, hasMore = true;
   int request = 0, page = 1;
+  SourceBrowseMode? mode;
+  String layout = 'comfortable';
+  SourceFilterSet? selectedFilters;
+
+  Future<void> chooseFilters() async {
+    final selected = await showModalBottomSheet<SourceFilterSet>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) =>
+          SourceFilterSheet(source: widget.source, selected: selectedFilters),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      selectedFilters = selected;
+      mode = null;
+    });
+    await search();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final saved = ref
+        .read(preferencesProvider)
+        .getString('sourceCatalogueLayoutV1');
+    if (['list', 'compact', 'comfortable'].contains(saved)) layout = saved!;
+    text.text = widget.initialQuery;
+    if (widget.initialQuery.isNotEmpty) {
+      Future.microtask(search);
+    } else if (ref
+        .read(sourceRepositoryProvider)
+        .supportsCatalogueBrowsing(widget.source.engine)) {
+      mode = SourceBrowseMode.popular;
+      Future.microtask(search);
+    }
+  }
+
+  Future<void> chooseLayout() async {
+    final chosen = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        title: const Text('Hiển thị truyện'),
+        actions: [
+          for (final item in const {
+            'list': 'Danh sách',
+            'compact': 'Lưới nhỏ gọn',
+            'comfortable': 'Lưới lớn',
+          }.entries)
+            CupertinoActionSheetAction(
+              onPressed: () => Navigator.pop(ctx, item.key),
+              child: Text(item.value),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Hủy'),
+        ),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    await perform(context, () async {
+      await ref
+          .read(preferencesProvider)
+          .setString('sourceCatalogueLayoutV1', chosen);
+      if (mounted) setState(() => layout = chosen);
+    });
+  }
+
+  CatalogueBook get website => CatalogueBook(
+    ref: widget.source.baseUrl,
+    title: widget.source.name,
+    sourceId: widget.source.id,
+    kind: widget.source.kind,
+    engine: widget.source.engine,
+  );
 
   Future<void> search({bool more = false}) async {
     final query = more ? submittedQuery : text.text.trim();
-    if (query.isEmpty || (more && (busy || !hasMore))) return;
+    if (!mounted ||
+        (mode == null && query.isEmpty && selectedFilters == null) ||
+        (more && (busy || !hasMore))) {
+      return;
+    }
     final current = ++request;
     final targetPage = more ? page + 1 : 1;
     setState(() {
@@ -39,9 +128,25 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
       }
     });
     try {
-      final results = await ref
-          .read(sourceRepositoryProvider)
-          .search(widget.source, query, page: targetPage);
+      final repository = ref.read(sourceRepositoryProvider);
+      final results = mode == null
+          ? selectedFilters == null
+                ? await repository.search(
+                    widget.source,
+                    query,
+                    page: targetPage,
+                  )
+                : await repository.searchFiltered(
+                    widget.source,
+                    query,
+                    selectedFilters!,
+                    page: targetPage,
+                  )
+          : await repository.browse(
+              widget.source,
+              mode: mode!,
+              page: targetPage,
+            );
       if (!mounted || current != request) return;
       setState(() {
         books = more
@@ -60,7 +165,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
     } catch (e) {
       if (mounted && current == request) {
         setState(() {
-          error = '$e';
+          error = userFacingError(e);
           busy = false;
         });
       }
@@ -68,11 +173,23 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
   }
 
   Future<void> open(CatalogueBook book) async {
+    final existing = catalogueLibraryIndex(
+      ref.read(libraryProvider).value ?? const [],
+    )[book.identity];
+    if (existing != null) {
+      context.push('/book/${existing.id}');
+      return;
+    }
     if (adding.contains(book.identity)) return;
     setState(() => adding.add(book.identity));
     final item = await perform(
       context,
-      () => ref.read(libraryProvider.notifier).addFromSource(book),
+      () => addCatalogueBookWithCategories(
+        context,
+        ref,
+        book,
+        sourceName: widget.source.name,
+      ),
     );
     if (!mounted) return;
     setState(() => adding.remove(book.identity));
@@ -123,9 +240,41 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
         overflow: TextOverflow.ellipsis,
       ),
       actions: [
+        if (ref
+            .read(sourceRepositoryProvider)
+            .supportsSourceFilters(widget.source.engine))
+          IconButton(
+            tooltip: 'Bộ lọc của nguồn',
+            onPressed: busy ? null : chooseFilters,
+            icon: Icon(
+              CupertinoIcons.line_horizontal_3_decrease,
+              color: selectedFilters == null
+                  ? null
+                  : Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        IconButton(
+          tooltip: 'Hiển thị truyện',
+          onPressed: chooseLayout,
+          icon: const Icon(CupertinoIcons.rectangle_grid_2x2),
+        ),
+        if (ref.read(sourceRepositoryProvider).canOpenNativeWebsite(website))
+          IconButton(
+            tooltip: 'Xem trang web',
+            onPressed: () => perform(context, () async {
+              await ref.read(sourceRepositoryProvider).openWebsite(website);
+              if (mounted && searched) await search();
+            }),
+            icon: const Icon(CupertinoIcons.globe, size: 22),
+          ),
         IconButton(
           tooltip: 'Tìm',
-          onPressed: busy ? null : search,
+          onPressed: busy
+              ? null
+              : () {
+                  mode = null;
+                  search();
+                },
           icon: const Icon(CupertinoIcons.search, size: 22),
         ),
       ],
@@ -137,7 +286,10 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
           child: CupertinoSearchTextField(
             controller: text,
             placeholder: 'Tìm truyện trong nguồn',
-            onSubmitted: (_) => search(),
+            onSubmitted: (_) {
+              mode = null;
+              search();
+            },
             onChanged: (value) {
               if (value.isEmpty) {
                 setState(() {
@@ -151,6 +303,34 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
             },
           ),
         ),
+        if (ref
+            .read(sourceRepositoryProvider)
+            .supportsCatalogueBrowsing(widget.source.engine))
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            child: CupertinoSlidingSegmentedControl<String>(
+              groupValue: mode?.name ?? 'search',
+              children: const {
+                'popular': Text('Phổ biến'),
+                'latest': Text('Mới nhất'),
+                'search': Text('Tìm kiếm'),
+              },
+              onValueChanged: (value) {
+                if (value == null) return;
+                setState(() {
+                  mode = value == 'popular'
+                      ? SourceBrowseMode.popular
+                      : value == 'latest'
+                      ? SourceBrowseMode.latest
+                      : null;
+                  request++;
+                  busy = false;
+                  books = [];
+                });
+                search();
+              },
+            ),
+          ),
         const Divider(height: 1),
         if (busy) const LinearProgressIndicator(minHeight: 2),
         if (error != null)
@@ -184,7 +364,13 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
           child: books.isEmpty
               ? busy
                     ? const Center(child: CupertinoActivityIndicator())
-                    : empty()
+                    : RefreshIndicator(
+                        onRefresh: search,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [SizedBox(height: 220, child: empty())],
+                        ),
+                      )
               : LayoutBuilder(
                   builder: (context, constraints) {
                     final columns = constraints.maxWidth >= 1000
@@ -193,81 +379,94 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
                         ? 4
                         : constraints.maxWidth >= 500
                         ? 3
+                        : layout == 'compact'
+                        ? 3
                         : 2;
-                    return CustomScrollView(
-                      slivers: [
-                        SliverPadding(
-                          padding: const EdgeInsets.all(6),
-                          sliver: SliverGrid(
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: columns,
-                                  crossAxisSpacing: 6,
-                                  mainAxisSpacing: 6,
-                                  childAspectRatio: .67,
+                    final library = catalogueLibraryIndex(
+                      ref.watch(libraryProvider).value ?? const [],
+                    );
+                    Widget result(int index, {bool list = false}) {
+                      final book = books[index];
+                      return SourceResultTile(
+                        book: book,
+                        inLibrary: library.containsKey(book.identity),
+                        pending: adding.contains(book.identity),
+                        list: list,
+                        onOpen: () => open(book),
+                      );
+                    }
+
+                    return RefreshIndicator(
+                      onRefresh: search,
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          if (notification is ScrollUpdateNotification &&
+                              notification.metrics.axis == Axis.vertical &&
+                              notification.metrics.pixels > 0 &&
+                              notification.metrics.pixels >
+                                  notification.metrics.maxScrollExtent - 300 &&
+                              !busy &&
+                              hasMore) {
+                            search(more: true);
+                          }
+                          return false;
+                        },
+                        child: CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          slivers: [
+                            if (layout == 'list')
+                              SliverList.builder(
+                                itemCount: books.length,
+                                itemBuilder: (_, index) =>
+                                    result(index, list: true),
+                              )
+                            else
+                              SliverPadding(
+                                padding: const EdgeInsets.all(6),
+                                sliver: SliverGrid(
+                                  gridDelegate:
+                                      SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: columns,
+                                        crossAxisSpacing: 6,
+                                        mainAxisSpacing: 6,
+                                        childAspectRatio: .67,
+                                      ),
+                                  delegate: SliverChildBuilderDelegate((
+                                    context,
+                                    index,
+                                  ) {
+                                    return result(index);
+                                  }, childCount: books.length),
                                 ),
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              final book = books[index];
-                              final pending = adding.contains(book.identity);
-                              return Semantics(
-                                label: 'Thêm ${book.title} vào thư viện',
-                                button: true,
-                                child: InkWell(
-                                  onTap: pending ? null : () => open(book),
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      BookCover(
-                                        title: book.title,
-                                        cover: book.coverUrl,
-                                        kind: book.kind.name,
-                                      ),
-                                      Positioned(
-                                        top: 5,
-                                        right: 5,
-                                        child: pending
-                                            ? const CupertinoActivityIndicator(
-                                                color: Colors.white,
-                                              )
-                                            : const Icon(
-                                                CupertinoIcons.plus_circle_fill,
-                                                size: 21,
-                                                color: Colors.white,
-                                              ),
-                                      ),
-                                    ],
-                                  ),
+                              ),
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
                                 ),
-                              );
-                            }, childCount: books.length),
-                          ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Center(
-                              child: hasMore
-                                  ? TextButton(
-                                      onPressed: busy
-                                          ? null
-                                          : () => search(more: true),
-                                      child: const Text('Tải thêm kết quả'),
-                                    )
-                                  : Text(
-                                      'Đã tải hết kết quả',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: CupertinoColors.secondaryLabel
-                                            .resolveFrom(context),
-                                      ),
-                                    ),
+                                child: Center(
+                                  child: hasMore
+                                      ? TextButton(
+                                          onPressed: busy
+                                              ? null
+                                              : () => search(more: true),
+                                          child: const Text('Tải thêm kết quả'),
+                                        )
+                                      : Text(
+                                          'Đã tải hết kết quả',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: CupertinoColors
+                                                .secondaryLabel
+                                                .resolveFrom(context),
+                                          ),
+                                        ),
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     );
                   },
                 ),

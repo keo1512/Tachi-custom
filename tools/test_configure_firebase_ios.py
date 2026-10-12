@@ -1,10 +1,15 @@
 """Offline config-helper regression checks; no Firebase account is contacted."""
 
 import importlib.util
+import base64
+import contextlib
+import io
+import os
 from pathlib import Path
 import plistlib
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("configure_firebase_ios", Path(__file__).with_name("configure_firebase_ios.py"))
 helper = importlib.util.module_from_spec(spec)
@@ -89,6 +94,29 @@ class FirebaseIosConfigTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             helper.configure(self.config, self.ios)
         self.assertEqual((self.info.read_bytes(), self.project.read_bytes()), before)
+
+    def test_environment_config_is_installed_without_logging_values(self):
+        encoded = base64.b64encode(self.config.read_bytes()).decode("ascii")
+        output = io.StringIO()
+        with patch.dict(os.environ, {"TACHI_GOOGLE_SERVICE_INFO_PLIST_BASE64": encoded}), \
+             patch("sys.argv", ["configure", "--config-env", "--ios-dir", str(self.ios)]), \
+             contextlib.redirect_stdout(output):
+            helper.main()
+        self.assertEqual((self.ios / "Runner" / helper.CONFIG_NAME).read_bytes(), self.config.read_bytes())
+        self.assertNotIn(encoded, output.getvalue())
+        self.assertNotIn("000-test", output.getvalue())
+
+    def test_missing_or_invalid_environment_config_preserves_project(self):
+        before = self.info.read_bytes(), self.project.read_bytes()
+        for encoded in ("", "not-base64!", "A" * 90001,
+                        base64.b64encode(b"wrong plist").decode("ascii")):
+            with self.subTest(encoded_size=len(encoded)), \
+                 patch("os.environ", {**os.environ, "TACHI_GOOGLE_SERVICE_INFO_PLIST_BASE64": encoded}), \
+                 patch("sys.argv", ["configure", "--config-env", "--ios-dir", str(self.ios)]):
+                with self.assertRaises(SystemExit):
+                    helper.main()
+                self.assertEqual((self.info.read_bytes(), self.project.read_bytes()), before)
+                self.assertFalse((self.ios / "Runner" / helper.CONFIG_NAME).exists())
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-enum DownloadJobStatus { pending, active, failed }
+enum DownloadJobStatus { pending, active, failed, paused }
 
 class DownloadJob {
   const DownloadJob({
@@ -42,8 +42,10 @@ class DownloadQueueState {
     List<DownloadJob> tasks = const [],
     this.running = false,
     this.storageError,
+    this.pauseReason,
   }) : tasks = List.unmodifiable(tasks);
   final List<DownloadJob> tasks;
   final bool running;
   final String? storageError;
+  final String? pauseReason;
 }

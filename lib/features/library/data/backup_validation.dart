@@ -4,13 +4,19 @@ import 'dart:typed_data';
 import 'package:html/parser.dart' as html_parser;
 
 import '../domain/library_book.dart';
+import '../domain/chapter_list_options.dart';
 import 'library_repository.dart';
 import 'library_snapshot.dart';
+import 'backup_configuration.dart';
+import '../../sources/domain/extension_backup.dart';
 
 class BackupValidator {
   BackupValidator(this.repository);
   final LibraryRepository repository;
-  List<LibrarySnapshotEntry> validate(Uint8List bytes) {
+  List<LibrarySnapshotEntry> validate(Uint8List bytes) =>
+      validateSnapshot(bytes).entries;
+
+  LibrarySnapshot validateSnapshot(Uint8List bytes) {
     if (bytes.isEmpty || bytes.length > LibrarySnapshot.maxBytes) {
       throw const FormatException(
         'Bản sao lưu trống hoặc vượt giới hạn 128 MB.',
@@ -26,6 +32,12 @@ class BackupValidator {
       );
     }
     final values = root['entries'] as List;
+    final configuration = root.containsKey('configuration')
+        ? BackupConfiguration.fromJson(root['configuration'])
+        : null;
+    final extensions = root.containsKey('extensions')
+        ? ExtensionBackup.fromJson(root['extensions'])
+        : null;
     if (values.length > 10000) {
       throw const FormatException('Bản sao lưu có quá nhiều sách.');
     }
@@ -52,20 +64,83 @@ class BackupValidator {
         'kind',
         'engine',
         'sourceId',
+        'sourceName',
         'sourceRef',
         'cover',
+        'originalCover',
         'collection',
       ]) {
         _string(json, key);
       }
       final genres = json['genres'] ?? const [];
+      final aliases = json['alternativeTitles'] ?? const [];
+      if (aliases is! List ||
+          aliases.length > 2 ||
+          aliases.any((name) => name is! String || name.trim().isEmpty) ||
+          aliases.toSet().length != aliases.length) {
+        throw const FormatException(
+          'Tên khác phải gồm tối đa hai tên không trống, không trùng.',
+        );
+      }
+      if (json.containsKey('customCover') && json['customCover'] is! bool) {
+        throw const FormatException('Trạng thái bìa riêng không hợp lệ.');
+      }
       if (genres is! List || genres.any((genre) => genre is! String)) {
         throw const FormatException('Thể loại sách phải là danh sách chuỗi.');
+      }
+      final categories = json['categories'];
+      if (categories != null &&
+          (categories is! List ||
+              categories.length > 10000 ||
+              categories.any(
+                (name) => name is! String || name.trim().isEmpty,
+              ))) {
+        throw const FormatException(
+          'Danh mục sách phải là danh sách tên không trống.',
+        );
+      }
+      for (final key in ['createdAt', 'lastUpdated']) {
+        if (json[key] != null &&
+            (json[key] is! String ||
+                DateTime.tryParse(json[key] as String) == null)) {
+          throw FormatException('$key phải là ngày hợp lệ.');
+        }
+      }
+      if (json['readerPreferences'] != null &&
+          (json['readerPreferences'] is! Map ||
+              (json['readerPreferences'] as Map).keys.any(
+                (key) => key is! String,
+              ))) {
+        throw const FormatException('Thiết lập đọc riêng phải là object JSON.');
+      }
+      if (json.containsKey('chapterListPreferences')) {
+        ChapterListOptions.validateJson(json['chapterListPreferences']);
       }
       for (final key in ['favorite', 'completed']) {
         if (json.containsKey(key) && json[key] is! bool) {
           throw FormatException('$key phải là true hoặc false.');
         }
+      }
+      if (json['status'] != null &&
+          (json['status'] is! int ||
+              (json['status'] as int) < 0 ||
+              (json['status'] as int) > 7)) {
+        throw const FormatException('Trạng thái phát hành sách không hợp lệ.');
+      }
+      if (json['readingState'] != null &&
+          ![
+            '',
+            'planned',
+            'reading',
+            'paused',
+            'completed',
+          ].contains(json['readingState'])) {
+        throw const FormatException('Trạng thái đọc sách không hợp lệ.');
+      }
+      final rating = json['rating'];
+      if (rating != null &&
+          (rating is! num || !rating.isFinite || rating < 0 || rating > 10)) {
+        throw const FormatException('Điểm đánh giá phải từ 0 đến 10.');
       }
       if (!['manga', 'novel'].contains(json['kind'] ?? 'novel') ||
           ![
@@ -104,6 +179,22 @@ class BackupValidator {
       final chapterIds = <String>{};
       for (var index = 0; index < chapters.length; index++) {
         final chapter = _object(chapters[index], 'Chương');
+        _string(chapter, 'scanlator');
+        if (chapter['uploadedAt'] != null &&
+            (chapter['uploadedAt'] is! String ||
+                DateTime.tryParse(chapter['uploadedAt'] as String) == null)) {
+          throw const FormatException('Ngày phát hành chương không hợp lệ.');
+        }
+        if (chapter['discoveredAt'] != null &&
+            (chapter['discoveredAt'] is! String ||
+                DateTime.tryParse(chapter['discoveredAt'] as String) == null)) {
+          throw const FormatException('Ngày phát hiện chương không hợp lệ.');
+        }
+        if (chapter['number'] != null &&
+            (chapter['number'] is! num ||
+                !(chapter['number'] as num).isFinite)) {
+          throw const FormatException('Số chương phải hữu hạn.');
+        }
         _string(chapter, 'id', required: true);
         _string(chapter, 'title', required: true);
         if ((chapter['id'] as String).isEmpty ||
@@ -145,8 +236,9 @@ class BackupValidator {
       }
       final book = LibraryBook.fromJson(json);
       _imageReference(book.cover, allowEmpty: true);
+      _imageReference(book.originalCover, allowEmpty: true);
       // Native hydrated covers may be large; metadata uses a short attachment ref.
-      repository.validateBook(book.copyWith(cover: ''));
+      repository.validateBook(book.copyWith(cover: '', originalCover: ''));
       final contentValues = _object(entry['contents'], 'Nội dung chương');
       final contents = <int, ReaderContent>{};
       for (final contentEntry in contentValues.entries) {
@@ -232,7 +324,11 @@ class BackupValidator {
       }
       result.add(LibrarySnapshotEntry(book, contents));
     }
-    return result;
+    return LibrarySnapshot(
+      result,
+      configuration: configuration,
+      extensions: extensions,
+    );
   }
 
   Map<String, dynamic> _object(Object? value, String label) {

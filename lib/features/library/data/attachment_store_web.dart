@@ -11,5 +11,10 @@ class AttachmentStore {
   ) async => 'data:$mediaType;base64,${base64Encode(bytes)}';
   Future<String> resolve(String reference) async => reference;
   Future<void> removeBook(String bookId) async {}
+  Future<void> removeUnreferenced(
+    String bookId,
+    Iterable<String> candidates,
+    Iterable<String> retained,
+  ) async {}
   Future<void> clear() async {}
 }

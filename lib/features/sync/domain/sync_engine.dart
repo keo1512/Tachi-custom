@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'sync_merge_plan.dart';
+
 class SyncFailure implements Exception {
   const SyncFailure(this.message);
   final String message;
@@ -13,15 +15,17 @@ class SyncHead {
     required this.parts,
     required this.digest,
     required this.bytes,
+    this.format = 1,
   });
   final String id, digest;
-  final int parts, bytes;
+  final int parts, bytes, format;
 
   Map<String, Object> toJson() => {
     'id': id,
     'parts': parts,
     'digest': digest,
     'bytes': bytes,
+    if (format != 1) 'format': format,
   };
 }
 
@@ -45,6 +49,27 @@ abstract interface class SyncRemote {
   Future<SyncHead> publish(Uint8List bytes, {required String? expectedHead});
 }
 
+abstract interface class SyncHistoryRemote {
+  Future<Uint8List?> baseline(String headId);
+}
+
+enum SyncTransferDirection { upload, download }
+
+class SyncTransferProgress {
+  const SyncTransferProgress(
+    this.direction,
+    this.completed,
+    this.total, {
+    this.reused = 0,
+  });
+  final SyncTransferDirection direction;
+  final int completed, total, reused;
+}
+
+abstract interface class SyncProgressRemote {
+  set onProgress(void Function(SyncTransferProgress progress)? callback);
+}
+
 abstract interface class SyncLocal {
   SyncLink? get link;
   Future<void> saveLink(SyncLink link);
@@ -54,6 +79,13 @@ abstract interface class SyncLocal {
   Future<void> replace(Uint8List bytes, {required String expectedFingerprint});
 }
 
+/// Projects an incoming snapshot to the image replacement will actually retain.
+/// Inputs are validated snapshots. This must be pure and use the pinned current
+/// bytes, so replacement still checks the original fingerprint with CAS.
+abstract interface class SyncIncomingNormalizer {
+  Uint8List normalizeIncoming(Uint8List incoming, {required Uint8List current});
+}
+
 enum SyncOutcome { current, uploaded, downloaded, conflict, paused }
 
 class SyncConflict {
@@ -61,10 +93,12 @@ class SyncConflict {
     required Uint8List local,
     required Uint8List remote,
     required this.head,
+    this.mergePlan,
   }) : local = Uint8List.fromList(local),
        remote = Uint8List.fromList(remote);
   final Uint8List local, remote;
   final SyncHead head;
+  final SyncMergePlan? mergePlan;
 }
 
 /// A snapshot is published before the head moves. Both head and local replacements
@@ -123,6 +157,38 @@ class SyncEngine {
     ),
   );
 
+  Uint8List _normalizeIncoming(Uint8List incoming, Uint8List current) {
+    final result = local is SyncIncomingNormalizer
+        ? (local as SyncIncomingNormalizer).normalizeIncoming(
+            incoming,
+            current: current,
+          )
+        : incoming;
+    local.validate(result);
+    return result;
+  }
+
+  Future<SyncOutcome> _receive(
+    Uint8List incoming, {
+    required Uint8List current,
+    required String expectedFingerprint,
+    required SyncHead head,
+  }) async {
+    final applied = _normalizeIncoming(incoming, current);
+    final appliedFingerprint = local.fingerprint(applied);
+    // Additive replacement can retain installed packages or omitted settings.
+    // Publish the same applied image before CAS replacement, otherwise the link
+    // would claim a cloud baseline different from the resulting local snapshot.
+    final appliedHead = appliedFingerprint == local.fingerprint(incoming)
+        ? head
+        : await remote.publish(applied, expectedHead: head.id);
+    if (appliedFingerprint != expectedFingerprint) {
+      await local.replace(applied, expectedFingerprint: expectedFingerprint);
+    }
+    await _remember(appliedHead, appliedFingerprint);
+    return SyncOutcome.downloaded;
+  }
+
   Future<SyncOutcome> run({bool enable = false}) => _exclusive(() async {
     final before = local.link;
     if (!enable && before?.enabled != true) return SyncOutcome.paused;
@@ -170,7 +236,30 @@ class SyncEngine {
       return SyncOutcome.current;
     }
     if (localChanged) {
-      conflict = SyncConflict(local: source, remote: downloaded, head: head);
+      Uint8List? baseline;
+      if (before?.headId != null && remote is SyncHistoryRemote) {
+        baseline = await (remote as SyncHistoryRemote).baseline(
+          before!.headId!,
+        );
+        if (baseline != null) {
+          local.validate(baseline);
+          if (local.fingerprint(baseline) != before.fingerprint) {
+            throw const SyncFailure(
+              'Bản gốc đồng bộ không khớp. Không tự hợp nhất.',
+            );
+          }
+        }
+      }
+      conflict = SyncConflict(
+        local: source,
+        remote: downloaded,
+        head: head,
+        mergePlan: SyncMergePlan.tryBuild(
+          source,
+          downloaded,
+          baseline: baseline,
+        ),
+      );
       return SyncOutcome.conflict;
     }
     // Re-check the head after all chunks have arrived, before local mutation.
@@ -179,9 +268,12 @@ class SyncEngine {
         'Bản cloud vừa thay đổi. Hãy đồng bộ lại để lấy bản mới nhất.',
       );
     }
-    await local.replace(downloaded, expectedFingerprint: fingerprint);
-    await _remember(head, remoteFingerprint);
-    return SyncOutcome.downloaded;
+    return _receive(
+      downloaded,
+      current: source,
+      expectedFingerprint: fingerprint,
+      head: head,
+    );
   });
 
   Future<SyncOutcome> resolve({required bool keepLocal}) =>
@@ -209,12 +301,43 @@ class SyncEngine {
           return SyncOutcome.uploaded;
         }
         local.validate(pending.remote);
-        await local.replace(
+        final outcome = await _receive(
           pending.remote,
+          current: current,
           expectedFingerprint: originalFingerprint,
+          head: pending.head,
         );
-        await _remember(pending.head, local.fingerprint(pending.remote));
         conflict = null;
-        return SyncOutcome.downloaded;
+        return outcome;
       });
+
+  Future<SyncOutcome> resolveRecords(Map<String, bool> keepLocal) => _exclusive(
+    () async {
+      final pending = conflict;
+      final plan = pending?.mergePlan;
+      if (pending == null || plan == null) {
+        throw const SyncFailure('Không có bản xem trước hợp nhất.');
+      }
+      final current = await local.snapshot();
+      final expected = local.fingerprint(pending.local);
+      if (local.fingerprint(current) != expected ||
+          (await remote.head())?.id != pending.head.id) {
+        conflict = null;
+        throw const SyncFailure(
+          'Dữ liệu vừa thay đổi. Hãy đồng bộ lại trước khi hợp nhất.',
+        );
+      }
+      final merged = _normalizeIncoming(plan.encode(keepLocal), current);
+      // Publish CAS first; a concurrent local edit is still protected by the
+      // repository CAS and remains dirty if the local replacement is rejected.
+      final published = await remote.publish(
+        merged,
+        expectedHead: pending.head.id,
+      );
+      await local.replace(merged, expectedFingerprint: expected);
+      await _remember(published, local.fingerprint(merged));
+      conflict = null;
+      return SyncOutcome.downloaded;
+    },
+  );
 }

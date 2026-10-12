@@ -3,32 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/feedback.dart';
-import '../../library/presentation/library_view_model.dart';
+import '../../library/application/reading_statistics_controller.dart';
+import '../../library/domain/library_book.dart';
+import '../../library/domain/library_reading.dart';
+import '../../library/domain/reading_statistics.dart';
 import '../settings_controller.dart';
+import 'reading_statistics_book_list.dart';
+import 'reading_statistics_charts.dart';
 import 'settings_widgets.dart';
 
 class ReadingInfoScreen extends ConsumerStatefulWidget {
   const ReadingInfoScreen({super.key});
-
   @override
   ConsumerState<ReadingInfoScreen> createState() => _ReadingInfoState();
 }
 
 class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
   late int goal;
-
+  int chartDays = 7;
   @override
   void initState() {
     super.initState();
     goal = (ref.read(preferencesProvider).getInt('readingGoalMinutes') ?? 20)
         .clamp(5, 120);
   }
-
-  int secondsOn(DateTime day) =>
-      ref
-          .read(preferencesProvider)
-          .getInt('readSeconds:${day.year}-${day.month}-${day.day}') ??
-      0;
 
   Future<void> saveGoal(double value) => perform(context, () async {
     final saved = await ref
@@ -39,52 +37,63 @@ class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final todaySeconds = secondsOn(today);
-    var weekSeconds = 0;
-    for (var index = 0; index < 7; index++) {
-      weekSeconds += secondsOn(today.subtract(Duration(days: index)));
-    }
+    final now = ref.read(readingStatisticsClockProvider)();
     final preferences = ref.read(preferencesProvider);
-    final totalSeconds = preferences
-        .getKeys()
-        .where((key) => key.startsWith('readSeconds:'))
-        .fold<int>(0, (sum, key) => sum + (preferences.getInt(key) ?? 0));
-    final books = ref.watch(libraryProvider);
+    final time = RecordedReadingTime({
+      for (final key in preferences.getKeys()) key: preferences.get(key),
+    }, now: now);
+    final statistics = ref.watch(readingStatisticsProvider);
     return SettingsPage(
       title: 'Thông tin Đọc',
       children: [
+        SettingsRow(
+          title: 'Làm mới thống kê',
+          icon: CupertinoIcons.refresh,
+          onTap: () {
+            ref.invalidate(readingStatisticsProvider);
+            setState(() {});
+          },
+        ),
         const SettingsHeading('Thời gian đọc'),
-        SettingsRow(
-          title: 'Hôm nay',
-          icon: CupertinoIcons.clock,
-          trailing: Text('${todaySeconds ~/ 60} phút'),
-        ),
-        SettingsRow(
-          title: '7 ngày qua',
-          trailing: Text('${weekSeconds ~/ 60} phút'),
-        ),
-        SettingsRow(
-          title: 'Tổng thời gian',
-          trailing: Text('${totalSeconds ~/ 60} phút'),
-        ),
+        _count('Hôm nay', '${time.todaySeconds ~/ 60} phút'),
+        _count('7 ngày qua', '${time.recentSeconds(7) ~/ 60} phút'),
+        _count('30 ngày qua', '${time.recentSeconds(30) ~/ 60} phút'),
+        _count('Tổng thời gian', '${time.totalSeconds ~/ 60} phút'),
         const SettingsNote(
-          'Thời gian được ghi khi reader đang ở màn hình trước. Dữ liệu này nằm trên thiết bị và không được đồng bộ tài khoản.',
+          'Chỉ tính thời gian reader đang ở màn hình trước và phiên đọc không ẩn danh. '
+          'Số liệu được lưu theo ngày, không suy đoán thời gian của từng truyện. '
+          'Thời gian và mục tiêu được mang theo trong sao lưu/đồng bộ TachiBooks.',
         ),
+        if (time.ignoredRecords > 0)
+          SettingsNote(
+            '${time.ignoredRecords} bản ghi thời gian không hợp lệ hoặc ở tương lai '
+            'không được cộng vào thống kê; dữ liệu gốc được giữ nguyên.',
+          ),
+        const SettingsHeading('Biểu đồ thời gian đọc'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: CupertinoSlidingSegmentedControl<int>(
+            groupValue: chartDays,
+            children: const {7: Text('7 ngày'), 30: Text('30 ngày')},
+            onValueChanged: (value) {
+              if (value != null) setState(() => chartDays = value);
+            },
+          ),
+        ),
+        ReadingTimeChart(time: time, days: chartDays),
         const Divider(height: 24, thickness: .5),
         const SettingsHeading('Mục tiêu đọc mỗi ngày'),
         SettingsRow(
           title: '$goal phút',
           icon: CupertinoIcons.flag,
           trailing: Text(
-            '${(todaySeconds / (goal * 60) * 100).clamp(0, 100).round()}%',
+            '${(time.todaySeconds / (goal * 60) * 100).clamp(0, 100).round()}%',
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: LinearProgressIndicator(
-            value: (todaySeconds / (goal * 60)).clamp(0, 1),
+            value: (time.todaySeconds / (goal * 60)).clamp(0, 1),
             minHeight: 3,
           ),
         ),
@@ -100,39 +109,133 @@ class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
             onChangeEnd: saveGoal,
           ),
         ),
-        const SettingsNote(
-          'Mục tiêu từ 5 đến 120 phút, được lưu trên thiết bị.',
-        ),
         const Divider(height: 24, thickness: .5),
         const SettingsHeading('Thư viện'),
-        books.when(
+        statistics.when(
           loading: () => const Padding(
             padding: EdgeInsets.all(16),
             child: CupertinoActivityIndicator(),
           ),
-          error: (error, _) => SettingsNote('$error'),
-          data: (values) => Column(
-            children: [
-              SettingsRow(
-                title: 'Sách và truyện',
-                trailing: Text('${values.length}'),
-              ),
-              SettingsRow(
-                title: 'Đã hoàn thành',
-                trailing: Text(
-                  '${values.where((book) => book.completed).length}',
-                ),
-              ),
-              SettingsRow(
-                title: 'Dấu trang',
-                trailing: Text(
-                  '${values.fold<int>(0, (sum, book) => sum + book.bookmarks.length)}',
-                ),
-              ),
-            ],
+          error: (error, _) => SettingsNote(
+            'Chưa đọc được dữ liệu thống kê: ${userFacingError(error)} '
+            'Hãy kiểm tra thư viện trong Công cụ cơ sở dữ liệu. '
+            'Không có dữ liệu nào bị thay đổi.',
           ),
+          data: (stats) => _libraryStatistics(stats, now),
         ),
       ],
     );
   }
+
+  Widget _count(String title, String value) =>
+      SettingsRow(title: title, trailing: Text(value));
+
+  Widget _libraryStatistics(ReadingStatistics stats, DateTime now) => Column(
+    children: [
+      _count('Sách và truyện', '${stats.books.length}'),
+      _count('Tổng số chương', '${stats.chapters}'),
+      _count('Chương đã đọc', '${stats.read}'),
+      _count('Chương chưa đọc', '${stats.unread}'),
+      _count('Đang đọc', '${stats.inProgress}'),
+      _count('Đã hoàn thành', '${stats.completed}'),
+      _count('Đang tạm dừng', '${stats.paused}'),
+      _count('Dự định đọc', '${stats.planned}'),
+      _count('Truyện có hồ sơ theo dõi', '${stats.trackedBooks}'),
+      _count('Chương có nội dung offline', '${stats.downloaded}'),
+      _count('Truyện có chương offline', '${stats.offlineBooks}'),
+      _count('Yêu thích', '${stats.favorites}'),
+      _count('Dấu trang', '${stats.bookmarks}'),
+      _count('Tiến độ toàn thư viện', '${(stats.progress * 100).round()}%'),
+      const SettingsNote(
+        'Tiến độ tổng thể tính theo số chương đã đọc trên tổng số chương, '
+        'không lấy trung bình các truyện dài/ngắn. Offline được kiểm tra từ nội '
+        'dung lưu trên máy; cờ đã tải nhưng thiếu nội dung không được tính.',
+      ),
+      _count(
+        'Điểm đánh giá trung bình',
+        stats.averageRating == null
+            ? 'Chưa có'
+            : '${stats.averageRating!.toStringAsFixed(1)}/10',
+      ),
+      SettingsNote(
+        'Tính từ ${stats.ratedBooks} đánh giá bạn đã lưu theo thang 0–10. '
+        'Điểm từ tracker có thang khác nhau được giữ nguyên trong bản sao lưu '
+        'và không được tự gộp vào điểm trung bình.',
+      ),
+      SettingsRow(
+        key: const ValueKey('statistics-manage-books'),
+        title: 'Trạng thái và đánh giá từng truyện',
+        icon: CupertinoIcons.book,
+        onTap: () => Navigator.of(context).push<void>(
+          CupertinoPageRoute(builder: (_) => const ReadingStatisticsBookList()),
+        ),
+      ),
+      const SettingsHeading('Theo trạng thái đọc'),
+      ReadingCountChart(values: stats.readingStates),
+      const SettingsHeading('Theo tiến độ chương'),
+      ReadingCountChart(values: stats.progressGroups),
+      ..._groups('Theo nguồn', stats.sources),
+      ..._groups('Theo danh mục', stats.categories),
+      const SettingsNote(
+        'Một truyện thuộc nhiều danh mục được tính một lần trong từng danh mục.',
+      ),
+      ..._groups('Theo dịch vụ theo dõi', stats.trackers),
+      const SettingsNote(
+        'Hồ sơ tracker là dữ liệu có trong bản sao lưu đã nhập. '
+        'Thống kê không đăng nhập, gọi dịch vụ hoặc khẳng định tài khoản đang kết nối.',
+      ),
+      const SettingsHeading('Đọc nhiều chương nhất'),
+      if (stats.mostReadBooks.isEmpty)
+        const SettingsNote('Chưa có chương được ghi nhận đã đọc.'),
+      for (final book in stats.mostReadBooks)
+        _bookCount(
+          book,
+          '${readChapterCount(book)}/${book.chapters.length} chương đã đọc',
+        ),
+      const SettingsHeading('Truyện đọc gần đây'),
+      if (stats.recentBooks(now).isEmpty)
+        const SettingsNote('Chưa có phiên đọc được ghi nhận.'),
+      for (final book in stats.recentBooks(now))
+        _bookCount(
+          book,
+          'Đọc gần nhất: ${book.lastRead!.day}/${book.lastRead!.month}/${book.lastRead!.year} '
+          '· ${readChapterCount(book)}/${book.chapters.length} chương',
+        ),
+    ],
+  );
+
+  Widget _bookCount(LibraryBook book, String subtitle) => SettingsRow(
+    title: book.title,
+    subtitle: subtitle,
+    onTap: () => Navigator.of(context).push<void>(
+      CupertinoPageRoute(
+        builder: (_) => ReadingStatisticsBookList(initialBookId: book.id),
+      ),
+    ),
+  );
+
+  List<Widget> _groups(String title, Map<String, int> values) => [
+    SettingsHeading(title),
+    if (values.isEmpty) const SettingsNote('Chưa có dữ liệu.'),
+    for (final entry in values.entries.take(10))
+      _count(entry.key, '${entry.value} truyện'),
+    if (values.length > 10)
+      SettingsRow(
+        title: 'Xem tất cả ${values.length} nhóm',
+        onTap: () => Navigator.of(context).push<void>(
+          CupertinoPageRoute(
+            builder: (_) => Scaffold(
+              appBar: AppBar(title: Text(title)),
+              body: ListView.builder(
+                itemCount: values.length,
+                itemBuilder: (_, index) {
+                  final entry = values.entries.elementAt(index);
+                  return _count(entry.key, '${entry.value} truyện');
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+  ];
 }

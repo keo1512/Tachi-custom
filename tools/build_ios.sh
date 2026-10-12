@@ -59,7 +59,8 @@ if codesign --display "$tachi_app" >/dev/null 2>&1; then
   printf '%s\n' 'Expected an unsigned Runner.app, but the app has a signature. Review the build settings before packaging.' >&2
   exit 1
 fi
-python3 - "$tachi_app" "$tachi_output" <<'PY'
+python3 tools/package_jvm_frameworks.py "$tachi_app"
+python3 - "$tachi_app" "$tachi_output" "$tachi_root" <<'PY'
 import json
 import pathlib
 import plistlib
@@ -68,6 +69,9 @@ import sys
 
 app = pathlib.Path(sys.argv[1])
 output = pathlib.Path(sys.argv[2])
+sys.path.insert(0, str(pathlib.Path(sys.argv[3]) / 'tools'))
+from check_native_runtime_bundle import verify
+native_resources = verify(app)
 with (app / 'Info.plist').open('rb') as handle:
     info = plistlib.load(handle)
 if 'iPhoneOS' not in info.get('CFBundleSupportedPlatforms', []):
@@ -106,6 +110,7 @@ build_info = {
     'checks': 'Flutter analyze, Flutter tests, release device compilation and package checks passed.',
     'runtimeValidation': 'Not performed on an iPhone or iPad by this build script.',
     'firebaseConfiguration': 'Matching TachiBooks iOS config and Google callback included; live login and sync not verified by this build.',
+    'onDeviceExtensionResources': native_resources,
 }
 with (output / 'TachiBooks-unsigned.build-info.json').open('w', encoding='utf-8') as handle:
     json.dump(build_info, handle, ensure_ascii=False, indent=2)
@@ -118,13 +123,14 @@ mkdir "$tachi_staging/Payload"
 ditto "$tachi_app" "$tachi_staging/Payload/Runner.app"
 tachi_ipa="$tachi_output/TachiBooks-unsigned.ipa"
 ditto -c -k --keepParent "$tachi_staging/Payload" "$tachi_ipa"
-python3 - "$tachi_ipa" <<'PY'
+python3 - "$tachi_ipa" "$tachi_root" <<'PY'
+import json
+import pathlib
 import sys
-import zipfile
 
-with zipfile.ZipFile(sys.argv[1]) as archive:
-    if archive.testzip() is not None or 'Payload/Runner.app/Info.plist' not in archive.namelist():
-        raise SystemExit('The packaged IPA is incomplete or failed its ZIP integrity check.')
+sys.path.insert(0, str(pathlib.Path(sys.argv[2]) / 'tools'))
+from check_native_runtime_bundle import verify_archive
+print(json.dumps(verify_archive(pathlib.Path(sys.argv[1])), indent=2))
 PY
 (
   cd "$tachi_output"

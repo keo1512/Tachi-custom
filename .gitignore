@@ -39,6 +39,7 @@ artifacts/*.log
 /android/
 /artifacts/
 /coverage/
+packages/tachi_runtime/ios/Runtime/
 
 # Symbolication related
 app.*.symbols

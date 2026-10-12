@@ -4,8 +4,11 @@ import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/library_book.dart';
+import '../../downloads/domain/download_deletion.dart';
 import 'library_mutation.dart';
 import 'library_snapshot.dart';
+import 'library_cache_maintenance.dart';
+import 'backup_validation.dart';
 import 'library_repository_web.dart'
     if (dart.library.io) 'library_repository_native.dart'
     as platform;
@@ -36,6 +39,16 @@ abstract class LibraryRepository {
   Future<void> saveChapter(String bookId, int index, ReaderContent content);
   Future<void> deleteChapter(String bookId, int index);
 
+  /// Removes cache and downloaded flags together, preserving reading metadata.
+  /// An actual deletion invalidates requests opened before it.
+  Future<int> deleteDownloadedChapters(
+    LibraryBook expected,
+    Iterable<String> chapterIds, {
+    required int expectedRevision,
+    bool protectBookmarks = true,
+    bool readOnly = false,
+  });
+
   /// Invalidates work started before a successful restore, clear or removal.
   int get replacementRevision;
   Future<LibraryChapterRead?> openChapter(String bookId, String chapterId);
@@ -46,6 +59,14 @@ abstract class LibraryRepository {
   });
   Future<LibraryBook?> mutateBook(
     String id,
+    LibraryBook Function(LibraryBook) transform, {
+    int? expectedRevision,
+  });
+
+  /// Applies metadata transforms to the latest matching titles as one commit.
+  /// Chapter contents and replacement revision are retained.
+  Future<int> mutateBooks(
+    Iterable<String> ids,
     LibraryBook Function(LibraryBook) transform, {
     int? expectedRevision,
   });
@@ -71,7 +92,34 @@ abstract class LibraryRepository {
     LibrarySnapshot incoming, {
     required String expectedFingerprint,
   });
+
+  /// Joint restore hook; configuration is journaled by the caller and written
+  /// after library CAS/recovery, before the atomic book commit. Unsupported
+  /// implementations must reject before changing either store.
+  Future<void> replaceSnapshotWithConfiguration(
+    LibrarySnapshot incoming, {
+    required String expectedFingerprint,
+    required Uint8List recovery,
+    required Future<void> Function() beforeCommit,
+  }) async => throw UnsupportedError(
+    'Bộ nhớ này chưa hỗ trợ khôi phục thiết lập và thư viện cùng nhau.',
+  );
   Future<Uint8List?> recoverySnapshot();
+  Future<LibraryStorageReport> inspectStorage() async {
+    final image = await snapshot();
+    BackupValidator(this).validateSnapshot(image.encode());
+    return snapshotStorageReport(image, replacementRevision);
+  }
+
+  Future<LibraryCacheMaintenanceResult> clearTransientChapterCache({
+    required String expectedFingerprint,
+    void Function()? guard,
+  }) async =>
+      throw UnsupportedError('Bộ nhớ chưa hỗ trợ dọn cache chương an toàn.');
+  Future<LibraryCacheMaintenanceResult> collectUnusedAttachments({
+    required String expectedFingerprint,
+    void Function()? guard,
+  }) async => throw UnsupportedError('Bộ nhớ chưa hỗ trợ dọn tệp ảnh an toàn.');
   Future<void> close() async {}
   Future<String> storeAttachment(
     String bookId,
@@ -85,6 +133,29 @@ abstract class LibraryRepository {
   }
 
   void validateBook(LibraryBook book) {
+    if (book.alternativeTitles.length > 2 ||
+        book.alternativeTitles.any((title) => title.trim().isEmpty) ||
+        book.alternativeTitles.toSet().length !=
+            book.alternativeTitles.length) {
+      throw const FormatException(
+        'Tên khác phải gồm tối đa hai tên không trống, không trùng.',
+      );
+    }
+    if (![
+          '',
+          'planned',
+          'reading',
+          'paused',
+          'completed',
+        ].contains(book.readingState) ||
+        (book.rating != null &&
+            (!book.rating!.isFinite ||
+                book.rating! < 0 ||
+                book.rating! > 10))) {
+      throw const FormatException(
+        'Trạng thái đọc hoặc điểm đánh giá không hợp lệ.',
+      );
+    }
     if (book.id.isEmpty ||
         book.title.isEmpty ||
         book.chapters.length > 10000 ||
@@ -114,6 +185,47 @@ class MemoryLibraryRepository extends LibraryRepository {
   @override
   int get replacementRevision => _replacementRevision;
   String _key(String id, int index) => jsonEncode([id, index]);
+  @override
+  Future<LibraryCacheMaintenanceResult> clearTransientChapterCache({
+    required String expectedFingerprint,
+    void Function()? guard,
+  }) async {
+    guard?.call();
+    final image = await snapshot();
+    BackupValidator(this).validateSnapshot(image.encode());
+    final keys = transientChapterKeys(image);
+    if (image.fingerprint != expectedFingerprint) {
+      throw StateError(
+        'Thư viện đã thay đổi. Hãy kiểm tra lại trước khi dọn cache.',
+      );
+    }
+    if (keys.isEmpty) return const LibraryCacheMaintenanceResult();
+    guard?.call();
+    // No await between preservation and cache deletion.
+    _recovery = image.encode();
+    for (final key in keys) {
+      _chapters.remove(_key(key.bookId, key.index));
+    }
+    _replacementRevision++;
+    return LibraryCacheMaintenanceResult(removedChapters: keys.length);
+  }
+
+  @override
+  Future<LibraryCacheMaintenanceResult> collectUnusedAttachments({
+    required String expectedFingerprint,
+    void Function()? guard,
+  }) async {
+    guard?.call();
+    final image = await snapshot();
+    BackupValidator(this).validateSnapshot(image.encode());
+    if (image.fingerprint != expectedFingerprint) {
+      throw StateError(
+        'Thư viện đã thay đổi. Hãy kiểm tra lại trước khi dọn cache.',
+      );
+    }
+    return const LibraryCacheMaintenanceResult();
+  }
+
   @override
   Future<List<LibraryBook>> list() async => _books.values.toList();
   @override
@@ -186,6 +298,48 @@ class MemoryLibraryRepository extends LibraryRepository {
   @override
   Future<void> deleteChapter(String bookId, int index) async {
     _chapters.remove(_key(bookId, index));
+  }
+
+  @override
+  Future<int> deleteDownloadedChapters(
+    LibraryBook expected,
+    Iterable<String> chapterIds, {
+    required int expectedRevision,
+    bool protectBookmarks = true,
+    bool readOnly = false,
+  }) async {
+    checkLibraryRevision(replacementRevision, expectedRevision);
+    final book = _books[expected.id];
+    if (book == null ||
+        bookSourceIdentity(book) != bookSourceIdentity(expected)) {
+      throw StateError('Sách hoặc nguồn đã thay đổi. Hãy mở lại sách.');
+    }
+    final indices =
+        downloadDeletionIndices(
+              book,
+              chapterIds.toSet(),
+              protectBookmarks: protectBookmarks,
+              readOnly: readOnly,
+            )
+            .where(
+              (index) =>
+                  book.chapters[index].downloaded ||
+                  _chapters.containsKey(_key(book.id, index)),
+            )
+            .toList();
+    if (indices.isEmpty) return 0;
+    final chapters = [...book.chapters];
+    for (final index in indices) {
+      chapters[index] = chapters[index].copyWith(downloaded: false);
+    }
+    final updated = book.copyWith(chapters: chapters);
+    validateBook(updated);
+    for (final index in indices) {
+      _chapters.remove(_key(book.id, index));
+    }
+    _books[book.id] = updated;
+    _replacementRevision++;
+    return indices.length;
   }
 
   @override
@@ -286,6 +440,32 @@ class MemoryLibraryRepository extends LibraryRepository {
   }
 
   @override
+  Future<int> mutateBooks(
+    Iterable<String> ids,
+    LibraryBook Function(LibraryBook) transform, {
+    int? expectedRevision,
+  }) async {
+    checkLibraryRevision(replacementRevision, expectedRevision);
+    final distinct = ids.toSet();
+    if (distinct.length > 10000) {
+      throw const FormatException('Thao tác có quá nhiều sách.');
+    }
+    final updated = <String, LibraryBook>{};
+    for (final id in distinct) {
+      final book = _books[id];
+      if (book == null) continue;
+      final next = transform(book);
+      if (next.id != id) {
+        throw StateError('Không thể đổi mã sách trong cập nhật metadata.');
+      }
+      validateBook(next);
+      updated[id] = next;
+    }
+    _books.addAll(updated);
+    return updated.length;
+  }
+
+  @override
   Future<int> updateChapterOrder(
     LibraryBook expected,
     List<BookChapter> incoming, {
@@ -302,14 +482,26 @@ class MemoryLibraryRepository extends LibraryRepository {
     return change.additions;
   }
 
-  LibrarySnapshot _snapshot() => LibrarySnapshot([
-    for (final book in _books.values)
-      LibrarySnapshotEntry(book, {
-        for (var index = 0; index < book.chapters.length; index++)
-          if (_chapters[_key(book.id, index)] != null)
-            index: _chapters[_key(book.id, index)]!,
-      }),
-  ]);
+  LibrarySnapshot _snapshot() {
+    for (final key in _chapters.keys) {
+      final position = jsonDecode(key) as List<dynamic>;
+      final book = _books[position[0]];
+      final index = position[1] as int;
+      if (book == null || index < 0 || index >= book.chapters.length) {
+        throw const FormatException(
+          'Nội dung chương không thuộc thư viện hoặc mục lục. Dữ liệu được giữ nguyên.',
+        );
+      }
+    }
+    return LibrarySnapshot([
+      for (final book in _books.values)
+        LibrarySnapshotEntry(book, {
+          for (var index = 0; index < book.chapters.length; index++)
+            if (_chapters[_key(book.id, index)] != null)
+              index: _chapters[_key(book.id, index)]!,
+        }),
+    ]);
+  }
 
   @override
   Future<LibrarySnapshot> snapshot() async => _snapshot();
@@ -318,11 +510,31 @@ class MemoryLibraryRepository extends LibraryRepository {
   Future<void> replaceSnapshot(
     LibrarySnapshot incoming, {
     required String expectedFingerprint,
+  }) => _replaceSnapshot(incoming, expectedFingerprint: expectedFingerprint);
+
+  @override
+  Future<void> replaceSnapshotWithConfiguration(
+    LibrarySnapshot incoming, {
+    required String expectedFingerprint,
+    required Uint8List recovery,
+    required Future<void> Function() beforeCommit,
+  }) => _replaceSnapshot(
+    incoming,
+    expectedFingerprint: expectedFingerprint,
+    recovery: recovery,
+    beforeCommit: beforeCommit,
+  );
+
+  Future<void> _replaceSnapshot(
+    LibrarySnapshot incoming, {
+    required String expectedFingerprint,
+    Uint8List? recovery,
+    Future<void> Function()? beforeCommit,
   }) async {
     final books = <String, LibraryBook>{};
     final chapters = <String, ReaderContent>{};
     for (final entry in incoming.entries) {
-      validateBook(entry.book.copyWith(cover: ''));
+      validateBook(entry.book.copyWith(cover: '', originalCover: ''));
       books[entry.book.id] = entry.book;
       for (final chapter in entry.contents.entries) {
         validateChapter(chapter.key, chapter.value);
@@ -335,8 +547,15 @@ class MemoryLibraryRepository extends LibraryRepository {
         'Thư viện đã thay đổi. Hãy tải lại trước khi khôi phục.',
       );
     }
-    // No await between the comparison and map replacement.
-    _recovery = previous.encode();
+    _recovery = recovery ?? previous.encode();
+    if (beforeCommit != null) {
+      await beforeCommit();
+      // Memory repositories also reject an edit while async preferences write.
+      if (_snapshot().fingerprint != expectedFingerprint) {
+        throw StateError('Thư viện đã thay đổi trong khi khôi phục.');
+      }
+    }
+    // No await between the final comparison and map replacement.
     _books
       ..clear()
       ..addAll(books);
@@ -458,6 +677,15 @@ class _PreferenceLibraryRepository extends MemoryLibraryRepository {
   }) => _mutate(
     () => super.mutateBook(id, transform, expectedRevision: expectedRevision),
   );
+
+  @override
+  Future<int> mutateBooks(
+    Iterable<String> ids,
+    LibraryBook Function(LibraryBook) transform, {
+    int? expectedRevision,
+  }) => _mutate(
+    () => super.mutateBooks(ids, transform, expectedRevision: expectedRevision),
+  );
   @override
   Future<int> updateChapterOrder(
     LibraryBook expected,
@@ -474,6 +702,22 @@ class _PreferenceLibraryRepository extends MemoryLibraryRepository {
   Future<void> deleteChapter(String bookId, int index) =>
       _mutate(() => super.deleteChapter(bookId, index));
   @override
+  Future<int> deleteDownloadedChapters(
+    LibraryBook expected,
+    Iterable<String> chapterIds, {
+    required int expectedRevision,
+    bool protectBookmarks = true,
+    bool readOnly = false,
+  }) => _mutate(
+    () => super.deleteDownloadedChapters(
+      expected,
+      chapterIds,
+      expectedRevision: expectedRevision,
+      protectBookmarks: protectBookmarks,
+      readOnly: readOnly,
+    ),
+  );
+  @override
   Future<void> replaceChapterOrder(
     LibraryBook book,
     List<int?> previousIndices,
@@ -487,5 +731,15 @@ class _PreferenceLibraryRepository extends MemoryLibraryRepository {
     required String expectedFingerprint,
   }) async => throw UnsupportedError(
     'Đồng bộ thay thế toàn bộ thư viện chỉ được hỗ trợ trong app iOS.',
+  );
+
+  @override
+  Future<void> replaceSnapshotWithConfiguration(
+    LibrarySnapshot incoming, {
+    required String expectedFingerprint,
+    required Uint8List recovery,
+    required Future<void> Function() beforeCommit,
+  }) async => throw UnsupportedError(
+    'Khôi phục thay thế chỉ được hỗ trợ trong app iOS.',
   );
 }

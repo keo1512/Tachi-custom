@@ -79,7 +79,52 @@ Future<void> waitForReaderImages(WidgetTester tester) async {
 
 void main() {
   testWidgets(
-    'manga restores image-relative position after asynchronous image sizing and retains one page controller',
+    'a contents sheet opened before restore cannot reopen or change the replacement book',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final repo = await novel();
+      final original = (await repo.find('novel'))!;
+      final container = ProviderContainer(
+        overrides: [
+          libraryRepositoryProvider.overrideWithValue(repo),
+          preferencesProvider.overrideWithValue(preferences),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: ReaderScreen(id: 'novel')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Mục lục'));
+      await tester.pumpAndSettle();
+      await repo.clear();
+      await repo.save(original.copyWith(title: 'Replacement', progress: .2));
+      await repo.saveChapter(
+        'novel',
+        0,
+        ReaderContent(kind: 'novel', html: '<p>Replacement contents</p>'),
+      );
+      await tester.tap(find.widgetWithText(ListTile, 'Chapter 1'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Thư viện đã được thay đổi hoặc khôi phục'),
+        findsOneWidget,
+      );
+      expect((await repo.find('novel'))!.progress, .2);
+      expect(find.text('Replacement'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      expect((await repo.find('novel'))!.progress, .2);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'continuous manga preserves image-relative position despite legacy mode and theme preferences',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       final preferences = await SharedPreferences.getInstance();
@@ -143,24 +188,22 @@ void main() {
       final vertical = tester
           .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
           .controller!;
-      expect(vertical.offset, closeTo(1200, 1));
+      final fullWidthScale =
+          tester.getSize(find.byType(Image).first).width / 20;
+      expect(vertical.offset, closeTo(1200 * fullWidthScale, 1));
       await container
           .read(settingsProvider.notifier)
           .update(mangaMode: 'paged');
       await tester.pumpAndSettle();
-      final controller = tester
-          .widget<PageView>(find.byType(PageView))
-          .controller!;
-      expect(controller.page, 1);
+      expect(find.byType(PageView), findsNothing);
+      expect(vertical.offset, closeTo(1200 * fullWidthScale, 1));
+      expect(preferences.getString('mangaMode'), 'paged');
       await container
           .read(settingsProvider.notifier)
           .update(readerTheme: 'night');
       await tester.pumpAndSettle();
-      expect(
-        tester.widget<PageView>(find.byType(PageView)).controller,
-        same(controller),
-      );
-      expect(controller.page, 1);
+      expect(find.byType(PageView), findsNothing);
+      expect(vertical.offset, closeTo(1200 * fullWidthScale, 1));
       await container
           .read(settingsProvider.notifier)
           .update(mangaMode: 'vertical');
@@ -171,7 +214,7 @@ void main() {
             .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
             .controller!
             .offset,
-        closeTo(1200, 1),
+        closeTo(1200 * fullWidthScale, 1),
       );
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
@@ -240,7 +283,7 @@ void main() {
         .controller!
         .jumpTo(0);
     await tester.pump(const Duration(milliseconds: 600));
-    await tester.tap(find.textContaining('Mục lục'));
+    await tester.tap(find.byTooltip('Mục lục'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Dấu trang'));
     await tester.pumpAndSettle();

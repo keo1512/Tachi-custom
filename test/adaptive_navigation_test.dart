@@ -188,6 +188,15 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Hiển thị'));
         await tester.pumpAndSettle();
+        final displayScrollable = find.descendant(
+          of: find.byType(LibraryFilterSheet),
+          matching: find.byType(Scrollable),
+        ).last;
+        await tester.scrollUntilVisible(
+          find.text('Lưới nhỏ').hitTestable(),
+          75,
+          scrollable: displayScrollable,
+        );
         await tester.tap(find.text('Lưới nhỏ'));
         await tester.pumpAndSettle();
         expect(

@@ -8,11 +8,33 @@ import 'package:http/http.dart' as http;
 import '../domain/catalogue.dart';
 
 class ExtensionIndex {
-  const ExtensionIndex(this.url, this.engine, this.entries, {this.error = ''});
-  final String url, error;
+  const ExtensionIndex(
+    this.url,
+    this.engine,
+    this.entries, {
+    this.error = '',
+    this.name = '',
+    this.label = '',
+  });
+  final String url, error, name, label;
   final SourceEngine engine;
   final List<CatalogueExtension> entries;
   String get identity => '${engine.name}:$url';
+  String get displayName => label.isNotEmpty
+      ? label
+      : name.isNotEmpty
+      ? name
+      : engine == SourceEngine.tachimanga
+      ? 'Tachimanga'
+      : 'vBook';
+  ExtensionIndex withLabel(String value) => ExtensionIndex(
+    url,
+    engine,
+    entries,
+    error: error,
+    name: name,
+    label: value,
+  );
 }
 
 /// Reads public catalogues directly. Installation still uses an engine adapter.
@@ -137,9 +159,11 @@ class ExtensionIndexRepository {
               lang: languages.length == 1 ? languages.single : 'all',
               packageUrl: validUrl(resourceBase.resolve(apkUrl).toString())
                   .toString(),
+              iconUrl: _iconUrl(resourceBase, resources.text(2)),
             );
           }),
         ),
+        name: _repositoryName(store.text(1)),
       );
     }
     Object? decoded;
@@ -159,12 +183,22 @@ class ExtensionIndexRepository {
       if (next == url || !next.path.endsWith('.pb')) {
         throw const FormatException('index_v2 không hợp lệ.');
       }
-      return fetch(next.toString(), engine);
+      final fetched = await fetch(next.toString(), engine);
+      return ExtensionIndex(
+        fetched.url,
+        fetched.engine,
+        fetched.entries,
+        name: _repositoryName(decoded['name']).isEmpty
+            ? fetched.name
+            : _repositoryName(decoded['name']),
+      );
     }
     final values = decoded is List
         ? decoded
         : decoded is Map
-        ? decoded['data']
+        ? engine == SourceEngine.tachimanga && decoded['extensionList'] is Map
+              ? (decoded['extensionList'] as Map)['extensions']
+              : decoded['data']
         : null;
     if (values is! List || values.length > maxEntries) {
       throw const FormatException('Kho không có danh sách extension hợp lệ.');
@@ -176,16 +210,45 @@ class ExtensionIndexRepository {
             throw const FormatException('Mục extension không hợp lệ.');
           }
           final String packageUrl, id;
+          Object? icon;
+          var version = '${raw['version'] ?? ''}';
+          var lang =
+              '${raw[engine == SourceEngine.vbook ? 'locale' : 'lang'] ?? ''}';
           if (engine == SourceEngine.tachimanga) {
-            id = _nonempty(raw['pkg']);
-            final apk = _nonempty(raw['apk']);
-            if (apk.contains('/') ||
-                apk.contains('\\') ||
-                !apk.endsWith('.apk')) {
-              throw const FormatException('Tên APK không hợp lệ.');
+            if (raw.containsKey('packageName') ||
+                raw.containsKey('resources')) {
+              id = _nonempty(raw['packageName']);
+              final resources = raw['resources'];
+              if (resources is! Map) {
+                throw const FormatException('Mục extension thiếu resources.');
+              }
+              packageUrl = validUrl(
+                url.resolve(_nonempty(resources['apkUrl'])).toString(),
+              ).toString();
+              icon = resources['iconUrl'] ?? '';
+              version = '${raw['versionName'] ?? ''}';
+              final sources = raw['sources'];
+              if (sources is List) {
+                final languages = sources
+                    .whereType<Map>()
+                    .map((source) => source['language'])
+                    .whereType<String>()
+                    .map((language) => language.trim())
+                    .where((language) => language.isNotEmpty)
+                    .toSet();
+                lang = languages.length == 1 ? languages.single : 'all';
+              }
+            } else {
+              id = _nonempty(raw['pkg']);
+              final apk = _nonempty(raw['apk']);
+              if (apk.contains('/') ||
+                  apk.contains('\\') ||
+                  !apk.endsWith('.apk')) {
+                throw const FormatException('Tên APK không hợp lệ.');
+              }
+              packageUrl = validUrl(url.resolve('apk/$apk').toString())
+                  .toString();
             }
-            packageUrl = validUrl(url.resolve('apk/$apk').toString())
-                .toString();
           } else {
             packageUrl = validUrl(
               url.resolve(_nonempty(raw['path'])).toString(),
@@ -198,22 +261,56 @@ class ExtensionIndexRepository {
           return CatalogueExtension(
             id: id,
             name: _nonempty(raw['name']),
-            version: '${raw['version'] ?? ''}',
+            version: version,
             engine: engine,
             packageUrl: packageUrl,
-            lang:
-                '${raw[engine == SourceEngine.vbook ? 'locale' : 'lang'] ?? ''}',
+            iconUrl: _iconUrl(
+              url,
+              icon ??
+                  raw['icon'] ??
+                  raw['iconUrl'] ??
+                  (engine == SourceEngine.tachimanga &&
+                          RegExp(r'^[A-Za-z0-9_.]+$').hasMatch(id)
+                      ? 'icon/$id.png'
+                      : ''),
+            ),
+            lang: lang,
           );
         })
         .toList(growable: false);
-    return ExtensionIndex(url.toString(), engine, entries);
+    return ExtensionIndex(
+      url.toString(),
+      engine,
+      entries,
+      name: decoded is Map ? _repositoryName(decoded['name']) : '',
+    );
   }
+
+  static String _repositoryName(Object? value) =>
+      value is String &&
+          value.trim().length <= 100 &&
+          !RegExp(r'[\x00-\x1f]').hasMatch(value)
+      ? value.trim()
+      : '';
 
   static String _nonempty(Object? value) {
     if (value is! String || value.trim().isEmpty || value.length > 4096) {
       throw const FormatException('Thiếu tên, ID hoặc link extension.');
     }
     return value.trim();
+  }
+
+  // Icons are optional. A malformed image link must not hide a valid package
+  // catalogue or introduce a non-HTTP URL into the image loader.
+  static String _iconUrl(Uri base, Object? value) {
+    if (value is! String || value.trim().isEmpty || value.length > 4096) {
+      return '';
+    }
+    try {
+      return validUrl(base.resolve(value.trim()).toString()).toString();
+    } on FormatException {
+      return '';
+    }
   }
 
   // The current Keiyoushi .pb is a gzip file, without Content-Encoding.

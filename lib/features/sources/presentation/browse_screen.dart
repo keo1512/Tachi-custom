@@ -5,8 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/feedback.dart';
 import '../../library/presentation/library_view_model.dart';
-import '../../settings/presentation/connection_dialog.dart';
+import '../../settings/presentation/settings_widgets.dart';
 import '../../settings/settings_controller.dart';
+import '../../sync/presentation/sync_screen.dart';
 import '../domain/catalogue.dart';
 import 'browse_dialogs.dart';
 import 'browse_widgets.dart';
@@ -14,6 +15,12 @@ import 'source_migration_view.dart';
 import 'source_preferences_dialog.dart';
 import 'extension_catalogue_controller.dart';
 import 'extension_catalogue_view.dart';
+import 'extension_file_import.dart';
+import 'global_search_screen.dart';
+import 'source_order_sheet.dart';
+import 'source_catalogue_tools.dart';
+import 'source_languages_controller.dart';
+import 'source_languages_sheet.dart';
 
 class BrowseScreen extends ConsumerStatefulWidget {
   const BrowseScreen({super.key});
@@ -32,6 +39,10 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
   final packageUrls = <SourceEngine, String>{};
   final errors = <SourceEngine, String>{};
   final installing = <String>{};
+  final queuedInstalls = <String>{};
+  final installErrors = <String, String>{};
+  bool updatingAll = false;
+  bool importing = false;
 
   @override
   void initState() {
@@ -71,7 +82,10 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
     });
     await Future.wait(
       SourceEngine.values.map((engine) async {
-        if (connection(settings, engine).isEmpty) return;
+        if (repo.requiresExternalConnection(engine) &&
+            connection(settings, engine).isEmpty) {
+          return;
+        }
         try {
           if (extensions) {
             final result = await repo.extensions(engine);
@@ -86,7 +100,7 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
           }
         } catch (error) {
           if (mounted && current == request) {
-            setState(() => errors[engine] = '$error');
+            setState(() => errors[engine] = userFacingError(error));
           }
         }
       }),
@@ -94,8 +108,8 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
     if (mounted && current == request) setState(() => loading = false);
   }
 
-  Future<void> connect() async {
-    await showConnections(context, ref);
+  Future<void> manageRepositories() async {
+    await context.push('/repositories');
     if (mounted) await load();
   }
 
@@ -121,33 +135,237 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
     if (mounted) setState(() => adding = false);
   }
 
+  Future<void> importApk() async {
+    if (importing || updatingAll || installing.isNotEmpty) return;
+    setState(() => importing = true);
+    try {
+      await perform(context, () async {
+        final bytes = await ref.read(extensionPackagePickerProvider)();
+        if (bytes == null || !mounted) return;
+        final repository = ref.read(sourceRepositoryProvider);
+        final package = await repository.installExtensionBytes(
+          SourceEngine.tachimanga,
+          bytes,
+        );
+        // Host metadata describes the actual loaded APK, not its filename.
+        final confirmed = await repository.extensions(SourceEngine.tachimanga);
+        if (!package.installed ||
+            !confirmed.any(
+              (item) =>
+                  item.installed &&
+                  item.id == package.id &&
+                  item.version == package.version,
+            )) {
+          throw const ApiException('Engine chưa xác nhận gói APK vừa nhập.');
+        }
+        if (!mounted) return;
+        setState(() => packageLists[SourceEngine.tachimanga] = confirmed);
+        await load();
+        if (mounted) {
+          message(context, 'Đã cài ${package.name} ${package.version}');
+        }
+      });
+    } finally {
+      if (mounted) setState(() => importing = false);
+    }
+  }
+
   void requireEngine(SourceEngine engine) {
-    if (connection(ref.read(settingsProvider), engine).isEmpty) {
-      throw StateError(
-        'Bản này chưa có engine ${sourceEngineName(engine)} chạy trực tiếp '
-        'trên iPhone. Để cài và đọc nguồn, mở Thêm → Chung → Kết nối nguồn '
-        'và kết nối engine. Danh sách kho vẫn dùng được khi chưa kết nối.',
+    if (ref.read(sourceRepositoryProvider).requiresExternalConnection(engine) &&
+        connection(ref.read(settingsProvider), engine).isEmpty) {
+      throw ApiException(
+        'Chưa có engine ${sourceEngineName(engine)} trên thiết bị này.',
       );
     }
   }
 
   Future<void> install(CatalogueExtension package) async {
     final key = '${package.engine.name}:${package.id}';
-    if (installing.contains(key)) return;
+    if (importing || updatingAll || installing.contains(key)) return;
     setState(() => installing.add(key));
     await perform(context, () async {
-      requireEngine(package.engine);
-      await ref
-          .read(sourceRepositoryProvider)
-          .installExtension(
-            package.engine,
-            package.packageUrl.isEmpty
-                ? package.installRef
-                : package.packageUrl,
-          );
-      if (mounted) await load();
+      await installPackage(package);
     });
     if (mounted) setState(() => installing.remove(key));
+  }
+
+  Future<void> installPackage(CatalogueExtension package) async {
+    final key = '${package.engine.name}:${package.id}';
+    if (mounted) setState(() => installErrors.remove(key));
+    try {
+      requireEngine(package.engine);
+      final repository = ref.read(sourceRepositoryProvider);
+      await repository.installExtension(
+        package.engine,
+        package.packageUrl.isEmpty ? package.installRef : package.packageUrl,
+      );
+      final confirmed = await repository.extensions(package.engine);
+      if (!confirmed.any(
+        (item) =>
+            item.installed &&
+            sameExtension(item, package) &&
+            item.version == package.version,
+      )) {
+        throw const ApiException(
+          'Engine chưa xác nhận đúng phiên bản extension vừa cài.',
+        );
+      }
+      if (mounted) {
+        setState(() => packageLists[package.engine] = confirmed);
+        await load();
+      }
+    } catch (error) {
+      if (mounted) setState(() => installErrors[key] = userFacingError(error));
+      rethrow;
+    }
+  }
+
+  Future<void> updateAllExtensions() async {
+    if (importing || updatingAll || installing.isNotEmpty) return;
+    final updates = availableExtensionUpdates(
+      ref
+              .read(extensionCatalogueProvider)
+              .value
+              ?.expand((index) => index.entries) ??
+          const [],
+      packageLists.values.expand((items) => items),
+    );
+    if (updates.isEmpty) return;
+    setState(() {
+      updatingAll = true;
+      queuedInstalls.addAll(updates.map((p) => '${p.engine.name}:${p.id}'));
+    });
+    var passed = 0, failed = 0;
+    for (final package in updates) {
+      if (!mounted) break;
+      final key = '${package.engine.name}:${package.id}';
+      setState(() {
+        queuedInstalls.remove(key);
+        installing.add(key);
+      });
+      try {
+        await installPackage(package);
+        passed++;
+      } catch (_) {
+        failed++;
+      }
+      if (mounted) setState(() => installing.remove(key));
+    }
+    if (mounted) {
+      setState(() {
+        updatingAll = false;
+        queuedInstalls.clear();
+      });
+      message(
+        context,
+        'Đã cập nhật $passed extension${failed > 0 ? ', $failed extension lỗi.' : '.'}',
+      );
+    }
+  }
+
+  Future<void> uninstall(CatalogueExtension package) async {
+    if (importing || updatingAll || installing.isNotEmpty) return;
+    final accepted = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text('Gỡ ${package.name}?'),
+        content: const Text(
+          'Các nguồn của extension sẽ không còn truy cập được. Truyện trong thư viện và nội dung đã tải vẫn được giữ.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Gỡ'),
+          ),
+        ],
+      ),
+    );
+    if (accepted != true ||
+        !mounted ||
+        importing ||
+        updatingAll ||
+        installing.isNotEmpty) {
+      return;
+    }
+    final key = '${package.engine.name}:${package.id}';
+    setState(() => installing.add(key));
+    try {
+      await perform(context, () async {
+        await ref
+            .read(sourceRepositoryProvider)
+            .uninstallExtension(package.engine, package.id);
+        await load();
+      });
+    } finally {
+      if (mounted) setState(() => installing.remove(key));
+    }
+  }
+
+  Future<void> globalSearch() async {
+    final languages = ref.read(sourceLanguagesProvider);
+    await Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (_) => GlobalSearchScreen(
+          sources: sources
+              .where((source) => languages.allows(source.lang))
+              .toList(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> showPackageInfo(CatalogueExtension package) async {
+    final names = {for (final source in sources) source.identity: source.name};
+    await showCupertinoDialog<void>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(package.name),
+        content: SingleChildScrollView(
+          child: Text(
+            [
+              '${sourceEngineName(package.engine)} · ${package.version}',
+              package.id,
+              package.installed
+                  ? 'Đã cài và nạp nguồn'
+                  : package.loadError.isNotEmpty
+                  ? 'Đã lưu gói nhưng chưa nạp được nguồn'
+                  : 'Chưa được engine xác nhận đã cài',
+              if (package.loadError.isNotEmpty) package.loadError,
+              if (package.sourceIds.isNotEmpty)
+                'Nguồn của gói:\n${package.sourceIds.map((id) => names['${package.engine.name}:$id'] ?? id).join('\n')}',
+              ...package.limitations,
+            ].join('\n\n'),
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> reorderPinned() async {
+    final byId = {for (final source in sources) source.identity: source};
+    final pins = ref
+        .read(settingsProvider)
+        .pinnedSources
+        .map((id) => byId[id])
+        .whereType<CatalogueSource>()
+        .toList();
+    final ordered = await showPinnedSourceOrder(context, pins);
+    if (ordered == null || !mounted) return;
+    await perform(
+      context,
+      () => ref.read(settingsProvider.notifier).setPinnedSourceOrder(ordered),
+    );
   }
 
   Future<void> openSource(CatalogueSource source) async {
@@ -178,8 +396,16 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
         title: const Text('Ngôn ngữ'),
         actions: [
           CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, '@multiple'),
+            child: const Text('Chọn nhiều ngôn ngữ và lưu'),
+          ),
+          CupertinoActionSheetAction(
             onPressed: () => Navigator.pop(ctx, '*'),
-            child: const Text('Tất cả ngôn ngữ'),
+            child: Text(
+              ref.read(sourceLanguagesProvider).enabled == null
+                  ? 'Tất cả ngôn ngữ'
+                  : 'Tất cả ngôn ngữ đã bật',
+            ),
           ),
           for (final code in codes)
             CupertinoActionSheetAction(
@@ -194,29 +420,22 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
       ),
     );
     if (selected != null && mounted) {
+      if (selected == '@multiple') {
+        await showSourceLanguages(context, codes.toSet());
+        if (mounted) setState(() => language = null);
+        return;
+      }
       setState(() => language = selected == '*' ? null : selected);
     }
   }
 
   List<Widget> connectionNotes() {
-    final settings = ref.read(settingsProvider);
     return [
       for (final engine in SourceEngine.values)
         if (errors[engine] != null)
           BrowseNote(
             '${sourceEngineName(engine)}: ${errors[engine]}',
             onRetry: load,
-          )
-        else if (connection(settings, engine).isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: connect,
-                child: Text('Kết nối ${sourceEngineName(engine)}'),
-              ),
-            ),
           ),
     ];
   }
@@ -240,12 +459,14 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
 
   Widget sourceList() {
     final settings = ref.watch(settingsProvider);
+    final languages = ref.watch(sourceLanguagesProvider);
     final pinned = settings.pinnedSources.toSet();
     final visible =
         sources
             .where(
               (source) =>
                   source.name.toLowerCase().contains(query.toLowerCase()) &&
+                  languages.allows(source.lang) &&
                   (language == null || source.lang == language),
             )
             .toList()
@@ -256,7 +477,10 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
         .whereType<CatalogueSource>()
         .take(1)
         .toList();
-    final pins = visible.where((source) => pinned.contains(source.identity));
+    final pins = settings.pinnedSources
+        .map((id) => byIdentity[id])
+        .whereType<CatalogueSource>()
+        .toList();
     final grouped = <String, List<CatalogueSource>>{};
     for (final source in visible.where(
       (source) => !pinned.contains(source.identity),
@@ -273,13 +497,28 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
           bottom: MediaQuery.paddingOf(context).bottom + 16,
         ),
         children: [
+          ListTile(
+            leading: const Icon(CupertinoIcons.search),
+            title: const Text('Tìm truyện toàn bộ nguồn'),
+            onTap: sources.isEmpty ? null : globalSearch,
+          ),
           ...connectionNotes(),
           if (recent.isNotEmpty) ...[
             const BrowseHeading('Sử dụng lần cuối'),
             for (final source in recent) sourceRow(source, pinned),
           ],
           if (pins.isNotEmpty) ...[
-            const BrowseHeading('Đã ghim'),
+            Row(
+              children: [
+                const Expanded(child: BrowseHeading('Đã ghim')),
+                if (settings.pinnedSources.length > 1)
+                  IconButton(
+                    tooltip: 'Sắp xếp nguồn đã ghim',
+                    onPressed: reorderPinned,
+                    icon: const Icon(CupertinoIcons.slider_horizontal_3),
+                  ),
+              ],
+            ),
             for (final source in pins) sourceRow(source, pinned),
           ],
           for (final lang in langs) ...[
@@ -318,10 +557,28 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
   Widget extensionList() => ExtensionCatalogueView(
     installed: packageLists.values.expand((items) => items).toList(),
     installing: installing,
+    queued: queuedInstalls,
+    installErrors: installErrors,
+    updatingAll: updatingAll,
+    importing: importing,
+    onImportApk:
+        ref
+            .read(sourceRepositoryProvider)
+            .supportsExtensionFileImport(SourceEngine.tachimanga)
+        ? importApk
+        : null,
+    onUpdateAll: updateAllExtensions,
+    onUninstall: uninstall,
+    onPackageInfo: showPackageInfo,
+    canUninstall: (package) => ref
+        .read(sourceRepositoryProvider)
+        .supportsExtensionRemoval(package.engine),
     onInstall: install,
     onAdd: add,
+    onManage: manageRepositories,
     query: query,
     language: language,
+    languages: ref.watch(sourceLanguagesProvider),
     onRefresh: load,
     adding: adding,
     engineErrors: [
@@ -332,6 +589,7 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final enabledLanguages = ref.watch(sourceLanguagesProvider).enabled;
     ref.listen(
       settingsProvider.select((s) => (s.tachimangaUrl, s.vbookUrl)),
       (_, _) => load(),
@@ -342,9 +600,9 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
         appBar: AppBar(
           title: const Text('Duyệt'),
           leading: IconButton(
-            tooltip: 'Kết nối nguồn',
+            tooltip: 'Đồng bộ',
             icon: const Icon(CupertinoIcons.cloud),
-            onPressed: connect,
+            onPressed: () => openSettingsPage(context, const SyncScreen()),
           ),
           actions: [
             IconButton(
@@ -355,37 +613,10 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
                 if (!searching) query = '';
               }),
             ),
-            PopupMenuButton<String>(
-              tooltip: 'Quản lý nguồn và extension',
-              icon: const Icon(CupertinoIcons.globe),
-              onSelected: (value) {
-                if (value == 'add') {
-                  add();
-                } else if (value == 'connection') {
-                  connect();
-                } else {
-                  load();
-                  if (tab == 1) {
-                    perform(
-                      context,
-                      () => ref
-                          .read(extensionCatalogueProvider.notifier)
-                          .refresh(),
-                    );
-                  }
-                }
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'refresh', child: Text('Làm mới')),
-                PopupMenuItem(
-                  value: 'add',
-                  child: Text('Thêm kho hoặc gói extension'),
-                ),
-                PopupMenuItem(
-                  value: 'connection',
-                  child: Text('Kết nối nguồn'),
-                ),
-              ],
+            IconButton(
+              tooltip: 'Kho tiện ích mở rộng',
+              icon: const Icon(CupertinoIcons.plus),
+              onPressed: manageRepositories,
             ),
             IconButton(
               tooltip: 'Ngôn ngữ',
@@ -417,6 +648,13 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
         ),
         body: Column(
           children: [
+            if (enabledLanguages != null && tab != 2)
+              ListTile(
+                dense: true,
+                title: Text('Đã bật ${enabledLanguages.length} ngôn ngữ'),
+                trailing: const Icon(CupertinoIcons.chevron_right, size: 16),
+                onTap: chooseLanguage,
+              ),
             if (searching)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),

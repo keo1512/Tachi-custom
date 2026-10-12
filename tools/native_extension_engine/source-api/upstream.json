@@ -1,0 +1,222 @@
+{
+  "repository": "https://github.com/Suwayomi/Suwayomi-Server",
+  "tag": "v2.4.2366",
+  "commit": "40bc5da57820324ed0ae724cbbc020cc4673b594",
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
+      "gitBlob": "d0a1fa1482eea82e19510e7920cbe3a03e41f691"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/LICENSE",
+      "sha256": "168593836b75e38257b4f4f7454cf4112695c04f3f5a381d51a3f05accd0bd8d",
+      "gitBlob": "68e745e90c98402dae495e02fd710a9cc42c5433"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/network/HttpException.kt",
+      "sha256": "7ca9bcec05fc752b4143a454ef183831b8b72124b86ff3ce2d05f56df98ef03b",
+      "gitBlob": "0b551a6569ce67f2e7dab288cf06ad645a316504"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/network/OkHttpExtensions.kt",
+      "sha256": "9bf1db944eeaa27be724ac8d707924667a4ea03733b5e311d0bc58c8fcd2a815",
+      "gitBlob": "4622c67f2e34e915e943801ee5602e9a3813b354"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/network/ProgressListener.kt",
+      "sha256": "245c66d3dfce4755a8acfeda958bb9ba546115daac434766bc48ea79b806ddad",
+      "gitBlob": "6d8da08903dbdc9a4ac5137a547a5d8444be8d04"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/network/ProgressResponseBody.kt",
+      "sha256": "971e85525061ca4ecd8a2426e6a2ed1f87c3998e38190fbb1089f67c1de0470a",
+      "gitBlob": "abc75ced1acd35e16235a6284def05716f04bbc0"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/network/Requests.kt",
+      "sha256": "8cd2c2c14499a36d19eb6621d846515ce736f71694a129a5757b89589fc0e2ff",
+      "gitBlob": "3b3c5ac8b366cf2d99bc63d95ea38ad52569db6e"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/network/interceptor/RateLimitInterceptor.kt",
+      "sha256": "9dc2e962ec44570241cc3ab8e4bf0350b124bd906dd67206a52df5194d822dc0",
+      "gitBlob": "586671d9363e6e09dfd483ff4345e3524d6d2ba6"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/network/interceptor/SpecificHostRateLimitInterceptor.kt",
+      "sha256": "cdd47c0c0692d9bd253a5787de5df00c282830a901d0404468a50ce04862372c",
+      "gitBlob": "3e03d2a8c6ffdc936b4a6094475454973e5c18ab"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/network/interceptor/UncaughtExceptionInterceptor.kt",
+      "sha256": "53c2065a31276b8867156f094d084e7cac915fb4c519f4e4d7e65e64ce7b2904",
+      "gitBlob": "bca1090123e0b2845ff2d532b90be6f46d14790d"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/network/interceptor/UserAgentInterceptor.kt",
+      "sha256": "2866567318eeacf75af78255dd530d0487d2bcf9d7a4574ff28a7fa86deb2110",
+      "gitBlob": "63a35958df593da969f70a0272117d96cf5bcbca"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/CatalogueSource.kt",
+      "sha256": "e1c5847402bf812e944df895d975e07467df23ca80bba884e82e056242479db8",
+      "gitBlob": "b24123239f21895f01b21a2138ad5c78927d8674"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/ConfigurableSource.kt",
+      "sha256": "847336170fd2cbc36d975d7a2fa6f3c6a7a3042051f5ae48ac3f37f62bdd78af",
+      "gitBlob": "b7f41218011de5b0001eafaae8f16d2efafc2f0f"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/PreferenceScreen.kt",
+      "sha256": "1e656d8d1cdda71dad327981d6b7ace636073649c98fd8304a3932e2d0717a48",
+      "gitBlob": "0e6d5cdc25bf1ae5f7239c1dfeb0f320ff951090"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/Source.kt",
+      "sha256": "0fd81a81c719746b20f6ae686775d1d17bf1f0845c3e2ef6e4afc6ee2d6eaa8f",
+      "gitBlob": "e7e6ddefccecf2991305656d9b13f79981646514"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/SourceFactory.kt",
+      "sha256": "4ff3f8e591d8d059dc665735f0cb1a7fd478c00db73e7b3928b95407c383bc44",
+      "gitBlob": "d326c437a555ffec0c60c88a9c272f5340fa898d"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/UnmeteredSource.kt",
+      "sha256": "82a01676da96d2386e6d4441ff97521a9eb1d8da8f1302beb871bd1cd7a72636",
+      "gitBlob": "7536ccb0ba29d0033b3b4ab8a955c7304829647d"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/model/Filter.kt",
+      "sha256": "b61364986dea4666e359468156882d8af6ce5364923c476718a61ebe88a75a8c",
+      "gitBlob": "78f37cd53bbcd8e0b74a63dad95022b855511dac"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/model/FilterList.kt",
+      "sha256": "acfdb0dcb860a67b53a40755d97c1f0df153b9a0bb50e327f3282620581ed876",
+      "gitBlob": "699d7774289018fa4258936efe28e4c9d6a458ac"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/model/MangasPage.kt",
+      "sha256": "42d5d65a542613efc36132285e2c7865e7cf064ab05b924ea25614f51d6540e3",
+      "gitBlob": "0f72131e11a9536daefa3cb384661fd8d9e683c2"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/model/Page.kt",
+      "sha256": "ad268ad3b3fbb80d4577b0d4fd4aa1483b94bb87990808897ddeda5f7eb35c16",
+      "gitBlob": "584fbdf61975649ce4fc8800239d039cb2b99956"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/model/SChapter.kt",
+      "sha256": "3497303552da58dcfcafaef9d327718260c47c881239c96927980e026fd05c7a",
+      "gitBlob": "c6e5251cef8e14bb2d97d90ce4b11ad99200bbbb"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/model/SChapterImpl.kt",
+      "sha256": "2f41d822c3ded453d0fb6f932ab22e3589e06da4a87195a37146e5fa758cb0fd",
+      "gitBlob": "d583db909a3c2d208a22e94545ef57ce2bb794db"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/model/SManga.kt",
+      "sha256": "53f53d805aff47a1c1ce381488fce4846c258e0223d5f25ddd94e717b451c06c",
+      "gitBlob": "6ba982fabc47ae19d2908ced777345490cb40680"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/model/SMangaImpl.kt",
+      "sha256": "a52c4dfd780a03d71ce81fc1ecd7f87c8a7e98a4f55ad6f1976bcd5212a53a02",
+      "gitBlob": "514a333b23500056a486949982e7be5eb65842ed"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/model/SMangaUpdate.kt",
+      "sha256": "0a62575d263d7e4cb5b869dbb554cbc7bc78e2e85416783c4a6ec80a83efac68",
+      "gitBlob": "19a692f87b6438ef97014541390f186bb8bc9a65"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/model/UpdateStrategy.kt",
+      "sha256": "60d026add1715983413eaf9bb9262dbe3802cca2bcbb762e16b3baa6222abf55",
+      "gitBlob": "91b5f5e290198d1ca1043481eb9dcd6173198d79"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/online/HttpSource.kt",
+      "sha256": "17e65cc99a3492d25deabc6fe3245c5f359eb19f572f327c43f92ae9d4572bb9",
+      "gitBlob": "1a571971815b8e05c5fba7124bd2af909064f901"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/online/ParsedHttpSource.kt",
+      "sha256": "7aa9ba4aa9735144d2b3abb015d2baa29ddafe84bfaca560229bd20c765bee7f",
+      "gitBlob": "ec5648463fa13b4ff64d8ccbfcf46aaf0a25939c"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/source/online/ResolvableSource.kt",
+      "sha256": "9f474cedd691def09561121b85ba192478c3105d8c5e5c14f192d6d6ad6d3863",
+      "gitBlob": "59f732cf85d86bac752c7dfb605b8923c153919b"
+    },
+    {
+      "path": "server/src/main/kotlin/eu/kanade/tachiyomi/util/JsoupExtensions.kt",
+      "sha256": "770eea6f3effe8d635de8af53766fcbe24c0d21184ba1fce5509e925b8cbb304",
+      "gitBlob": "b916907664f32b010f769bc74f5d9452e2130e2d"
+    },
+    {
+      "path": "server/src/main/kotlin/suwayomi/tachidesk/manga/impl/util/lang/JsonObject.kt",
+      "sha256": "2ad65398aaf5afa3371650b4dd8d5e7c0c4d82b81bb72e4d18e7081cd3b9d9d5",
+      "gitBlob": "c6f2b67db2661cadd034b595aab91c42462a0ed8"
+    },
+    {
+      "path": "server/src/main/kotlin/suwayomi/tachidesk/manga/impl/util/lang/RxCoroutineBridge.kt",
+      "sha256": "3f635a028fe93d982b9718526fe7dc96fee332f268cafe76f1d4e374f4472b08",
+      "gitBlob": "5f60ec988fe2866b7038539fa6e584f2c2bab254"
+    }
+  ],
+  "compiler": [
+    {
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.4.10/kotlin-compiler-embeddable-2.4.10.jar",
+      "name": "kotlin-compiler-embeddable-2.4.10.jar",
+      "sha256": "9309638a2ee03e6bde9ef4b7444055a94b84ab906563675d71ff9aecb64da913",
+      "bytes": 60352373
+    },
+    {
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-build-tools-api/2.4.10/kotlin-build-tools-api-2.4.10.jar",
+      "name": "kotlin-build-tools-api-2.4.10.jar",
+      "sha256": "3953d283e7710c990672e403a87df393d9726a9bf3e172194ebb5c33e062fcb0",
+      "bytes": 310932
+    },
+    {
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.4.10/kotlin-stdlib-2.4.10.jar",
+      "name": "kotlin-stdlib-2.4.10.jar",
+      "sha256": "4ec0293bc3751423b203f1d8493251c57c42e73eb6377a6b8560d0974ff0a6df",
+      "bytes": 1841933
+    },
+    {
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-script-runtime/2.4.10/kotlin-script-runtime-2.4.10.jar",
+      "name": "kotlin-script-runtime-2.4.10.jar",
+      "sha256": "f4a5b30c2fdfbe386b097101b7989dbeea3743c06396136664784e08e15c6899",
+      "bytes": 46565
+    },
+    {
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-reflect/1.6.10/kotlin-reflect-1.6.10.jar",
+      "name": "kotlin-reflect-1.6.10.jar",
+      "sha256": "3277ac102ae17aad10a55abec75ff5696c8d109790396434b496e75087854203",
+      "bytes": 3038560
+    },
+    {
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-daemon-embeddable/2.4.10/kotlin-daemon-embeddable-2.4.10.jar",
+      "name": "kotlin-daemon-embeddable-2.4.10.jar",
+      "sha256": "547d969a2eab602fe0bdfd9fcb1b563a5c6d30099d3351394d6427eba8288467",
+      "bytes": 381839
+    },
+    {
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core-jvm/1.8.0/kotlinx-coroutines-core-jvm-1.8.0.jar",
+      "name": "kotlinx-coroutines-core-jvm-1.8.0.jar",
+      "sha256": "9860906a1937490bf5f3b06d2f0e10ef451e65b95b269f22daf68a3d1f5065c5",
+      "bytes": 1548360
+    },
+    {
+      "url": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.jar",
+      "name": "annotations-13.0.jar",
+      "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478",
+      "bytes": 17536
+    }
+  ]
+}

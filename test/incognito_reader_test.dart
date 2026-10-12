@@ -138,7 +138,7 @@ void main() {
       final fixture = await _open(tester, false);
       await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
-      await tester.pageBack();
+      await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Lịch sử').last);
       await tester.pumpAndSettle();

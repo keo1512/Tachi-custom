@@ -14,7 +14,12 @@ import 'package:tachi_books/features/sources/presentation/extension_catalogue_co
 http.Response registry(String name) => http.Response(
   jsonEncode({
     'data': [
-      {'name': name, 'path': 'plugin.zip', 'version': 1},
+      {
+        'name': name,
+        'path': 'plugin.zip',
+        'version': 1,
+        'icon': 'icons/plugin.png',
+      },
     ],
   }),
   200,
@@ -38,6 +43,75 @@ Future<ProviderContainer> mount(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('custom repository name survives refresh, restart and clearing restores metadata name', () async {
+    final client = MockClient(
+      (_) async => http.Response(
+        jsonEncode({
+          'name': 'Tên kho gốc',
+          'data': [
+            {'name': 'A', 'path': 'plugin.zip', 'version': 1},
+          ],
+        }),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      ),
+    );
+    final container = await mount(client);
+    addTearDown(container.dispose);
+    final controller = container.read(extensionCatalogueProvider.notifier);
+    await controller.add(SourceEngine.vbook, 'https://repo.test/plugin.json');
+    await controller.rename(
+      'vbook:https://repo.test/plugin.json',
+      'Kho của tôi',
+    );
+    await controller.refresh();
+    expect(
+      container
+          .read(extensionCatalogueProvider)
+          .requireValue
+          .single
+          .displayName,
+      'Kho của tôi',
+    );
+    final prefs = container.read(preferencesProvider);
+    expect(
+      (jsonDecode(
+        prefs.getString('extensionRepositoriesV1')!,
+      ) as List).single['name'],
+      'Kho của tôi',
+    );
+    final restarted = ProviderContainer(
+      overrides: [
+        preferencesProvider.overrideWithValue(prefs),
+        extensionIndexRepositoryProvider.overrideWithValue(
+          ExtensionIndexRepository(client),
+        ),
+      ],
+    );
+    addTearDown(restarted.dispose);
+    expect(
+      (await restarted.read(extensionCatalogueProvider.future))
+          .single
+          .displayName,
+      'Kho của tôi',
+    );
+    await restarted
+        .read(extensionCatalogueProvider.notifier)
+        .rename('vbook:https://repo.test/plugin.json', '');
+    expect(
+      restarted
+          .read(extensionCatalogueProvider)
+          .requireValue
+          .single
+          .displayName,
+      'Tên kho gốc',
+    );
+    expect(
+      (jsonDecode(prefs.getString('extensionRepositoriesV1')!) as List).single
+          .containsKey('name'),
+      isFalse,
+    );
+  });
   test(
     'overlapping add, add and remove preserve the final saved repository list',
     () async {
@@ -98,6 +172,10 @@ void main() {
     final loaded = await second.read(extensionCatalogueProvider.future);
     expect(loaded.single.entries.single.name, 'Reloaded');
     expect(loaded.single.entries.single.installed, false);
+    expect(
+      loaded.single.entries.single.iconUrl,
+      'https://repo.test/icons/plugin.png',
+    );
   });
 
   test(
@@ -126,7 +204,15 @@ void main() {
       final loaded = await container.read(extensionCatalogueProvider.future);
       expect(loaded.first.error, contains('503'));
       expect(loaded.first.entries.single.name, 'a.test original');
+      expect(
+        loaded.first.entries.single.iconUrl,
+        'https://a.test/icons/plugin.png',
+      );
       expect(loaded.last.entries.single.name, 'b.test updated');
+      expect(
+        loaded.last.entries.single.iconUrl,
+        'https://b.test/icons/plugin.png',
+      );
       expect(loaded.last.error, isEmpty);
       expect(
         container

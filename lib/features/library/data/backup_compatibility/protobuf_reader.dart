@@ -97,6 +97,20 @@ class ProtoMessage {
     return (field!.value as BigInt).toSigned(64);
   }
 
+  double? floatingPoint(int number) {
+    final field = one(number);
+    if (field == null) return null;
+    if (field.wire != 5) {
+      throw const FormatException('Số thực protobuf không hợp lệ.');
+    }
+    final value = ByteData.sublistView(field.value as Uint8List)
+        .getFloat32(0, Endian.little);
+    if (!value.isFinite) {
+      throw const FormatException('Số thực protobuf phải hữu hạn.');
+    }
+    return value;
+  }
+
   List<String> strings(int number, {int maximum = 10000}) {
     final values = fields[number] ?? const <ProtoField>[];
     if (values.length > maximum) {
