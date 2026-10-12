@@ -89,7 +89,8 @@ except subprocess.TimeoutExpired as error:
 PY
 
 flutter pub get --enforce-lockfile
-flutter build ios --simulator --debug --no-pub
+flutter build ios --simulator --debug --no-pub --verbose \
+  2>&1 | tee "$tachi_root/artifacts/native-tabs-compile.log"
 xcodebuild test \
   -workspace ios/Runner.xcworkspace \
   -scheme Runner \

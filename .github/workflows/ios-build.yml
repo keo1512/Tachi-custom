@@ -6,12 +6,12 @@ on:
       build_number:
         description: Positive iOS build number
         required: true
-        default: '7'
+        default: '8'
         type: string
       native_smoke:
-        description: Run simulator UIKit smoke after changes to native navigation
+        description: Run native integration checks (required for source 8 native changes)
         required: true
-        default: false
+        default: true
         type: boolean
 
 permissions:
@@ -21,10 +21,11 @@ jobs:
   unsigned-ipa:
     name: Compile iPhone and iPad app (unsigned)
     runs-on: xcode-27
-    timeout-minutes: 30
+    timeout-minutes: 90
     env:
       DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
       TACHI_BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
+      FLUTTER_SWIFT_PACKAGE_MANAGER: 'false'
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -71,10 +72,18 @@ jobs:
           "$RUNNER_TEMP/tachibooks-flutter/bin/flutter" --version
           "$RUNNER_TEMP/tachibooks-flutter/bin/flutter" precache --ios
 
+      - name: Prepare verified on-device extension engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          python3 tools/configure_ios_tachi_runtime.py
+
       - name: Test native UIKit tabs on an iOS 27 iPhone simulator
         if: ${{ inputs.native_smoke }}
         shell: bash
-        timeout-minutes: 12
+        timeout-minutes: 60
         run: bash tools/test_ios_native_tabs.sh
 
       - name: Upload native simulator test results
@@ -85,6 +94,7 @@ jobs:
           path: |
             artifacts/native-tabs-smoke.xcresult
             artifacts/native-tabs-smoke.log
+            artifacts/native-tabs-compile.log
             artifacts/native-tabs-simulator.json
             artifacts/native-tabs-simulator.png
           if-no-files-found: warn
