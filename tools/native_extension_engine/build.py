@@ -5,6 +5,7 @@ builder legitimately recompiles the reviewed Kotlin API for the Java 8 VM.
 """
 from __future__ import annotations
 
+import copy
 import hashlib
 import importlib.util
 import json
@@ -89,19 +90,46 @@ def upstream_members(source: zipfile.ZipFile) -> dict[str, bytes]:
     the archive hash fixes the class selection so it cannot change silently.
     User-downloaded extension ZIPs are validated separately and reject duplicates.
     """
-    import warnings
+    infos = source.infolist()
+    groups: dict[int, list[zipfile.ZipInfo]] = {}
+    for info in infos:
+        groups.setdefault(info.header_offset, []).append(info)
+    offsets = sorted(groups)
+    ends = {
+        offset: offsets[index + 1] if index + 1 < len(offsets) else source.start_dir
+        for index, offset in enumerate(offsets)
+    }
+    for offset, aliases in groups.items():
+        if len(aliases) < 2:
+            continue
+        # Shadow can repeat central-directory records for one physical member.
+        # Python 3.12.7 treats the zero-length inferred boundary as an overlap;
+        # newer Python recognizes this alias. Accept only identical metadata,
+        # and retain the boundary at the next distinct physical local header.
+        signatures = {
+            (info.orig_filename, info.filename, info.CRC, info.file_size,
+             info.compress_size, info.compress_type, info.flag_bits,
+             info.extract_version)
+            for info in aliases
+        }
+        if len(signatures) != 1 or offset < 0 or ends[offset] <= offset:
+            raise zipfile.BadZipFile("Conflicting upstream central-directory aliases")
     result: dict[str, bytes] = {}
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="Overlapped entries:.*", category=UserWarning)
-        for index, info in enumerate(source.infolist()):
-            if info.is_dir():
-                continue
-            data = source.read(info)
-            if legal_file(info.filename) and info.filename in result:
-                if result[info.filename] != data:
-                    result["META-INF/licenses/shadow-" + str(index) + "-" + info.filename.replace("/", "_")] = data
-            else:
-                result[info.filename] = data
+    for index, original in enumerate(infos):
+        if original.is_dir():
+            continue
+        info = original
+        if len(groups[info.header_offset]) > 1:
+            # Do not mutate the archive's ZipInfo objects or disable its overlap
+            # protection. ZipFile still validates local names, lengths and CRC.
+            info = copy.copy(info)
+            info._end_offset = ends[info.header_offset]
+        data = source.read(info)
+        if legal_file(info.filename) and info.filename in result:
+            if result[info.filename] != data:
+                result["META-INF/licenses/shadow-" + str(index) + "-" + info.filename.replace("/", "_")] = data
+        else:
+            result[info.filename] = data
     return result
 
 
