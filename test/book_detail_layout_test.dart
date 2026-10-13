@@ -538,8 +538,9 @@ Future<String> _cover() async {
   final image = await picture.toImage(120, 172);
   try {
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
-    await File('artifacts/book-detail-fixture-cover.png')
-        .writeAsBytes(data!.buffer.asUint8List(), flush: true);
+    final output = File('artifacts/book-detail-fixture-cover.png');
+    await output.parent.create(recursive: true);
+    await output.writeAsBytes(data!.buffer.asUint8List(), flush: true);
     return 'data:image/png;base64,${base64Encode(data.buffer.asUint8List())}';
   } finally {
     image.dispose();
