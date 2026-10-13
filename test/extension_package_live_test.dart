@@ -16,7 +16,7 @@ import 'package:tachi_books/features/sources/domain/extension_backup.dart';
 const _apkDigest =
     'd93ce4bf0d522bc84c21448aa5eb0b2de087e46b46e78211b7ebccfbcc319e4b';
 const _hostDigest =
-    'b97640e9d74c432e74920a0564dee35079808ac334c331ab73fe8177a7feac3c';
+    'c8a2660209871b425e5665cd89abb67592c8adae274013ee0f7caa2a9c746f53';
 const _choicesDigest =
     'd25a647dfa2a68ec2e1d4aa8983a1d8d26594df7cc5a4fb8046be833b4b5837a';
 

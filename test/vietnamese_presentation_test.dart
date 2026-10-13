@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tachi_books/core/format/error_messages.dart';
 import 'package:tachi_books/core/format/vietnamese_format.dart';
+import 'package:tachi_books/features/sources/domain/catalogue.dart';
 
 void main() {
   test('Vietnamese dates and numbers are display-only', () {
@@ -87,6 +88,68 @@ void main() {
         isNot(contains('secret')),
       );
       expect(userFacingError('HTTP 404'), contains('Không tìm thấy nội dung'));
+    },
+  );
+  test('native extension RPC errors retain distinct actionable categories', () {
+    final cases = {
+      'source_requires_browser': 'xác minh hoặc đăng nhập',
+      'unsupported_extension': 'API Android hoặc Java',
+      'engine_unavailable': 'Không khởi tạo được engine',
+      'extension_failed': 'Extension không lấy được nội dung',
+      'invalid_request': 'Yêu cầu tới engine extension không hợp lệ',
+      'RESTORED_TITLE_UNRESOLVED': 'Di chuyển nguồn',
+      'CHAPTER_IDENTITY_CHANGED': 'Cập nhật mục lục',
+      'SOURCE_NOT_INSTALLED': 'Cài extension tương ứng',
+    };
+    for (final entry in cases.entries) {
+      final error = ApiException(
+        'private https://example.test/secret?token=secret UserBook',
+        code: entry.key,
+      );
+      final message = userFacingError(error);
+      expect(message, contains(entry.value), reason: entry.key);
+      expect(message, isNot(contains('secret')));
+      expect(message, isNot(contains('UserBook')));
+    }
+    expect(
+      userFacingError(
+        PlatformException(code: 'engine_unavailable', message: 'private'),
+      ),
+      contains('Không khởi tạo được engine'),
+    );
+    expect(
+      userFacingError(
+        const ApiException('opaque provider message', statusCode: 403),
+      ),
+      contains('(HTTP 403)'),
+    );
+    expect(
+      userFacingError(const ApiException('English', code: 'PRIVATE_token')),
+      contains('Chẩn đoán'),
+    );
+  });
+  test(
+    'platform source errors preserve HTTP status and explicit timeout remedies',
+    () {
+      for (final code in [403, 404, 429, 503]) {
+        final error = PlatformException(
+          code: 'source_error',
+          message: 'HTTP $code private_token_secret',
+        );
+        final message = userFacingError(error);
+        expect(message, contains('(HTTP $code)'));
+        expect(message, isNot(contains('private_token_secret')));
+      }
+      expect(
+        userFacingError(PlatformException(code: 'timeout', message: 'private')),
+        contains('Nguồn phản hồi quá lâu'),
+      );
+      expect(
+        userFacingError(
+          const ApiException('private', code: 'source_not_installed'),
+        ),
+        contains('chưa được cài hoặc chưa nạp được'),
+      );
     },
   );
 }

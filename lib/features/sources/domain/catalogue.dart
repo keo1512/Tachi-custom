@@ -160,11 +160,17 @@ class CatalogueExtension {
 }
 
 class ApiException implements Exception {
-  const ApiException(this.message, {this.statusCode, this.code});
+  const ApiException(
+    this.message, {
+    this.statusCode,
+    this.code,
+    this.diagnosticType,
+  });
 
   final String message;
   final int? statusCode;
   final String? code;
+  final String? diagnosticType;
 
   @override
   String toString() => message;

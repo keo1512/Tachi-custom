@@ -106,10 +106,13 @@ String syncErrorMessage(Object error) {
   if (error is FirebaseException) {
     return switch (error.code) {
       'network-request-failed' || 'unavailable' || 'deadline-exceeded' => 'Không kết nối được cloud. Dữ liệu trên máy được giữ nguyên; hãy đồng bộ lại khi có mạng.',
-      'permission-denied' || 'operation-not-allowed' => 'Firebase chưa cho phép truy cập. Cần bật Google Auth và áp dụng quy tắc TachiBooks.',
+      'permission-denied' => 'Cloud từ chối truy cập dữ liệu của tài khoản. Kiểm tra quy tắc Firestore của TachiBooks đã hỗ trợ đồng bộ phiên bản 2; dữ liệu trên máy được giữ nguyên.',
+      'operation-not-allowed' => 'Đăng nhập Google chưa được bật trong Firebase của TachiBooks. Bật Google trong Authentication rồi thử đăng nhập lại.',
       'resource-exhausted' => 'Đã chạm hạn mức Firebase miễn phí. Thư viện trên máy vẫn dùng được; hãy thử lại sau.',
-      'invalid-credential' || 'user-token-expired' || 'requires-recent-login' =>
-        'Phiên đăng nhập hết hạn. Hãy đăng nhập Google lại.',
+      'invalid-credential' ||
+      'user-token-expired' ||
+      'requires-recent-login' ||
+      'unauthenticated' => 'Phiên đăng nhập hết hạn. Hãy đăng nhập Google lại.',
       'user-disabled' => 'Tài khoản đăng nhập đã bị vô hiệu hóa.',
       _ => 'Đồng bộ chưa hoàn tất. Dữ liệu trên máy được giữ nguyên.',
     };

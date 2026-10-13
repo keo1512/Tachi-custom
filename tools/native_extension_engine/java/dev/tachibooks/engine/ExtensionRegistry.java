@@ -18,7 +18,7 @@ import org.xml.sax.InputSource;
 /** Own installation catalogue. APK source code is loaded only after conversion and factory validation. */
 final class ExtensionRegistry {
     private static final String ANDROID="http://schemas.android.com/apk/res/android";
-    private static final String CONVERSION_PROFILE="dex2jar-2.4.38-constructorsCFG-originalNames-computeFrames-v4";
+    private static final String CONVERSION_PROFILE="dex2jar-2.4.38-constructorsCFG-originalNames-computeFrames-arrayTemplate-v5";
     private final Path root;
     private JsonObject entries=new JsonObject();
     private final Map<String,CatalogueSource> sources=new LinkedHashMap<>();
@@ -40,11 +40,20 @@ final class ExtensionRegistry {
         // references permits normal JVM collection; closing a live loader would break that work.
         sources.clear();loaders.clear();failures.clear();
         for(Map.Entry<String,JsonElement> item:entries.entrySet()){
-            try{Loaded loaded=load(item.getValue().getAsJsonObject());adopt(item.getKey(),loaded);}
+            try{
+                JsonObject original=item.getValue().getAsJsonObject(),metadata=migrateConversion(original);
+                Loaded loaded=load(metadata);
+                if(metadata!=original){
+                    JsonObject next=entries.deepCopy();next.add(item.getKey(),metadata);
+                    try{persist(next);}catch(Exception failure){loaded.loader.close();throw failure;}
+                    entries=next;
+                }
+                adopt(item.getKey(),loaded);
+            }
             catch(Throwable failure){failures.put(item.getKey(),failure.getClass().getSimpleName());}
         }
     }
-    CatalogueSource source(String id){CatalogueSource result=sources.get(id);if(result==null)throw new IllegalArgumentException("Source is not loaded");return result;}
+    CatalogueSource source(String id){CatalogueSource result=sources.get(id);if(result==null)throw new SourceNotLoadedException();return result;}
     Collection<CatalogueSource> sources(){return new ArrayList<>(sources.values());}
     String iconUrl(String sourceId){for(Map.Entry<String,JsonElement> entry:entries.entrySet()){JsonObject item=entry.getValue().getAsJsonObject();if(item.has("sourceIds"))for(JsonElement id:item.getAsJsonArray("sourceIds"))if(sourceId.equals(id.getAsString()))return item.has("iconUrl")?item.get("iconUrl").getAsString():"";}return "";}
     synchronized JsonArray extensions(){
@@ -71,8 +80,7 @@ final class ExtensionRegistry {
             try{Files.copy(input,pending,StandardCopyOption.REPLACE_EXISTING);if(!EngineFiles.sha256(pending).equals(digest))throw new IOException("APK changed during installation");Files.move(pending,apk,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}finally{Files.deleteIfExists(pending);}
         }
         if(!Files.exists(jar)){
-            Path pending=Files.createTempFile(directory,".pending-",".jar");
-            try{Files.delete(pending);Dex2jar converter=Dex2jar.from(apk.toFile());Dex2jar.from(DexCompatibility.prepare(converter.getReader())).skipDebug().dontSanitizeNames(true).computeFrames(true).to(pending);validateArchive(pending);Files.move(pending,jar,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}finally{Files.deleteIfExists(pending);}
+            convert(apk,jar);
         }
         metadata.addProperty("apk",apk.getFileName().toString());metadata.addProperty("jar",jar.getFileName().toString());
         metadata.addProperty("apkSha256",digest);metadata.addProperty("jarSha256",EngineFiles.sha256(jar));
@@ -105,6 +113,24 @@ final class ExtensionRegistry {
     private void adopt(String id,Loaded loaded){
         for(CatalogueSource source:loaded.sources)if(sources.containsKey(Long.toString(source.getId())))throw new IllegalArgumentException("Duplicate source identity");
         loaders.put(id,loaded.loader);for(CatalogueSource source:loaded.sources)sources.put(Long.toString(source.getId()),source);
+    }
+    private JsonObject migrateConversion(JsonObject original)throws Exception{
+        if(original.has("conversionProfile")&&CONVERSION_PROFILE.equals(original.get("conversionProfile").getAsString()))return original;
+        String apkName=original.get("apk").getAsString(),oldJarName=original.get("jar").getAsString();
+        if(!apkName.matches("[a-f0-9]{64}\\.apk")||!oldJarName.matches("[a-f0-9]{64}\\.jar"))throw new IOException("Invalid installed package filename");
+        Path apk=root.resolve("packages").resolve(apkName),oldJar=root.resolve("packages").resolve(oldJarName);
+        if(!Files.isRegularFile(apk)||!EngineFiles.sha256(apk).equals(original.get("apkSha256").getAsString())||
+            !Files.isRegularFile(oldJar)||!EngineFiles.sha256(oldJar).equals(original.get("jarSha256").getAsString()))throw new IOException("Installed package checksum mismatch");
+        validateArchive(apk);
+        String name=EngineFiles.sha256((original.get("apkSha256").getAsString()+CONVERSION_PROFILE).getBytes(StandardCharsets.US_ASCII));
+        Path jar=root.resolve("packages").resolve(name+".jar");
+        convert(apk,jar);
+        JsonObject next=original.deepCopy();next.addProperty("jar",jar.getFileName().toString());next.addProperty("jarSha256",EngineFiles.sha256(jar));next.addProperty("conversionProfile",CONVERSION_PROFILE);
+        return next;
+    }
+    private static void convert(Path apk,Path jar)throws Exception{
+        Path pending=Files.createTempFile(jar.getParent(),".pending-",".jar");
+        try{Files.delete(pending);Dex2jar converter=Dex2jar.from(apk.toFile());Dex2jar.from(DexCompatibility.prepare(converter.getReader())).skipDebug().dontSanitizeNames(true).computeFrames(true).to(pending);validateArchive(pending);Files.move(pending,jar,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}finally{Files.deleteIfExists(pending);}
     }
     private Loaded load(JsonObject metadata)throws Exception{
         String name=metadata.get("jar").getAsString();if(!name.matches("[a-f0-9]{64}\\.jar"))throw new IOException("Invalid package filename");

@@ -7,6 +7,7 @@ connects to a production endpoint; all identities and documents are synthetic.
 """
 
 import base64
+import hashlib
 import json
 import os
 import re
@@ -229,6 +230,62 @@ class FirestoreRulesTest(unittest.TestCase):
         for write in [update(path, {'bytes': 1, 'data': 'eQ=='}), {'delete': f'{DOCS}/{path}'}]:
             status, _ = self.commit([write])
             self.assertEqual(status, 403)
+
+    def test_incremental_upload_reads_and_creates_first_blob_in_owner_transaction(self):
+        # Mirrors FirestoreSyncRemote.publish: read an absent content-addressed
+        # blob inside a transaction, create it, then reuse without updating it.
+        piece = b'x' * (384 * 1024)
+        digest = hashlib.sha256(piece).hexdigest()
+        path = f'{ROOT}/blobs/{digest}'
+        status, transaction = request('POST', f'/v1/{DOCS}:beginTransaction', {})
+        self.assertEqual(status, 200)
+        status, missing = request('POST', f'/v1/{DOCS}:batchGet', {
+            'documents': [f'{DOCS}/{path}'],
+            'transaction': transaction['transaction'],
+        })
+        self.assertEqual(status, 200, 'Owner transaction cannot read a missing blob')
+        self.assertEqual(missing[0]['missing'], f'{DOCS}/{path}')
+        status, _ = request('POST', f'/v1/{DOCS}:commit', {
+            'writes': [update(path, {
+                'bytes': len(piece), 'data': base64.b64encode(piece).decode(),
+            })],
+            'transaction': transaction['transaction'],
+        })
+        self.assertEqual(status, 200, 'Owner transaction cannot create the first schema 2 blob')
+        status, found = request('GET', f'/v1/{DOCS}/{path}')
+        self.assertEqual(status, 200)
+        self.assertEqual(found['fields']['bytes']['integerValue'], str(len(piece)))
+        self.assertEqual(
+            base64.b64decode(found['fields']['data']['stringValue']), piece,
+        )
+
+    def test_incremental_media_upload_and_schema_2_head_accept_real_piece_boundaries(self):
+        # Roughly the 1.86 MiB upload shown on-device: multiple bounded blobs
+        # reach the server before the schema 2 manifest and CAS head publication.
+        remaining = 1950351
+        index = 0
+        while remaining:
+            piece = bytes([index]) * min(remaining, 384 * 1024)
+            digest = hashlib.sha256(piece).hexdigest()
+            status, _ = self.commit([update(f'{ROOT}/blobs/{digest}', {
+                'bytes': len(piece), 'data': base64.b64encode(piece).decode(),
+            })])
+            self.assertEqual(status, 200, f'Valid media piece {index} was denied')
+            remaining -= len(piece)
+            index += 1
+        self.assertEqual(index, 5)
+        current = {**head('d' * 32), 'format': 2}
+        status, _ = self.commit([
+            update(f"{ROOT}/snapshots/{current['id']}", {
+                **current, 'schema': 'tachi-books-cloud-2',
+            }, 'createdAt'),
+            update(f"{ROOT}/snapshots/{current['id']}/parts/0", {'data': 'eA=='}),
+        ])
+        self.assertEqual(status, 200)
+        status, _ = self.commit([update(f'{ROOT}/sync/head', {
+            **current, 'schema': 'tachi-books-cloud-2', 'retained': [current],
+        }, 'updatedAt')])
+        self.assertEqual(status, 200)
 
     def test_format_requires_an_integer_for_manifests_and_current_or_retained_heads(self):
         for index, number in enumerate([1.0, 2.0]):

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -10,10 +11,23 @@ import stat
 import zipfile
 
 from configure_ios_tachi_runtime import NATIVE_LIBRARIES, macho
-from native_extension_engine.build import sha256
+from native_extension_engine.build import sha256, ARRAY_DECODER_RESOURCE, ARRAY_DECODER_BYTES, ARRAY_DECODER_SHA256
 from package_jvm_frameworks import alias_path, executable_path, native_records, verify_layout
 
 BOOTSTRAP_JARS = ("resources.jar", "rt.jar", "jsse.jar", "jce.jar", "charsets.jar", "jfr.jar")
+
+
+def array_decoder(archive: zipfile.ZipFile) -> None:
+    try:
+        entry = archive.getinfo(ARRAY_DECODER_RESOURCE)
+    except KeyError as failure:
+        raise ValueError("Dex2jar primitive-array decoder template is missing") from failure
+    if entry.file_size != ARRAY_DECODER_BYTES:
+        raise ValueError("Dex2jar primitive-array decoder template does not match its pinned upstream bytes")
+    payload = archive.read(entry)
+    if payload[:4] != b"\xca\xfe\xba\xbe" or int.from_bytes(payload[6:8], "big") != 52 or \
+            hashlib.sha256(payload).hexdigest() != ARRAY_DECODER_SHA256:
+        raise ValueError("Dex2jar primitive-array decoder template does not match its pinned Java8 upstream bytes")
 
 
 def inside(path: Path, root: Path) -> None:
@@ -86,6 +100,8 @@ def verify(app: Path) -> dict:
             if filename == "extension-host.jar" and \
                     "dev/tachibooks/engine/ExtensionHost.class" not in archive.namelist():
                 raise ValueError("The Java host entrypoint is missing")
+            if filename == "extension-dependencies.jar":
+                array_decoder(archive)
     jre = tachi / "jre"
     for filename in BOOTSTRAP_JARS:
         jar(jre / "lib" / filename, app, "java/lang/Object.class" if filename == "rt.jar" else None)
@@ -116,6 +132,7 @@ def verify(app: Path) -> dict:
         "nativeLibraries": native_layout["frameworks"],
         "nativeLayoutVersion": native_layout["nativeLayoutVersion"],
         "bootstrapJars": len(BOOTSTRAP_JARS),
+        "arrayDecoderSha256": ARRAY_DECODER_SHA256,
         "vbookHostSha256": sha256(host),
         "deviceRuntimeVerified": False,
     }
@@ -183,7 +200,11 @@ def verify_archive(ipa: Path) -> dict:
         for filename, key in (("extension-host.jar", "host"),
                               ("extension-dependencies.jar", "dependencies")):
             check_file(resource + "engine/" + filename, provenance[key]["sha256"])
+            if filename == "extension-dependencies.jar":
+                with zipfile.ZipFile(io.BytesIO(archive.read(resource + "engine/" + filename))) as dependencies:
+                    array_decoder(dependencies)
     return {"nativeAliases": len(records), "nativeLayoutVersion": 2,
+            "arrayDecoderSha256": ARRAY_DECODER_SHA256,
             "zipIntegrityVerified": True, "deviceRuntimeVerified": False}
 
 

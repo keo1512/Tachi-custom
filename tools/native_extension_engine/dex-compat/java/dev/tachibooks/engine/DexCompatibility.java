@@ -6,6 +6,9 @@ import com.googlecode.d2j.node.*;
 import com.googlecode.d2j.node.insn.*;
 import com.googlecode.d2j.reader.*;
 import com.googlecode.d2j.visitors.DexFileVisitor;
+import com.googlecode.d2j.dex.Dex2Asm;
+import java.io.InputStream;
+import java.io.IOException;
 import java.util.*;
 
 /** Preserve R8's constructor-elided concrete allocations when converting to JVM. */
@@ -13,6 +16,7 @@ public final class DexCompatibility {
     private DexCompatibility() {}
 
     public static BaseDexFileReader prepare(BaseDexFileReader input) {
+        requireArrayDecoder();
         final DexFileNode file = new DexFileNode();
         // Read failures must propagate; a partially read package is not executable.
         input.accept(file, DexFileReader.SKIP_DEBUG);
@@ -43,6 +47,22 @@ public final class DexCompatibility {
                 visitor.visitEnd();
             }
         };
+    }
+
+    /** A missing template otherwise produces apparently valid but broken JARs. */
+    private static void requireArrayDecoder() {
+        try (InputStream input = Dex2Asm.class.getResourceAsStream("/res/Hex.class")) {
+            if (input == null || input.read() != 0xca || input.read() != 0xfe ||
+                    input.read() != 0xba || input.read() != 0xbe) {
+                throw new MissingRuntimeResourceException();
+            }
+        } catch (IOException failure) {
+            throw new MissingRuntimeResourceException();
+        }
+    }
+
+    public static final class MissingRuntimeResourceException extends IllegalStateException {
+        MissingRuntimeResourceException() { super("The engine array-decoder resource is missing or invalid"); }
     }
 
     private static final class Allocation {

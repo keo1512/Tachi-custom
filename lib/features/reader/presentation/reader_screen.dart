@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../../../core/widgets/feedback.dart';
+import '../../../core/diagnostics/diagnostic_log.dart';
 import '../../../core/platform/reader_platform.dart';
 import '../../downloads/presentation/download_queue_controller.dart';
 import '../../downloads/presentation/download_deletion_controller.dart';
@@ -395,6 +396,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
       }
     } catch (e) {
       if (mounted && request == generation) {
+        DiagnosticLogs.error('source', e);
         setState(() {
           error = userFacingError(e);
           loading = false;

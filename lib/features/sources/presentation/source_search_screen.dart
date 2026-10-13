@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/feedback.dart';
+import '../../../core/diagnostics/diagnostic_log.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../../library/presentation/library_add_categories.dart';
 import '../../settings/settings_controller.dart';
@@ -164,6 +165,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
       });
     } catch (e) {
       if (mounted && current == request) {
+        DiagnosticLogs.error('source', e);
         setState(() {
           error = userFacingError(e);
           busy = false;

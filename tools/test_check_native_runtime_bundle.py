@@ -1,5 +1,7 @@
 """Packaging checks use synthetic bytes; they never claim native execution."""
 import json
+import hashlib
+import io
 import os
 from pathlib import Path
 import stat
@@ -12,6 +14,7 @@ import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from check_native_runtime_bundle import verify, verify_archive, BOOTSTRAP_JARS, sha256
+import check_native_runtime_bundle as bundle_checker
 import test_package_jvm_frameworks as framework_fixtures
 
 
@@ -28,6 +31,10 @@ def native_bytes(platform=2, dependency=None):
 
 class RuntimeBundleTest(unittest.TestCase):
     def setUp(self):
+        self.array_template = b"\xca\xfe\xba\xbe\x00\x00\x00\x34" + b"fixture" + bytes(2326 - 15)
+        expected = mock.patch.object(bundle_checker, "ARRAY_DECODER_SHA256", hashlib.sha256(self.array_template).hexdigest())
+        expected.start()
+        self.addCleanup(expected.stop)
         # Reuse the actual structural fixture/alias model, without inheriting
         # its unit tests. Windows models POSIX aliases; macOS uses real aliases.
         fixture = framework_fixtures.FrameworkPackagingTest("test_nine_flat_frameworks_aliases_dependency_names_and_bootstrap_preserved")
@@ -46,6 +53,8 @@ class RuntimeBundleTest(unittest.TestCase):
             path = self.tachi / "engine" / name
             with zipfile.ZipFile(path, "w") as archive:
                 archive.writestr(member, b"fixture only")
+                if key == "dependencies":
+                    archive.writestr("res/Hex.class", self.array_template)
             self.provenance[key] = {"sha256": sha256(path)}
         for name in BOOTSTRAP_JARS:
             self.write_jar(self.tachi / "jre/lib" / name, "java/lang/Object.class" if name == "rt.jar" else "fixture-only.txt")
@@ -74,6 +83,19 @@ class RuntimeBundleTest(unittest.TestCase):
         self.assertEqual(result["nativeLayoutVersion"], 2)
         self.assertEqual(result["bootstrapJars"], 6)
         self.assertFalse(result["deviceRuntimeVerified"])
+
+    def test_missing_or_changed_array_decoder_fails_even_with_updated_jar_provenance(self):
+        path = self.tachi / "engine/extension-dependencies.jar"
+        for payload in (None, b"wrong size", self.array_template[:-1] + b"x", self.array_template[:6] + b"\x00\x3d" + self.array_template[8:]):
+            with self.subTest(payload=None if payload is None else len(payload)):
+                with zipfile.ZipFile(path, "w") as archive:
+                    archive.writestr("fixture-only.txt", b"fixture only")
+                    if payload is not None:
+                        archive.writestr("res/Hex.class", payload)
+                self.provenance["dependencies"]["sha256"] = sha256(path)
+                self.write_provenance()
+                with self.assertRaisesRegex(ValueError, "array decoder template"):
+                    verify(self.app)
 
     def test_missing_host_resource_and_duplicate_bundle_fail_before_packaging(self):
         (self.vbook / "host.js").unlink()
@@ -230,6 +252,25 @@ class RuntimeArchiveTest(unittest.TestCase):
         self.assertEqual(result["nativeAliases"], 9)
         self.assertTrue(result["zipIntegrityVerified"])
         self.assertFalse(result["deviceRuntimeVerified"])
+
+    def test_final_zip_rejects_lost_template_even_when_all_jar_and_outer_hashes_match(self):
+        dependency_name = self.resource + "engine/extension-dependencies.jar"
+        manifest_name = self.resource + "licenses/upstream-provenance.json"
+        for template in (None, b"wrong-size", b"x" * 2326):
+            with self.subTest(template=None if template is None else len(template)):
+                payload = io.BytesIO()
+                with zipfile.ZipFile(payload, "w") as archive:
+                    archive.writestr("fixture-only.txt", b"fixture only")
+                    if template is not None:
+                        archive.writestr("res/Hex.class", template)
+                entries = dict(self.entries)
+                entries[dependency_name] = (stat.S_IFREG, payload.getvalue())
+                manifest = json.loads(entries[manifest_name][1])
+                manifest["dependencies"]["sha256"] = hashlib.sha256(payload.getvalue()).hexdigest()
+                entries[manifest_name] = (stat.S_IFREG, json.dumps(manifest).encode())
+                self.write_archive(entries)
+                with self.assertRaisesRegex(ValueError, "array decoder template"):
+                    verify_archive(self.ipa)
 
     def test_each_alias_must_remain_a_symlink_instead_of_copied_binary_bytes(self):
         for record in self.records:

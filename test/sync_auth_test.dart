@@ -6,6 +6,7 @@ import 'package:tachi_books/features/sync/application/sync_controller.dart';
 import 'package:tachi_books/features/sync/data/google_session.dart';
 import 'package:tachi_books/features/sync/data/sync_link_store.dart';
 import 'package:tachi_books/features/sync/domain/sync_engine.dart';
+import 'package:tachi_books/core/diagnostics/diagnostic_log.dart';
 
 import 'support/sync_fakes.dart';
 
@@ -147,6 +148,77 @@ void main() {
       isNot(contains('secret-url')),
     );
   });
+  test('sync catch logs one original Firebase code instead of translated StateError', () async {
+    final events = <DiagnosticEvent>[];
+    final previous = DiagnosticLogs.writer;
+    DiagnosticLogs.writer = (event) async => events.add(event);
+    addTearDown(() => DiagnosticLogs.writer = previous);
+    await container.read(syncProvider.notifier).signIn();
+    remote.headError = FirebaseException(
+      plugin: 'cloud_firestore',
+      code: 'permission-denied',
+      message: 'private token=secret',
+    );
+    await container.read(syncProvider.notifier).sync(enable: true);
+    expect(events, hasLength(1));
+    expect(events.single.code, 'sync_permission_denied');
+    expect(events.single.type, 'FirebaseException');
+    expect(events.single.toJson().values.join(), isNot(contains('secret')));
+  });
+
+  test(
+    'Firestore permission failure keeps the signed-in session and library',
+    () async {
+      await container.read(syncProvider.notifier).signIn();
+      final originalBytes = local.bytes;
+      remote.headError = FirebaseException(
+        plugin: 'cloud_firestore',
+        code: 'permission-denied',
+        message: 'PRIVATE_PROJECT_AND_UID',
+      );
+      await container.read(syncProvider.notifier).sync(enable: true);
+
+      final state = container.read(syncProvider);
+      expect(state.user!.uid, 'alice');
+      expect(state.enabled, true);
+      expect(state.error, true);
+      expect(state.message, contains('quy tắc Firestore'));
+      expect(state.message, contains('phiên bản 2'));
+      expect(state.message, isNot(contains('bật Google')));
+      expect(state.message, isNot(contains('PRIVATE')));
+      expect(auth.signOuts, 0);
+      expect(local.bytes, same(originalBytes));
+      expect(local.replaces, 0);
+      expect(remote.publishes, 0);
+    },
+  );
+
+  test(
+    'disabled Google provider and expired cloud auth have distinct remedies',
+    () {
+      final disabledProvider = syncErrorMessage(
+        FirebaseException(
+          plugin: 'firebase_auth',
+          code: 'operation-not-allowed',
+          message: 'SECRET_PROVIDER_CONFIG',
+        ),
+      );
+      expect(disabledProvider, contains('Bật Google trong Authentication'));
+      expect(disabledProvider, isNot(contains('Firestore')));
+      expect(disabledProvider, isNot(contains('SECRET')));
+
+      final expiredSession = syncErrorMessage(
+        FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'unauthenticated',
+          message: 'SECRET_TOKEN',
+        ),
+      );
+      expect(expiredSession, contains('đăng nhập Google lại'));
+      expect(expiredSession, isNot(contains('Firestore')));
+      expect(expiredSession, isNot(contains('SECRET')));
+    },
+  );
 
   test(
     'malformed persisted link remains intact and blocks automatic relinking',

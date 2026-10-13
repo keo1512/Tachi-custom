@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/diagnostics/diagnostic_log.dart';
+
 import '../../library/application/backup_service_provider.dart';
 import '../../library/application/extension_recovery_controller.dart';
 import '../../privacy/application/app_lock_controller.dart';
@@ -165,6 +167,7 @@ class SyncController extends Notifier<SyncState> {
       if (ref.mounted) state = state.copyWith(busy: false);
     } catch (error) {
       if (ref.mounted) {
+        DiagnosticLogs.error('sync', error);
         var enabled = state.enabled;
         // Enabling sync pins the link before requesting the network. Reflect
         // that persisted choice even when its first upload fails. A malformed

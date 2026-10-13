@@ -6,10 +6,10 @@ on:
       build_number:
         description: Positive iOS build number
         required: true
-        default: '8'
+        default: '9'
         type: string
       native_smoke:
-        description: Run native integration checks (required for source 8 native changes)
+        description: Run native integration checks when UIKit or platform bridges change
         required: true
         default: true
         type: boolean

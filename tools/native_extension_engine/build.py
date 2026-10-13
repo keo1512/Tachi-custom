@@ -21,6 +21,9 @@ LEGACY_DEPENDENCY_SHA256 = "e033b55a2042bbff32a45809741984c105d0d716960256edf0de
 DEPENDENCY_URL = "https://github.com/Suwayomi/Suwayomi-Server/releases/download/v2.4.2366/Suwayomi-Server-v2.4.2366.jar"
 DEPENDENCY_BYTES = 182_952_426
 DEPENDENCY_SHA256 = "af9feb20af9d7ebe9e30769e6c6ebc7fc7ab1c447388d42e0280b1da5fe07bfd"
+ARRAY_DECODER_RESOURCE = "res/Hex.class"
+ARRAY_DECODER_BYTES = 2326
+ARRAY_DECODER_SHA256 = "34aaebb87071092ceb06033a016a19be38d3882b21094b2acbaec7694c60da73"
 PREFIXES = (
     "uy/kohesive/injekt/", "kotlin/",
     "kotlinx/serialization/", "kotlinx/coroutines/", "okhttp3/", "okio/", "rx/",
@@ -36,6 +39,10 @@ LEGACY_PREFIXES = (
 )
 RESOURCES = {
     "r_values.ini", "r_styles.ini",
+    # Dex2Asm reads this class as a template resource and injects its primitive
+    # array decoders into converted extension classes. It silently omits the
+    # methods when the resource is absent, leaving linkage failures at runtime.
+    ARRAY_DECODER_RESOURCE,
     "META-INF/services/kotlin.reflect.jvm.internal.impl.builtins.BuiltInsLoader",
     "META-INF/services/kotlin.reflect.jvm.internal.impl.km.internal.extensions.MetadataExtensions",
     "META-INF/services/kotlin.reflect.jvm.internal.impl.resolve.ExternalOverridabilityCondition",
@@ -168,6 +175,8 @@ def build_dependencies(archive: Path, output: Path, legacy: Path) -> dict:
                     members["META-INF/licenses/legacy-" + name.replace("/", "_")] = original[name]
                 else:
                     members.setdefault(name, original[name])
+    if ARRAY_DECODER_RESOURCE not in members:
+        raise ValueError("Dex2jar primitive-array decoder template is missing")
     with zipfile.ZipFile(output, "w") as target:
         for name, data in sorted(members.items()):
             if name.endswith(".class"):

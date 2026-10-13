@@ -82,6 +82,49 @@ void main() {
         client: client ?? MockClient((_) async => http.Response('', 500)),
       );
 
+  test('native errors preserve bounded exception types and reject provider identifiers', () async {
+    for (final type in [
+      'NoSuchMethodError',
+      'NoClassDefFoundError',
+      'IOException',
+      'SourceNotLoadedException',
+      'private_token_secret',
+      123,
+      null,
+    ]) {
+      final repo = NativeTachiRepository(
+        storageDirectory: directory,
+        executor: (raw) async {
+          final request = jsonDecode(raw) as Map;
+          if (request['method'] == 'initialize') {
+            return jsonEncode({'ok': true, 'result': {}});
+          }
+          return jsonEncode({
+            'ok': false,
+            'error': {
+              'code': 'unsupported_extension',
+              'message': 'PrivateBook private_token_secret',
+              'type': type,
+            },
+          });
+        },
+      );
+      addTearDown(repo.dispose);
+      await expectLater(
+        repo.listSources(),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.code, 'original code', 'unsupported_extension')
+              .having(
+                (e) => e.diagnosticType,
+                'allowlisted diagnostic type',
+                type is String && type != 'private_token_secret' ? type : null,
+              ),
+        ),
+      );
+    }
+  });
+
   test('local APK import stages an immutable copy and forwards confirmed host metadata without HTTP', () async {
     final bytes = _packageBytes(),
         original = Uint8List.fromList(_packageBytes());

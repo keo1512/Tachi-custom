@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/downloads/presentation/download_queue_controller.dart';
 import '../../features/library/application/automatic_backup_status.dart';
 import '../../features/library/application/library_update_report.dart';
-import '../../features/sync/application/sync_controller.dart';
 import '../../features/tasks/data/task_platform.dart';
 import 'diagnostic_log.dart';
 
@@ -71,12 +70,6 @@ class _DiagnosticListenerState extends ConsumerState<DiagnosticListener> {
     ref.listen(automaticBackupStatusProvider, (old, next) {
       if (next.failure != null && next.failure != old?.failure) {
         DiagnosticLogs.error('backup', StateError(next.failure!));
-      }
-    });
-    ref.listen(syncProvider, (old, next) {
-      if (next.error &&
-          (!(old?.error ?? false) || next.message != old?.message)) {
-        DiagnosticLogs.error('sync', StateError(next.message ?? 'failed'));
       }
     });
     return widget.child;

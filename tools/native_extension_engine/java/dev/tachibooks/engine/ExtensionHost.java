@@ -82,6 +82,7 @@ public final class ExtensionHost {
         }catch(Throwable failure){
             JsonObject error=new JsonObject();String code,message;
             if(requiresBrowser(failure)){code="source_requires_browser";message="The source requires an interactive browser session.";}
+            else if(failure instanceof SourceNotLoadedException){code="source_not_installed";message="Required source extension is not loaded.";}
             else if(failure instanceof LinkageError){code="unsupported_extension";message="The extension requires an Android or Java API that this engine does not provide.";}
             else if(failure instanceof IllegalArgumentException){code="invalid_request";message=failure.getMessage();}
             else if(failure instanceof IllegalStateException&&registry==null){code="engine_unavailable";message="The native extension engine could not initialize.";}

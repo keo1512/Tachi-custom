@@ -5,6 +5,9 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
+
+import '../../../core/diagnostics/diagnostic_error_type.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:tachi_runtime/tachi_runtime.dart';
@@ -102,6 +105,7 @@ class NativeTachiRepository
           code: error['code'] is String
               ? error['code'] as String
               : 'TACHI_RUNTIME_FAILED',
+          diagnosticType: canonicalDiagnosticType(error['type']),
         );
       }
       return value['result'];

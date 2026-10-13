@@ -326,7 +326,9 @@ class _LogDiagnosticsState extends ConsumerState<LogDiagnosticsScreen> {
           const SettingsNote('Chưa có lỗi được ghi cho mục này.'),
         for (final event in visible)
           SettingsRow(
-            title: '${label(event.category)} · ${event.code}',
+            title:
+                '${label(event.category)} · ${event.code}'
+                '${event.type == null ? '' : ' · ${event.type}'}',
             subtitle: '${event.message}\n${event.at.toLocal()}',
             onTap: () => openCategory(event.category),
           ),
