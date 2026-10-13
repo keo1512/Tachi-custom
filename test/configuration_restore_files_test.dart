@@ -117,6 +117,53 @@ void main() {
   });
 
   test(
+    'Apple system alias and physical directory reopen the same checkpoint',
+    () async {
+      final physical = ConfigurationRestoreFiles(
+        await directory.resolveSymbolicLinks(),
+      );
+      await files.writeCheckpoint(_configuration(true));
+      expect(physical.directory.path, files.directory.path);
+      expect(
+        (await physical.readCheckpoint())!.values,
+        _configuration(true).values,
+      );
+      await physical.writeCheckpoint(_configuration(false));
+      expect(
+        (await files.readCheckpoint())!.values,
+        _configuration(false).values,
+      );
+    },
+    skip: !(Platform.isMacOS || Platform.isIOS),
+  );
+
+  test(
+    'caller-owned symlink parents remain rejected without touching targets',
+    () async {
+      final target = Directory('${directory.path}/original');
+      await target.create();
+      final original = File('${target.path}/input.txt');
+      await original.writeAsString('original bytes');
+      final link = Link('${directory.path}/redirect');
+      await link.create(target.path);
+      try {
+        final redirected = ConfigurationRestoreFiles('${link.path}/nested');
+        await expectLater(
+          redirected.writeCheckpoint(_configuration(true)),
+          throwsA(isA<FileSystemException>()),
+        );
+        expect(await Directory('${target.path}/nested').exists(), false);
+        expect(await original.readAsString(), 'original bytes');
+      } finally {
+        await link.delete();
+      }
+    },
+    skip: Platform.isWindows
+        ? 'Symlink creation requires Windows privileges.'
+        : false,
+  );
+
+  test(
     'file checkpoints replace the previous image and leave no pending file',
     () async {
       final unrelated = File('${directory.path}/original-source.txt');

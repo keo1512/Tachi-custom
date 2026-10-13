@@ -8,6 +8,7 @@ import '../../sources/domain/extension_backup.dart';
 import '../../sources/domain/native_source_engine.dart';
 import 'library_repository.dart';
 import 'library_snapshot.dart';
+import 'storage_directory.dart';
 
 abstract interface class ExtensionBackupStore {
   Future<T> exclusive<T>(Future<T> Function() action);
@@ -33,13 +34,13 @@ class RepositoryExtensionBackupStore implements ExtensionBackupStore {
     // Public injection keeps the storage implementation field private.
     Directory? directory,
     // ignore: prefer_initializing_formals
-  }) : _directory = directory;
+  }) : _directory = directory == null ? null : storageDirectory(directory.path);
   final NativeExtensionBackupEngine runtime;
   final LibraryRepository repository;
   final Set<SourceEngine> engines;
   Directory? _directory;
   static final _tails = <String, Future<void>>{};
-  Future<Directory> _storage() async => _directory ??= Directory(
+  Future<Directory> _storage() async => _directory ??= storageDirectory(
     '${(await getApplicationSupportDirectory()).path}/TachiBooks/extension-restore',
   );
   Future<File> _journal() async {

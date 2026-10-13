@@ -2,13 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'backup_configuration.dart';
+import 'storage_directory.dart';
 
 /// Private fixed-name files; no source book, credentials or external paths.
 class ConfigurationRestoreFiles {
-  ConfigurationRestoreFiles(String path)
-    : directory = Directory(
-        Directory(path).absolute.uri.normalizePath().toFilePath(),
-      );
+  ConfigurationRestoreFiles(String path) : directory = storageDirectory(path);
   final Directory directory;
   String get checkpointPath => '${directory.path}/configuration.json';
   String get journalPath => '${directory.path}/restore-journal.json';
