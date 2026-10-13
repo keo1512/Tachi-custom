@@ -33,6 +33,7 @@ final class VbookHtmlBridge {
       try doc.select("script,style,iframe,object,embed").remove()
       let allowed = Set((args.count > 1 ? args[1] as? [String] ?? [] : []).map { $0.lowercased() })
       for node in try doc.select("*").array().reversed() {
+        guard !(node is Document), node.parent() != nil else { continue }
         if !allowed.contains(node.tagName().lowercased()) && !["html", "head", "body"].contains(node.tagName().lowercased()) {
           try node.unwrap()
         }

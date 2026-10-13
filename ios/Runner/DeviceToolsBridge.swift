@@ -76,24 +76,24 @@ final class DeviceToolsBridge {
     guard manager.fileExists(atPath: root.path) else { return (0, 0, 0) }
     let rootInfo = try root.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
     guard rootInfo.isDirectory == true, rootInfo.isSymbolicLink != true else { return (0, 0, 0) }
-    var enumerationError: Error?
-    guard let iterator = manager.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey], options: [], errorHandler: { _, error in
-      enumerationError = error; return false
-    }) else { throw NSError(domain: "DeviceTools", code: 2) }
+    let keys: Set<URLResourceKey> = [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]
+    var pending = [root]
     var total = 0, backups = 0, library = 0, count = 0
-    for case let url as URL in iterator {
-      count += 1
-      guard count <= 200000 else { throw NSError(domain: "DeviceTools", code: 1) }
-      let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
-      if values.isSymbolicLink == true { iterator.skipDescendants(); continue }
-      guard values.isRegularFile == true, let size = values.fileSize, size >= 0 else { continue }
-      guard size <= Int.max - total else { throw NSError(domain: "DeviceTools", code: 3) }
-      total += size
-      let name = url.lastPathComponent
-      if name.hasPrefix("tachibooks-auto-") || name.hasPrefix("recovery-") || name == "original-backup.bin" { backups += size }
-      if url.path.contains("/attachments/") || name == "tachi_books.isar" { library += size }
+    while let directory = pending.popLast() {
+      for url in try manager.contentsOfDirectory(at: directory, includingPropertiesForKeys: Array(keys)) {
+        count += 1
+        guard count <= 200000 else { throw NSError(domain: "DeviceTools", code: 1) }
+        let values = try url.resourceValues(forKeys: keys)
+        if values.isSymbolicLink == true { continue }
+        if values.isDirectory == true { pending.append(url); continue }
+        guard values.isRegularFile == true, let size = values.fileSize, size >= 0 else { continue }
+        guard size <= Int.max - total else { throw NSError(domain: "DeviceTools", code: 3) }
+        total += size
+        let name = url.lastPathComponent
+        if name.hasPrefix("tachibooks-auto-") || name.hasPrefix("recovery-") || name == "original-backup.bin" { backups += size }
+        if url.path.contains("/attachments/") || name == "tachi_books.isar" { library += size }
+      }
     }
-    if let error = enumerationError { throw error }
     return (total, backups, library)
   }
 }

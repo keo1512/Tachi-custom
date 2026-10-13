@@ -320,7 +320,8 @@ final class TachiSourceBrowserTests: XCTestCase {
     browser.perform(NSSelectorFromString("setBrowserUserAgent:"), with: "Invalid\nagent")
     XCTAssertEqual(webView.customUserAgent, "Custom source UA")
     browser.perform(NSSelectorFromString("setBrowserUserAgent:"), with: "")
-    XCTAssertNil(webView.customUserAgent)
+    // WebKit on iOS 27 exposes an unset override as either nil or empty.
+    XCTAssertTrue(webView.customUserAgent?.isEmpty ?? true)
     XCTAssertNil(UserDefaults.standard.dictionary(forKey: preferenceKey)?["reader.source.test"])
     XCTAssertEqual(webView.reloadCalls, 2)
     navigation.dismiss(animated: false)
