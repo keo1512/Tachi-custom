@@ -9,9 +9,11 @@ class ActivityBookCover extends StatelessWidget {
     super.key,
     this.width = 48,
     this.height = 48,
+    this.coverImage,
   });
   final LibraryBook book;
   final double width, height;
+  final ImageProvider<Object>? coverImage;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +27,13 @@ class ActivityBookCover extends StatelessWidget {
       ),
     );
     Widget cover = fallback;
-    if (book.cover.startsWith('data:image/')) {
+    if (coverImage != null) {
+      cover = Image(
+        image: coverImage!,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback,
+      );
+    } else if (book.cover.startsWith('data:image/')) {
       try {
         cover = Image.memory(
           UriData.parse(book.cover).contentAsBytes(),

@@ -3,17 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/feedback.dart';
+import '../../../core/widgets/book_cover.dart';
 import '../../library/application/reading_statistics_controller.dart';
 import '../../library/domain/library_book.dart';
 import '../../library/domain/library_reading.dart';
 import '../../library/domain/reading_statistics.dart';
+import '../../sources/presentation/source_cover_image.dart';
 import '../settings_controller.dart';
 import 'reading_statistics_book_list.dart';
 import 'reading_statistics_charts.dart';
 import 'settings_widgets.dart';
 
 class ReadingInfoScreen extends ConsumerStatefulWidget {
-  const ReadingInfoScreen({super.key});
+  const ReadingInfoScreen({super.key, this.title = 'Thông tin Đọc'});
+  final String title;
   @override
   ConsumerState<ReadingInfoScreen> createState() => _ReadingInfoState();
 }
@@ -44,7 +47,7 @@ class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
     }, now: now);
     final statistics = ref.watch(readingStatisticsProvider);
     return SettingsPage(
-      title: 'Thông tin Đọc',
+      title: widget.title,
       children: [
         SettingsRow(
           title: 'Làm mới thống kê',
@@ -81,6 +84,10 @@ class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
           ),
         ),
         ReadingTimeChart(time: time, days: chartDays),
+        if (time.recentSeconds(chartDays) == 0)
+          const SettingsNote(
+            'Chưa có thời gian đọc được ghi nhận trong khoảng này.',
+          ),
         const Divider(height: 24, thickness: .5),
         const SettingsHeading('Mục tiêu đọc mỗi ngày'),
         SettingsRow(
@@ -204,9 +211,21 @@ class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
     ],
   );
 
-  Widget _bookCount(LibraryBook book, String subtitle) => SettingsRow(
-    title: book.title,
-    subtitle: subtitle,
+  Widget _bookCount(LibraryBook book, String subtitle) => ListTile(
+    leading: SizedBox(
+      width: 40,
+      height: 56,
+      child: BookCover(
+        title: book.title,
+        cover: book.cover,
+        kind: book.kind,
+        showTitle: false,
+        imageProvider: libraryCoverImage(ref, book),
+      ),
+    ),
+    title: Text(book.title),
+    subtitle: Text(subtitle),
+    trailing: const Icon(CupertinoIcons.chevron_right, size: 16),
     onTap: () => Navigator.of(context).push<void>(
       CupertinoPageRoute(
         builder: (_) => ReadingStatisticsBookList(initialBookId: book.id),

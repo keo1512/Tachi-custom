@@ -14,12 +14,12 @@ import 'navigation_settings_screen.dart';
 import 'library_update_settings_screen.dart';
 import '../../library/presentation/library_categories_screen.dart';
 import '../../privacy/presentation/privacy_settings.dart';
-import 'library_diagnostics_screen.dart';
 import '../../tasks/presentation/task_settings_screen.dart';
-import 'network_tools_screen.dart';
-import 'log_diagnostics_screen.dart';
 import 'storage_maintenance_screen.dart';
+import 'network_tools_screen.dart';
 import '../../library/presentation/local_comic_library_screen.dart';
+import '../../sources/presentation/source_languages_sheet.dart';
+import 'advanced_settings_screen.dart';
 
 class GeneralSettingsScreen extends ConsumerStatefulWidget {
   const GeneralSettingsScreen({super.key});
@@ -50,6 +50,15 @@ class _GeneralSettingsState extends ConsumerState<GeneralSettingsScreen> {
   Widget build(BuildContext context) => SettingsPage(
     title: 'Chung',
     children: [
+      const SettingsHeading('Điều hướng'),
+      SettingsRow(
+        title: 'Thanh tab',
+        subtitle: 'Tab mặc định, thứ tự, nhãn và ghi nhớ tab',
+        icon: CupertinoIcons.square_grid_2x2,
+        onTap: () =>
+            openSettingsPage(context, const NavigationSettingsScreen()),
+      ),
+      const SettingsHeading('Truyện và tác vụ'),
       SettingsRow(
         icon: CupertinoIcons.doc_on_doc,
         title: 'Nhập sách & truyện',
@@ -71,12 +80,6 @@ class _GeneralSettingsState extends ConsumerState<GeneralSettingsScreen> {
       ),
       const Divider(height: 24, thickness: .5),
       SettingsRow(
-        title: 'Chẩn đoán thư viện',
-        icon: CupertinoIcons.checkmark_shield,
-        onTap: () =>
-            openSettingsPage(context, const LibraryDiagnosticsScreen()),
-      ),
-      SettingsRow(
         title: 'Thông báo và tác vụ',
         icon: CupertinoIcons.bell,
         onTap: () => openSettingsPage(context, const TaskSettingsScreen()),
@@ -88,15 +91,11 @@ class _GeneralSettingsState extends ConsumerState<GeneralSettingsScreen> {
             openSettingsPage(context, const StorageMaintenanceScreen()),
       ),
       SettingsRow(
-        title: 'WebView & mạng',
-        icon: CupertinoIcons.globe,
-        onTap: () => openSettingsPage(context, const NetworkToolsScreen()),
+        title: 'Nâng cao và chẩn đoán',
+        icon: CupertinoIcons.wrench,
+        onTap: () => openSettingsPage(context, const AdvancedSettingsScreen()),
       ),
-      SettingsRow(
-        title: 'Nhật ký & chẩn đoán',
-        icon: CupertinoIcons.doc_text_search,
-        onTap: () => openSettingsPage(context, const LogDiagnosticsScreen()),
-      ),
+      const SettingsHeading('Thông tin ứng dụng'),
       const SettingsRow(
         title: 'TachiBooks',
         icon: CupertinoIcons.book,
@@ -154,7 +153,13 @@ class AppearanceSettingsScreen extends ConsumerWidget {
             ),
           ),
         const SettingsNote(
-          'Lựa chọn giao diện được lưu trên thiết bị. Phông chữ và nền trang của reader được thiết lập riêng trong Độc giả.',
+          'Lựa chọn giao diện được lưu trên thiết bị. Phông chữ và nền trang được thiết lập riêng trong Trình đọc.',
+        ),
+        const SettingsRow(
+          title: 'Ngôn ngữ giao diện',
+          subtitle: 'Tiếng Việt',
+          icon: CupertinoIcons.textformat,
+          showChevron: false,
         ),
       ],
     );
@@ -231,7 +236,7 @@ class ReaderSettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     const mode = 'Cuộn dọc liên tục';
     return SettingsPage(
-      title: 'Độc giả',
+      title: 'Trình đọc',
       children: [
         SettingsRow(
           title: 'Đọc truyện tranh',
@@ -278,8 +283,14 @@ class ExtensionSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => SettingsPage(
-    title: 'Phần mở rộng',
+    title: 'Nguồn',
     children: [
+      SettingsRow(
+        title: 'Kho tiện ích mở rộng',
+        subtitle: 'Nhập liên kết, xem danh sách và chọn tiện ích để cài',
+        icon: CupertinoIcons.square_stack_3d_up,
+        onTap: () => context.push('/repositories'),
+      ),
       SettingsRow(
         title: 'Nguồn & extension',
         icon: CupertinoIcons.compass,
@@ -287,12 +298,26 @@ class ExtensionSettingsScreen extends ConsumerWidget {
         onTap: () => context.go('/browse'),
       ),
       SettingsRow(
+        title: 'Trình duyệt và mạng',
+        subtitle: 'Cookie, thông tin trình duyệt và tùy chọn truy cập',
+        icon: CupertinoIcons.globe,
+        onTap: () => openSettingsPage(context, const NetworkToolsScreen()),
+      ),
+      SettingsRow(
+        title: 'Ngôn ngữ nguồn truyện',
+        subtitle: 'Chọn ngôn ngữ nội dung cho nguồn và tiện ích',
+        icon: CupertinoIcons.globe,
+        onTap: () => showAvailableSourceLanguages(context),
+      ),
+      SettingsRow(
         title: 'Máy chủ nguồn tùy chọn',
         icon: CupertinoIcons.link,
         onTap: () => showConnections(context, ref),
       ),
       const SettingsNote(
-        'Thêm URL kho trong Duyệt → Phần mở rộng, chọn extension và cài. Bộ chạy nguồn Tachimanga/vBook được tích hợp trong app iOS. Máy chủ ngoài là tùy chọn; mỗi extension có thể có yêu cầu riêng.',
+        'Thêm liên kết kho, chọn tiện ích và cài để sử dụng nguồn trên thiết bị. '
+        'Trong danh sách nguồn, dùng nút ngôn ngữ để chọn ngôn ngữ truyện muốn hiển thị. '
+        'Máy chủ riêng là tùy chọn.',
       ),
     ],
   );
@@ -304,15 +329,17 @@ class FeatureStatusScreen extends StatelessWidget {
     required this.title,
     required this.description,
     this.offerBackup = false,
+    this.statusTitle = 'Chưa hỗ trợ',
   });
   final String title, description;
+  final String statusTitle;
   final bool offerBackup;
 
   @override
   Widget build(BuildContext context) => SettingsPage(
     title: title,
     children: [
-      const SettingsRow(title: 'Chưa hỗ trợ', icon: CupertinoIcons.info_circle),
+      SettingsRow(title: statusTitle, icon: CupertinoIcons.info_circle),
       SettingsNote(description),
       if (offerBackup)
         SettingsRow(

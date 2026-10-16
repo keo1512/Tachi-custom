@@ -49,6 +49,18 @@ abstract class LibraryRepository {
     bool readOnly = false,
   });
 
+  /// Validate every title and remove its selected cached chapters as one commit.
+  /// An unsupported store rejects before changing data; single-title deletion
+  /// retains its existing public contract.
+  Future<int> deleteDownloadedChaptersBatch(
+    Iterable<LibraryChapterDeletion> selections, {
+    required int expectedRevision,
+    bool protectBookmarks = true,
+    bool readOnly = false,
+  }) async => throw UnsupportedError(
+    'Bộ nhớ này chưa hỗ trợ xóa nhiều truyện cùng lúc.',
+  );
+
   /// Invalidates work started before a successful restore, clear or removal.
   int get replacementRevision;
   Future<LibraryChapterRead?> openChapter(String bookId, String chapterId);
@@ -307,39 +319,75 @@ class MemoryLibraryRepository extends LibraryRepository {
     required int expectedRevision,
     bool protectBookmarks = true,
     bool readOnly = false,
-  }) async {
+  }) async => _deleteDownloadedBatch(
+    [LibraryChapterDeletion(expected, chapterIds)],
+    expectedRevision: expectedRevision,
+    protectBookmarks: protectBookmarks,
+    readOnly: readOnly,
+  );
+
+  @override
+  Future<int> deleteDownloadedChaptersBatch(
+    Iterable<LibraryChapterDeletion> selections, {
+    required int expectedRevision,
+    bool protectBookmarks = true,
+    bool readOnly = false,
+  }) async => _deleteDownloadedBatch(
+    selections,
+    expectedRevision: expectedRevision,
+    protectBookmarks: protectBookmarks,
+    readOnly: readOnly,
+  );
+
+  int _deleteDownloadedBatch(
+    Iterable<LibraryChapterDeletion> selections, {
+    required int expectedRevision,
+    required bool protectBookmarks,
+    required bool readOnly,
+  }) {
+    final values = checkedChapterDeletions(selections);
     checkLibraryRevision(replacementRevision, expectedRevision);
-    final book = _books[expected.id];
-    if (book == null ||
-        bookSourceIdentity(book) != bookSourceIdentity(expected)) {
-      throw StateError('Sách hoặc nguồn đã thay đổi. Hãy mở lại sách.');
+    final changes = <({LibraryBook book, List<int> indices})>[];
+    var count = 0;
+    for (final selection in values) {
+      final expected = selection.book;
+      final book = _books[expected.id];
+      if (book == null ||
+          bookSourceIdentity(book) != bookSourceIdentity(expected)) {
+        throw StateError('Sách hoặc nguồn đã thay đổi. Hãy mở lại sách.');
+      }
+      final indices =
+          downloadDeletionIndices(
+                book,
+                selection.chapterIds,
+                protectBookmarks: protectBookmarks,
+                readOnly: readOnly,
+              )
+              .where(
+                (index) =>
+                    book.chapters[index].downloaded ||
+                    _chapters.containsKey(_key(book.id, index)),
+              )
+              .toList();
+      if (indices.isEmpty) continue;
+      final chapters = [...book.chapters];
+      for (final index in indices) {
+        chapters[index] = chapters[index].copyWith(downloaded: false);
+      }
+      final updated = book.copyWith(chapters: chapters);
+      validateBook(updated);
+      changes.add((book: updated, indices: indices));
+      count += indices.length;
     }
-    final indices =
-        downloadDeletionIndices(
-              book,
-              chapterIds.toSet(),
-              protectBookmarks: protectBookmarks,
-              readOnly: readOnly,
-            )
-            .where(
-              (index) =>
-                  book.chapters[index].downloaded ||
-                  _chapters.containsKey(_key(book.id, index)),
-            )
-            .toList();
-    if (indices.isEmpty) return 0;
-    final chapters = [...book.chapters];
-    for (final index in indices) {
-      chapters[index] = chapters[index].copyWith(downloaded: false);
+    // No await between validation of every selection and the complete commit.
+    for (final change in changes) {
+      for (final index in change.indices) {
+        _chapters.remove(_key(change.book.id, index));
+      }
+      _books[change.book.id] = change.book;
     }
-    final updated = book.copyWith(chapters: chapters);
-    validateBook(updated);
-    for (final index in indices) {
-      _chapters.remove(_key(book.id, index));
-    }
-    _books[book.id] = updated;
-    _replacementRevision++;
-    return indices.length;
+    if (count > 0) _replacementRevision++;
+    return count;
   }
 
   @override
@@ -542,6 +590,7 @@ class MemoryLibraryRepository extends LibraryRepository {
       }
     }
     final previous = _snapshot();
+    final previousRevision = replacementRevision;
     if (previous.fingerprint != expectedFingerprint) {
       throw StateError(
         'Thư viện đã thay đổi. Hãy tải lại trước khi khôi phục.',
@@ -551,6 +600,7 @@ class MemoryLibraryRepository extends LibraryRepository {
     if (beforeCommit != null) {
       await beforeCommit();
       // Memory repositories also reject an edit while async preferences write.
+      checkLibraryRevision(replacementRevision, previousRevision);
       if (_snapshot().fingerprint != expectedFingerprint) {
         throw StateError('Thư viện đã thay đổi trong khi khôi phục.');
       }
@@ -717,6 +767,24 @@ class _PreferenceLibraryRepository extends MemoryLibraryRepository {
       readOnly: readOnly,
     ),
   );
+  @override
+  Future<int> deleteDownloadedChaptersBatch(
+    Iterable<LibraryChapterDeletion> selections, {
+    required int expectedRevision,
+    bool protectBookmarks = true,
+    bool readOnly = false,
+  }) {
+    final values = checkedChapterDeletions(selections);
+    return _mutate(
+      () => super.deleteDownloadedChaptersBatch(
+        values,
+        expectedRevision: expectedRevision,
+        protectBookmarks: protectBookmarks,
+        readOnly: readOnly,
+      ),
+    );
+  }
+
   @override
   Future<void> replaceChapterOrder(
     LibraryBook book,

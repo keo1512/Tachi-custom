@@ -9,11 +9,13 @@ class SourceResultTile extends StatelessWidget {
     super.key,
     required this.book,
     required this.onOpen,
+    this.coverImage,
     this.inLibrary = false,
     this.pending = false,
     this.list = false,
   });
   final CatalogueBook book;
+  final ImageProvider<Object>? coverImage;
   final VoidCallback? onOpen;
   final bool inLibrary, pending, list;
 
@@ -38,6 +40,7 @@ class SourceResultTile extends StatelessWidget {
           child: BookCover(
             title: book.title,
             cover: book.coverUrl,
+            imageProvider: coverImage,
             kind: book.kind.name,
           ),
         ),
@@ -64,6 +67,7 @@ class SourceResultTile extends StatelessWidget {
             BookCover(
               title: book.title,
               cover: book.coverUrl,
+              imageProvider: coverImage,
               kind: book.kind.name,
             ),
             Positioned(

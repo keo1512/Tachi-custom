@@ -15,6 +15,7 @@ import 'package:tachi_books/features/downloads/presentation/download_queue_contr
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/presentation/book_detail_header.dart';
+import 'package:tachi_books/features/library/presentation/book_cover_viewer.dart';
 import 'package:tachi_books/features/library/presentation/book_detail_screen.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
@@ -23,6 +24,174 @@ import 'package:tachi_books/features/deep_links/domain/app_deep_link.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  for (final size in const [Size(320, 568), Size(430, 932)]) {
+    testWidgets('cover opens in a themed zoomable viewer at $size', (
+      tester,
+    ) async {
+      final fixture = await _mount(tester, size, Brightness.dark);
+      final before = (await fixture.repository.snapshot()).fingerprint;
+      expect(find.byType(SelectionArea), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('book-detail-open-cover')));
+      await tester.pumpAndSettle();
+      expect(find.byType(BookCoverViewer), findsOneWidget);
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+      expect(
+        Theme.of(tester.element(find.byType(BookCoverViewer))).brightness,
+        Brightness.dark,
+      );
+      final viewer = tester.widget<BookCoverViewer>(
+        find.byType(BookCoverViewer),
+      );
+      final header = tester.widget<BookDetailHeader>(
+        find.byType(BookDetailHeader, skipOffstage: false),
+      );
+      expect(viewer.image, header.coverImage);
+      await tester.tap(find.byType(CloseButton));
+      await tester.pumpAndSettle();
+      expect((await fixture.repository.snapshot()).fingerprint, before);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+      'long press selects chapters and the row menu stays available at $size',
+      (tester) async {
+        final fixture = await _mount(tester, size, Brightness.dark);
+        final tile = find.widgetWithText(ListTile, 'Chương đầu');
+        await tester.scrollUntilVisible(
+          tile,
+          250,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.pumpAndSettle();
+        await tester.longPress(tile);
+        await tester.pumpAndSettle();
+        expect(find.text('1 đã chọn'), findsOneWidget);
+        expect(find.byTooltip('Thao tác các chương đã chọn'), findsOneWidget);
+        expect(find.byType(CupertinoActionSheet), findsNothing);
+        expect(
+          (await fixture.repository.find(fixture.book.id))!.toJson(),
+          fixture.book.toJson(),
+        );
+        await tester.tap(find.byTooltip('Thao tác Chương đầu'));
+        await tester.pumpAndSettle();
+        expect(find.byType(CupertinoActionSheet), findsOneWidget);
+        expect(find.text('Đánh dấu các chương trước đã đọc'), findsOneWidget);
+        await tester.tap(find.text('Hủy'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Thao tác các chương đã chọn'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Chọn phạm vi chương'));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const ValueKey('chapter-range-Từ vị trí')),
+          '2',
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('chapter-range-Đến vị trí')),
+          '3',
+        );
+        await tester.tap(find.text('Chọn'));
+        await tester.pumpAndSettle();
+        expect(find.text('3 đã chọn'), findsOneWidget);
+        await tester.tap(find.byTooltip('Thao tác các chương đã chọn'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Đảo chọn chương hiển thị'));
+        await tester.pumpAndSettle();
+        expect(find.text('0 đã chọn'), findsOneWidget);
+        await tester.tap(find.byTooltip('Thao tác các chương đã chọn'));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<PopupMenuItem<String>>(
+                find.widgetWithText(PopupMenuItem<String>, 'Đánh dấu đã đọc'),
+              )
+              .enabled,
+          isFalse,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'empty chapter search can reset without changing source identities at $size',
+      (tester) async {
+        final fixture = await _mount(tester, size, Brightness.dark);
+        await tester.scrollUntilVisible(
+          find.byTooltip('Tìm chương'),
+          250,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Tìm chương'));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byType(CupertinoSearchTextField),
+          'không có chương này',
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Xóa tìm kiếm và bộ lọc'));
+        await tester.pumpAndSettle();
+        expect(find.text('Không có chương phù hợp'), findsOneWidget);
+        await tester.tap(find.text('Xóa tìm kiếm và bộ lọc'));
+        await tester.pumpAndSettle();
+        expect(find.widgetWithText(ListTile, 'Chương đầu'), findsOneWidget);
+        final saved = (await fixture.repository.find(fixture.book.id))!;
+        expect(
+          saved.copyWith(chapterListPreferences: const {}).toJson(),
+          fixture.book.copyWith(chapterListPreferences: const {}).toJson(),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  testWidgets(
+    'a range opened before restore cannot select chapters from the replacement',
+    (tester) async {
+      final fixture = await _mount(
+        tester,
+        const Size(430, 932),
+        Brightness.dark,
+      );
+      await tester.ensureVisible(find.widgetWithText(ListTile, 'Chương đầu'));
+      await tester.pumpAndSettle();
+      await tester.longPress(find.widgetWithText(ListTile, 'Chương đầu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Thao tác các chương đã chọn'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chọn phạm vi chương'));
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(BookDetailScreen)),
+      );
+      await fixture.repository.clear();
+      final replacement = fixture.book.copyWith(title: 'Truyện sau khôi phục');
+      await fixture.repository.save(replacement);
+      await container.read(libraryProvider.notifier).refresh();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chọn'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Thư viện đã được thay đổi hoặc khôi phục'),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Thao tác các chương đã chọn'), findsNothing);
+      expect(
+        (await fixture.repository.find(replacement.id))!.toJson(),
+        replacement.toJson(),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
   for (final reading in [false, true]) {
     testWidgets(
       'copy title or current chapter link resolves stable identity reading=$reading',
@@ -192,6 +361,8 @@ void main() {
         expect(find.text('Theo dõi'), findsNothing);
         expect(find.text('Đang tiến hành'), findsNothing);
         expect(find.text('Họa sĩ: Họa sĩ mẫu'), findsOneWidget);
+        expect(find.text('TruyenQQ'), findsOneWidget);
+        expect(find.textContaining(fixture.book.sourceId), findsNothing);
         final scaffold = tester.widget<Scaffold>(
           find.descendant(
             of: find.byType(BookDetailScreen),
@@ -425,8 +596,9 @@ Future<({MemoryLibraryRepository repository, LibraryBook book})> _mount(
     author: 'Tác giả mẫu',
     artist: 'Họa sĩ mẫu',
     cover: cover!,
-    engine: 'vbook',
-    sourceId: 'sample-source',
+    engine: 'tachimanga',
+    sourceId: '2550859402019262988',
+    sourceName: 'TruyenQQ',
     sourceRef: 'https://example.test/truyen/mot-cau-chuyen',
     currentChapter: 1,
     progress: .5,

@@ -3,7 +3,10 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart'
+    show ScaffoldMessenger, SnackBar, SnackBarAction;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/feedback.dart';
 import '../../../core/format/vietnamese_format.dart';
@@ -38,6 +41,7 @@ class BackupSettingsScreen extends ConsumerStatefulWidget {
 
 class _BackupSettingsState extends ConsumerState<BackupSettingsScreen> {
   bool busy = false;
+  ({int count, bool configuration})? completedRestore;
 
   Future<void> run(Future<void> Function() action) async {
     if (busy) return;
@@ -131,15 +135,22 @@ class _BackupSettingsState extends ConsumerState<BackupSettingsScreen> {
       restoreConfiguration: choice.restoreConfiguration,
     );
     if (count == null) return;
+    if (mounted) {
+      setState(() {
+        completedRestore = (
+          count: count,
+          configuration: choice.restoreConfiguration,
+        );
+      });
+    }
     await activity.restored();
     if (!mounted) return;
     await ref.read(libraryProvider.notifier).refresh();
     if (mounted) {
-      message(
+      showBackupRestoreCompleted(
         context,
-        'Đã khôi phục $count sách mới'
-        '${choice.restoreConfiguration ? ' và cấu hình ứng dụng' : ''}. '
-        'Sách đã có được giữ nguyên.',
+        books: count,
+        restoredConfiguration: choice.restoreConfiguration,
       );
     }
   });
@@ -153,6 +164,12 @@ class _BackupSettingsState extends ConsumerState<BackupSettingsScreen> {
     return SettingsPage(
       title: 'Sao lưu & Khôi phục',
       children: [
+        if (completedRestore case final completed?)
+          BackupRestoreCompleted(
+            books: completed.count,
+            restoredConfiguration: completed.configuration,
+            enabled: !busy,
+          ),
         if (recovery.isLoading)
           const SettingsRow(
             title: 'Đang kiểm tra gói nguồn cần phục hồi…',
@@ -217,6 +234,55 @@ class _BackupSettingsState extends ConsumerState<BackupSettingsScreen> {
       ],
     );
   }
+}
+
+void showBackupRestoreCompleted(
+  BuildContext context, {
+  required int books,
+  required bool restoredConfiguration,
+}) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(_restoreSummary(books, restoredConfiguration)),
+      showCloseIcon: false,
+      action: SnackBarAction(
+        label: 'Về thư viện',
+        onPressed: () {
+          if (context.mounted) context.go('/');
+        },
+      ),
+    ),
+  );
+}
+
+String _restoreSummary(int books, bool configuration) =>
+    'Đã khôi phục $books truyện mới'
+    '${configuration ? ' và cấu hình ứng dụng' : ''}. '
+    'Sách đã có được giữ nguyên.';
+
+class BackupRestoreCompleted extends StatelessWidget {
+  const BackupRestoreCompleted({
+    super.key,
+    required this.books,
+    required this.restoredConfiguration,
+    this.enabled = true,
+  });
+  final int books;
+  final bool restoredConfiguration, enabled;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const SettingsHeading('Khôi phục hoàn tất'),
+      SettingsNote(_restoreSummary(books, restoredConfiguration)),
+      SettingsRow(
+        title: 'Về thư viện',
+        icon: CupertinoIcons.book,
+        onTap: enabled ? () => context.go('/') : null,
+      ),
+    ],
+  );
 }
 
 class MihonExportPreviewScreen extends StatelessWidget {

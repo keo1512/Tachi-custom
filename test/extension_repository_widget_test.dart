@@ -44,7 +44,9 @@ void main() {
         expect(find.text('Manga fixture'), findsOneWidget);
         _noConnectionPrompt();
 
-        await tester.tap(find.byTooltip('Kho tiện ích mở rộng'));
+        await tester.tap(find.byTooltip('Công cụ nguồn'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Kho tiện ích mở rộng'));
         await tester.pumpAndSettle();
         expect(
           router.routerDelegate.currentConfiguration.last.matchedLocation,
@@ -63,6 +65,8 @@ void main() {
           'https://fixture.test/plugin.json',
         );
         await tester.tap(find.text('Thêm'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Xác nhận'));
         await _waitForSave(tester, prefs);
         await tester.pumpAndSettle();
         expect(requests, ['https://fixture.test/plugin.json']);
@@ -95,12 +99,20 @@ void main() {
 
         router.pop();
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Phần mở rộng'));
+        await tester.tap(find.text('Tiện ích'));
         await tester.pumpAndSettle();
         expect(find.text('Novel fixture'), findsOneWidget);
         expect(find.text('Cài'), findsOneWidget);
         final pendingInstall = Completer<void>();
         vbook.pendingInstall = pendingInstall;
+        // Add and copy each queue a confirmation. Let both dismiss before
+        // tapping the last package near the bottom on a 320 px screen.
+        for (var notice = 0; notice < 2; notice++) {
+          await tester.pump(const Duration(seconds: 5));
+          await tester.pumpAndSettle();
+        }
+        await tester.ensureVisible(find.text('Cài'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Cài'));
         await tester.pump();
         expect(vbook.installs, ['https://fixture.test/plugin.zip']);
@@ -114,10 +126,14 @@ void main() {
         expect(find.text('Đã cài'), findsWidgets);
         expect(find.text('Cài'), findsNothing);
 
+        await tester.ensureVisible(find.text('Kho tiện ích mở rộng'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Kho tiện ích mở rộng'));
         await tester.pumpAndSettle();
         expect(find.byType(ExtensionRepositoryScreen), findsOneWidget);
         await tester.tap(find.byTooltip('Gỡ kho khỏi danh sách'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Gỡ kho'));
         await tester.pumpAndSettle();
         expect(
           jsonDecode(prefs.getString('extensionRepositoriesV1')!),
@@ -130,7 +146,7 @@ void main() {
         expect(vbook.installed, isTrue);
         router.pop();
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Nguồn'));
+        await tester.tap(find.text('Nguồn truyện'));
         await tester.pumpAndSettle();
         expect(find.text('Manga fixture'), findsOneWidget);
         expect(find.text('Novel fixture'), findsOneWidget);
@@ -166,7 +182,9 @@ void main() {
       _noConnectionPrompt();
       Navigator.of(tester.element(find.byType(SyncScreen))).pop();
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Kho tiện ích mở rộng'));
+      await tester.tap(find.byTooltip('Công cụ nguồn'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kho tiện ích mở rộng'));
       await tester.pumpAndSettle();
       await _openAdd(tester, 'Tachimanga');
       await tester.tap(find.text('Dùng kho Keiyoushi'));
@@ -208,7 +226,9 @@ void main() {
       await tester.runAsync(
         () => container.read(extensionCatalogueProvider.future),
       );
-      await tester.tap(find.byTooltip('Kho tiện ích mở rộng'));
+      await tester.tap(find.byTooltip('Công cụ nguồn'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Kho tiện ích mở rộng'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Đổi tên kho'));
       await tester.pumpAndSettle();
@@ -260,7 +280,7 @@ void main() {
         native,
         [],
       );
-      await tester.tap(find.text('Phần mở rộng'));
+      await tester.tap(find.text('Tiện ích'));
       final container = ProviderScope.containerOf(
         tester.element(find.byType(BrowseScreen)),
       );

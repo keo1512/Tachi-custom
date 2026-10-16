@@ -34,6 +34,12 @@ class _PreferenceState extends ConsumerState<_SourcePreferences> {
   }
 
   Future<void> _load() async {
+    if (mounted) {
+      setState(() {
+        error = null;
+        preferences = null;
+      });
+    }
     try {
       final values = await ref
           .read(sourceRepositoryProvider)
@@ -254,7 +260,13 @@ class _PreferenceState extends ConsumerState<_SourcePreferences> {
     content: SizedBox(
       width: 420,
       child: error != null
-          ? Text(error!)
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(error!),
+                TextButton(onPressed: _load, child: const Text('Thử lại')),
+              ],
+            )
           : preferences == null
           ? const Padding(
               padding: EdgeInsets.all(24),

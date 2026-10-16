@@ -438,7 +438,7 @@ void main() {
           find.byKey(const ValueKey('group-name')),
           'New category',
         );
-        await tester.tap(find.text('Áp dụng'));
+        await tester.tap(find.text('Lưu'));
         await tester.pumpAndSettle();
         expect(result!.categories, ['Existing', 'Other', 'New category']);
         expect(tester.takeException(), isNull);

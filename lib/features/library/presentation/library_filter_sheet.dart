@@ -315,6 +315,8 @@ class LibraryFilterSheet extends StatefulWidget {
     required this.onChanged,
     this.sources = const {},
     this.presetsBuilder,
+    this.libraryColumns,
+    this.onColumnsChanged,
   });
   final LibraryFilter value;
   final List<String> collections;
@@ -322,12 +324,15 @@ class LibraryFilterSheet extends StatefulWidget {
   final Map<String, String> sources;
   final Widget Function(LibraryFilter, ValueChanged<LibraryFilter>)?
   presetsBuilder;
+  final int? libraryColumns;
+  final ValueChanged<int>? onColumnsChanged;
   @override
   State<LibraryFilterSheet> createState() => _LibraryFilterSheetState();
 }
 
 class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
   late LibraryFilter filter = widget.value;
+  late int columns = widget.libraryColumns ?? 5;
   late final scanlatorController = TextEditingController(
     text: widget.value.scanlator,
   );
@@ -562,6 +567,27 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
                 ),
                 ListView(
                   children: [
+                    if (widget.onColumnsChanged != null) ...[
+                      ListTile(
+                        title: const Text('Số cột lưới'),
+                        trailing: Text('$columns'),
+                        subtitle: const Text(
+                          'Lưới nhỏ hiển thị thêm một cột, tối đa 8 cột.',
+                        ),
+                      ),
+                      Slider(
+                        key: const ValueKey('library-columns-slider'),
+                        value: columns.toDouble(),
+                        min: 2,
+                        max: 8,
+                        divisions: 6,
+                        label: '$columns cột',
+                        onChanged: (value) =>
+                            setState(() => columns = value.round()),
+                        onChangeEnd: (value) =>
+                            widget.onColumnsChanged!(value.round()),
+                      ),
+                    ],
                     for (final item in const {
                       LibraryDisplay.grid: 'Lưới có tên',
                       LibraryDisplay.list: 'Danh sách',

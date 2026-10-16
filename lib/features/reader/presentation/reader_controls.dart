@@ -193,3 +193,55 @@ class ReaderPageBadge extends StatelessWidget {
     ),
   );
 }
+
+class ReaderAutoScrollStatus extends StatelessWidget {
+  const ReaderAutoScrollStatus({
+    super.key,
+    required this.paused,
+    required this.mode,
+    required this.speed,
+    required this.pageSeconds,
+    required this.onToggle,
+  });
+  final bool paused;
+  final String mode;
+  final double speed, pageSeconds;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 340),
+      child: Material(
+        color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: .9),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 12, right: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  paused
+                      ? 'Đã tạm dừng tự cuộn'
+                      : mode == 'page'
+                      ? 'Tự cuộn · ${pageSeconds.round()} giây/trang'
+                      : 'Tự cuộn · ${speed.round()} px/giây',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+              IconButton(
+                key: const ValueKey('reader-auto-scroll-toggle'),
+                tooltip: paused ? 'Tiếp tục tự cuộn' : 'Tạm dừng tự cuộn',
+                onPressed: onToggle,
+                icon: Icon(
+                  paused ? CupertinoIcons.play_fill : CupertinoIcons.pause_fill,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}

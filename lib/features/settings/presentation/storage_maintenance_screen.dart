@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/format/vietnamese_format.dart';
 import '../../../core/platform/device_tools.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../downloads/presentation/download_queue_controller.dart';
+import '../../downloads/presentation/downloads_screen.dart';
 import '../../library/application/library_diagnostics.dart';
 import '../../library/application/library_update_report.dart';
 import '../../library/application/storage_maintenance.dart';
@@ -17,8 +17,10 @@ import '../../library/data/library_mutation.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../../privacy/application/app_lock_controller.dart';
 import '../../sources/application/source_maintenance.dart';
+import '../../sources/presentation/local_source_screen.dart';
 import '../settings_controller.dart';
 import 'settings_widgets.dart';
+import 'automatic_backup_screen.dart';
 
 class StorageMaintenanceScreen extends ConsumerStatefulWidget {
   const StorageMaintenanceScreen({super.key});
@@ -360,9 +362,25 @@ class _StorageMaintenanceState extends ConsumerState<StorageMaintenanceScreen> {
         ),
         const SettingsHeading('Thư viện'),
         SettingsRow(
+          title: 'Quản lý nội dung đã tải',
+          subtitle: 'Xem chương offline và chọn nội dung cần xóa',
+          icon: CupertinoIcons.arrow_down_circle,
+          onTap: busy
+              ? null
+              : () => openSettingsPage(context, const DownloadsScreen()),
+        ),
+        SettingsRow(
           title: 'Quản lý truyện cục bộ',
           subtitle: '${report?.localBooks ?? 0} truyện đã nhập',
           onTap: busy ? null : _localBooks,
+        ),
+        SettingsRow(
+          title: 'Quản lý bản sao lưu',
+          subtitle: 'Xem ngày, dung lượng, vị trí và thao tác từng bản',
+          icon: CupertinoIcons.archivebox,
+          onTap: busy
+              ? null
+              : () => openSettingsPage(context, const AutomaticBackupScreen()),
         ),
         SettingsRow(
           title: 'Làm mới ảnh bìa',
@@ -394,32 +412,8 @@ class _StorageMaintenanceState extends ConsumerState<StorageMaintenanceScreen> {
     );
   }
 
-  Future<void> _localBooks() async {
-    final books = (await ref.read(libraryRepositoryProvider).list())
-        .where((book) => book.engine == 'local')
-        .toList();
-    if (!mounted) return;
-    await Navigator.of(context).push<void>(
-      CupertinoPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('Truyện cục bộ')),
-          body: books.isEmpty
-              ? const Center(child: Text('Chưa có truyện cục bộ.'))
-              : ListView.builder(
-                  itemCount: books.length,
-                  itemBuilder: (_, index) => SettingsRow(
-                    title: books[index].title,
-                    subtitle:
-                        '${books[index].chapters.length} chương · Mở để đọc, xuất hoặc quản lý',
-                    onTap: () => context.push(
-                      '/book/${Uri.encodeComponent(books[index].id)}',
-                    ),
-                  ),
-                ),
-        ),
-      ),
-    );
-  }
+  Future<void> _localBooks() =>
+      openSettingsPage(context, const LocalSourceScreen());
 }
 
 String _formatBytes(int bytes) {

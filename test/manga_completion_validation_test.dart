@@ -58,7 +58,8 @@ void main() {
 
         client.response.complete(_ImageResponse(Uint8List(0), statusCode: 503));
         await _waitForImages(tester);
-        expect(find.textContaining('Không tải được ảnh.'), findsOneWidget);
+        expect(find.text('Không tải được ảnh'), findsOneWidget);
+        expect(find.text('Thử lại ảnh'), findsOneWidget);
         final saved = (await fixture.repo.find('manga'))!;
         expect(saved.chapters.single.read, isFalse);
         expect(saved.progress, closeTo(.999, .00001));
@@ -82,9 +83,15 @@ void main() {
       ], mode: 'vertical');
       client.response.complete(_ImageResponse(Uint8List(0), statusCode: 503));
       await _waitForImages(tester);
-      expect(find.textContaining('Không tải được ảnh.'), findsOneWidget);
+      expect(find.text('Không tải được ảnh'), findsOneWidget);
+      expect(find.text('Thử lại ảnh'), findsOneWidget);
       final scroll = tester
-          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .widget<SingleChildScrollView>(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is SingleChildScrollView && widget.controller != null,
+            ),
+          )
           .controller!;
       expect(scroll.position.maxScrollExtent, greaterThan(0));
       scroll.jumpTo(scroll.position.maxScrollExtent);
@@ -95,6 +102,52 @@ void main() {
       expect(saved.chapters.single.read, isFalse);
       await _dispose(tester, fixture.container);
       expect((await fixture.repo.find('manga'))!.chapters.single.read, isFalse);
+    },
+  );
+
+  testWidgets(
+    'a failed legacy image retry cannot adopt a restored same-ID chapter',
+    (tester) async {
+      final client = _PendingImageClient();
+      debugNetworkImageHttpClientProvider = () => client;
+      final fixture = await _open(tester, [
+        'https://images.invalid/legacy.png',
+      ], mode: 'vertical');
+      client.response.complete(_ImageResponse(Uint8List(0), statusCode: 503));
+      await _waitForImages(tester);
+      final original = (await fixture.repo.find('manga'))!;
+      await fixture.repo.clear();
+      await fixture.repo.save(
+        original.copyWith(
+          title: 'Restored same ID',
+          chapters: const [
+            BookChapter(
+              id: 'replacement-chapter',
+              title: 'Replacement chapter',
+              index: 0,
+              read: false,
+              downloaded: true,
+            ),
+          ],
+        ),
+      );
+      await fixture.repo.saveChapter(
+        'manga',
+        0,
+        ReaderContent(kind: 'manga', images: [await _png(tester)]),
+      );
+      final snapshot = (await fixture.repo.snapshot()).encode();
+      final requests = client.requestCount;
+      final retry = find.text('Thử lại ảnh');
+      await tester.ensureVisible(retry);
+      await tester.tap(retry);
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      expect(client.requestCount, requests);
+      expect((await fixture.repo.snapshot()).encode(), snapshot);
+      expect(find.text('Replacement chapter'), findsNothing);
+      expect(find.textContaining('khôi phục'), findsWidgets);
+      await _dispose(tester, fixture.container);
     },
   );
 
@@ -227,9 +280,11 @@ Future<void> _dispose(WidgetTester tester, ProviderContainer container) async {
 class _PendingImageClient implements HttpClient {
   final response = Completer<HttpClientResponse>();
   bool requested = false;
+  int requestCount = 0;
   @override
   Future<HttpClientRequest> getUrl(Uri uri) async {
     requested = true;
+    requestCount++;
     return _ImageRequest(response.future);
   }
 

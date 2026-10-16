@@ -239,7 +239,7 @@ void main() {
       expect(find.text('Manga source'), findsOneWidget);
       expect(find.byTooltip('Cấu hình Novel source'), findsNothing);
       expect(find.byTooltip('Cấu hình Manga source'), findsOneWidget);
-      await tester.tap(find.text('Phần mở rộng'));
+      await tester.tap(find.text('Tiện ích'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Thêm kho extension bằng link'));
       await tester.pumpAndSettle();
@@ -322,7 +322,7 @@ void main() {
       tester.view.physicalSize = const Size(320, 568);
       addTearDown(tester.view.reset);
       final router = await mountBrowse(tester, prefs, repo, indexes: indexes);
-      await tester.tap(find.text('Phần mở rộng'));
+      await tester.tap(find.text('Tiện ích'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Thêm kho extension bằng link'));
       await tester.pumpAndSettle();
@@ -381,15 +381,21 @@ void main() {
         client: MockClient((_) async => http.Response('[]', 200)),
       );
       final router = await mountBrowse(tester, prefs, repo, library: library);
-      await tester.tap(find.text('Di chuyển'));
+      await tester.tap(find.byTooltip('Công cụ nguồn'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chuyển nguồn'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('migration-origin-vbook:old')),
+      );
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('Chỉ ghép chương có số hoặc tên khớp duy nhất'),
+        find.text('Chọn truyện để tìm và đối chiếu kết quả ở nguồn mới.'),
         findsOneWidget,
       );
-      expect(find.text('Online book'), findsOneWidget);
+      expect(find.byKey(const ValueKey('migration-book-online')), findsOneWidget);
       expect(find.text('Local book'), findsNothing);
-      await tester.tap(find.text('Online book'));
+      await tester.tap(find.byKey(const ValueKey('migration-book-online')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Tìm ở nguồn khác'));
       await tester.pumpAndSettle();

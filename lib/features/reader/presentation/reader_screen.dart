@@ -23,6 +23,7 @@ import '../../library/domain/library_book.dart';
 import '../../library/domain/library_reading.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../../settings/settings_controller.dart';
+import '../../settings/presentation/log_diagnostics_screen.dart';
 import '../../sources/domain/catalogue.dart';
 import 'reader_settings_sheet.dart';
 import 'reader_controls.dart';
@@ -103,6 +104,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   String? requestedChapterId;
   double position = 0;
   bool loading = true, chrome = true, speaking = false, restoring = false;
+  bool autoScrollPaused = false;
   String? error;
   Timer? debounce;
   DateTime? started;
@@ -347,6 +349,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         final window = NativeMangaImageWindow(
           count: data.images.length,
           fetch: (i) async {
+            checkLibraryRevision(repository.replacementRevision, revision);
             final url = data.images[i];
             if (url.startsWith('data:')) {
               return SourceImageData(
@@ -354,7 +357,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                 mimeType: 'image/*',
               );
             }
-            return source.fetchImage(
+            final image = await source.fetchImage(
               vm.catalogue(latest),
               CatalogueChapter(
                 ref: chapter.id,
@@ -364,6 +367,8 @@ class _ReaderState extends ConsumerState<ReaderScreen>
               i,
               url,
             );
+            checkLibraryRevision(repository.replacementRevision, revision);
+            return image;
           },
         );
         nativeImages = window;
@@ -976,7 +981,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   }
 
   void applyOptions(ReaderOptions next) {
-    if ((next.autoScroll || holdingScroll) &&
+    if (((next.autoScroll && !autoScrollPaused) || holdingScroll) &&
         modalDepth == 0 &&
         lifecycle == AppLifecycleState.resumed &&
         !loading &&
@@ -1205,6 +1210,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         error: window.errorAt(index),
         loading: window.wants(index),
         onReady: (success) => imageReady(index, request, success: success),
+        onRetry: () => window.retry(index),
       );
       // Retained dimensions survive byte eviction from the five-page window,
       // so 100% pages keep their geometry when scrolled away and back.
@@ -1218,9 +1224,24 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     }
     Widget failed(Object error) {
       imageReady(index, request, success: false);
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text('Không tải được ảnh. ${userFacingError(error)}'),
+      final revision = loadedRevision;
+      final chapterId = book == null || book!.chapters.isEmpty
+          ? null
+          : book!.chapters[current].id;
+      return ReaderPageError(
+        error: error,
+        onRetry: revision == null || chapterId == null
+            ? null
+            : () => perform(context, () async {
+                if (!mounted || request != generation) return;
+                checkLibraryRevision(repository.replacementRevision, revision);
+                await load(
+                  current,
+                  resume: true,
+                  offset: position,
+                  chapterId: chapterId,
+                );
+              }),
       );
     }
 
@@ -1353,6 +1374,22 @@ class _ReaderState extends ConsumerState<ReaderScreen>
           }
         : theme.colorScheme.onSurface;
     final pageMargins = options.pageMargins(screenOrientation);
+    final displayBook = book ?? latest;
+    final displayChapter = displayBook == null || displayBook.chapters.isEmpty
+        ? null
+        : book != null
+        ? displayBook.chapters[current.clamp(
+            0,
+            displayBook.chapters.length - 1,
+          )]
+        : requestedChapterId != null
+        ? displayBook.chapters
+              .where((chapter) => chapter.id == requestedChapterId)
+              .firstOrNull
+        : displayBook.chapters[requestedChapter.clamp(
+            0,
+            displayBook.chapters.length - 1,
+          )];
     return PopScope(
       canPop: !options.disableBackSwipe || allowBack,
       child: ReaderKeyboardControls(
@@ -1390,14 +1427,14 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        book?.title ?? 'Đang mở',
+                        displayBook?.title ?? 'Đang mở',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 16),
                       ),
-                      if (book != null)
+                      if (displayChapter != null)
                         Text(
-                          book!.chapters[current].title,
+                          displayChapter.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -1468,14 +1505,31 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                         icon: Icons.wifi_off_rounded,
                         title: 'Chưa mở được chương',
                         description: error!,
-                        action: CupertinoButton.filled(
-                          onPressed: () => load(
-                            requestedChapter,
-                            resume: true,
-                            offset: requestedPosition,
-                            chapterId: requestedChapterId,
-                          ),
-                          child: const Text('Thử lại'),
+                        action: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CupertinoButton.filled(
+                              onPressed: () => load(
+                                requestedChapter,
+                                resume: true,
+                                offset: requestedPosition,
+                                chapterId: requestedChapterId,
+                              ),
+                              child: const Text('Thử lại'),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => readerModal(
+                                () => Navigator.of(context).push<void>(
+                                  CupertinoPageRoute<void>(
+                                    builder: (_) =>
+                                        const LogDiagnosticsScreen(),
+                                  ),
+                                ),
+                              ),
+                              icon: const Icon(CupertinoIcons.doc_text_search),
+                              label: const Text('Nhật ký và chẩn đoán'),
+                            ),
+                          ],
                         ),
                       )
                     : GestureDetector(
@@ -1634,6 +1688,27 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                         expectedRevision: loadedRevision,
                       ),
                     ),
+                  ),
+                ),
+              if (content != null &&
+                  !loading &&
+                  error == null &&
+                  options.autoScroll)
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  bottom:
+                      MediaQuery.viewPaddingOf(context).bottom +
+                      (chrome ? 146 : 48),
+                  child: ReaderAutoScrollStatus(
+                    paused: autoScrollPaused,
+                    mode: options.autoScrollMode,
+                    speed: options.autoScrollSpeed,
+                    pageSeconds: options.autoPageSeconds,
+                    onToggle: () {
+                      setState(() => autoScrollPaused = !autoScrollPaused);
+                      applyOptions(options);
+                    },
                   ),
                 ),
               if (!chrome &&

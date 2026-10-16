@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../domain/library_book.dart';
 import '../domain/library_duplicates.dart';
+import 'library_source_label.dart';
+import 'library_locations.dart';
 
 Future<void> showLibraryDuplicates(
   BuildContext context,
@@ -37,13 +39,13 @@ Future<void> showLibraryDuplicates(
               ListTile(
                 title: Text(book.title),
                 subtitle: Text(
-                  '${book.author}\n${book.engine == 'local' ? 'Truyện cục bộ' : '${book.engine} · ${book.sourceId}'} · ${book.chapters.length} chương',
+                  '${book.author}\n${librarySourceLabel(book)} · ${book.chapters.length} chương',
                 ),
                 isThreeLine: true,
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  context.push('/book/${book.id}');
+                  context.push(libraryBookLocation(book.id));
                 },
               ),
             const Divider(),

@@ -290,7 +290,7 @@ void main() {
           find.byKey(const ValueKey('category-name')),
           'Empty shelf',
         );
-        await tester.tap(find.text('Lưu'));
+        await tester.tap(find.text('Tạo'));
         await tester.pumpAndSettle();
         expect(find.text('Empty shelf'), findsOneWidget);
         expect(find.text('0 truyện'), findsOneWidget);

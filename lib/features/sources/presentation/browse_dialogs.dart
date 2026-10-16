@@ -4,6 +4,29 @@ import 'package:flutter/material.dart';
 import '../domain/catalogue.dart';
 import 'browse_widgets.dart';
 
+Future<bool> confirmRemoveRepository(BuildContext context, String name) async =>
+    await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text('Gỡ kho $name?'),
+        content: const Text(
+          'Kho sẽ không còn trong danh sách tiện ích có sẵn. Các tiện ích đã cài, truyện và nội dung đã tải vẫn được giữ.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Gỡ kho'),
+          ),
+        ],
+      ),
+    ) ??
+    false;
+
 Future<SourceEngine?> chooseExtensionEngine(BuildContext context) =>
     showCupertinoModalPopup<SourceEngine>(
       context: context,

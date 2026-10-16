@@ -31,6 +31,32 @@ class _ExtensionRepositoryState
       builder: (_) => _RepositoryUrlDialog(engine: engine),
     );
     if (url == null || url.isEmpty || !mounted) return;
+    final current = ref.read(extensionCatalogueProvider).value;
+    if (current?.any((index) => index.engine == engine && index.url == url) ==
+        true) {
+      message(context, 'Kho này đã có trong danh sách.');
+      return;
+    }
+    final accepted = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Thêm kho tiện ích?'),
+        content: Text(
+          '${sourceEngineName(engine)}\n\n$url\n\nỨng dụng sẽ kiểm tra chỉ mục trước khi lưu kho.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xác nhận'),
+          ),
+        ],
+      ),
+    );
+    if (accepted != true || !mounted) return;
     setState(() => adding = true);
     await perform(
       context,
@@ -119,12 +145,21 @@ class _ExtensionRepositoryState
             IconButton(
               tooltip: 'Gỡ kho khỏi danh sách',
               icon: const Icon(CupertinoIcons.trash, size: 22),
-              onPressed: () => perform(
-                context,
-                () => ref
-                    .read(extensionCatalogueProvider.notifier)
-                    .remove(index.identity),
-              ),
+              onPressed: () async {
+                if (!await confirmRemoveRepository(
+                      context,
+                      index.displayName,
+                    ) ||
+                    !mounted) {
+                  return;
+                }
+                await perform(
+                  context,
+                  () => ref
+                      .read(extensionCatalogueProvider.notifier)
+                      .remove(index.identity),
+                );
+              },
             ),
           ],
         ),
@@ -229,6 +264,19 @@ class _RepositoryUrlDialog extends StatefulWidget {
 
 class _RepositoryUrlDialogState extends State<_RepositoryUrlDialog> {
   final url = TextEditingController();
+  String? error;
+
+  void submit() {
+    try {
+      final normalized = ExtensionIndexRepository.normalize(
+        url.text.trim(),
+        widget.engine,
+      );
+      Navigator.pop(context, normalized.toString());
+    } catch (e) {
+      setState(() => error = userFacingError(e));
+    }
+  }
 
   @override
   void dispose() {
@@ -248,7 +296,11 @@ class _RepositoryUrlDialogState extends State<_RepositoryUrlDialog> {
             controller: url,
             keyboardType: TextInputType.url,
             autocorrect: false,
-            decoration: const InputDecoration(labelText: 'Link kho extension'),
+            onSubmitted: (_) => submit(),
+            decoration: InputDecoration(
+              labelText: 'Link kho extension',
+              errorText: error,
+            ),
           ),
           TextButton(
             onPressed: () => url.text = widget.engine == SourceEngine.tachimanga
@@ -273,10 +325,7 @@ class _RepositoryUrlDialogState extends State<_RepositoryUrlDialog> {
         onPressed: () => Navigator.pop(context),
         child: const Text('Hủy'),
       ),
-      TextButton(
-        onPressed: () => Navigator.pop(context, url.text.trim()),
-        child: const Text('Thêm'),
-      ),
+      TextButton(onPressed: submit, child: const Text('Thêm')),
     ],
   );
 }

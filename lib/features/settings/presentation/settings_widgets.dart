@@ -18,15 +18,22 @@ class SettingsPage extends StatelessWidget {
       title: Text(title),
       titleTextStyle: TextStyle(
         color: settingsLabel(context),
+        fontFamily: Theme.of(context).textTheme.titleLarge?.fontFamily,
         fontSize: 20,
         fontWeight: FontWeight.w400,
       ),
     ),
     body: SafeArea(
       top: false,
-      child: ListView(
-        padding: const EdgeInsets.only(top: 8, bottom: 24),
-        children: children,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: ListView(
+            padding: const EdgeInsets.only(top: 8, bottom: 24),
+            children: children,
+          ),
+        ),
       ),
     ),
   );

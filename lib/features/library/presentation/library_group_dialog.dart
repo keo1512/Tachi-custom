@@ -16,12 +16,16 @@ Future<LibraryGroupEdit?> showLibraryGroupDialog(
   required List<LibraryBook> books,
   required Set<String> selectedIds,
   required LibraryGrouping grouping,
+  List<String> availableCategories = const [],
+  bool initialMultipleCategories = false,
 }) => showDialog<LibraryGroupEdit>(
   context: context,
   builder: (_) => _LibraryGroupDialog(
     books: books,
     selectedIds: selectedIds,
     grouping: grouping,
+    availableCategories: availableCategories,
+    initialMultipleCategories: initialMultipleCategories,
   ),
 );
 
@@ -30,10 +34,14 @@ class _LibraryGroupDialog extends StatefulWidget {
     required this.books,
     required this.selectedIds,
     required this.grouping,
+    required this.availableCategories,
+    required this.initialMultipleCategories,
   });
   final List<LibraryBook> books;
   final Set<String> selectedIds;
   final LibraryGrouping grouping;
+  final List<String> availableCategories;
+  final bool initialMultipleCategories;
 
   @override
   State<_LibraryGroupDialog> createState() => _LibraryGroupDialogState();
@@ -42,8 +50,10 @@ class _LibraryGroupDialog extends StatefulWidget {
 class _LibraryGroupDialogState extends State<_LibraryGroupDialog> {
   final form = GlobalKey<FormState>();
   late LibraryGrouping grouping = widget.grouping;
-  late final controller = TextEditingController(text: commonValue());
-  bool multipleCategories = false;
+  late final controller = TextEditingController(
+    text: widget.initialMultipleCategories ? '' : commonValue(),
+  );
+  late bool multipleCategories = widget.initialMultipleCategories;
   late final selectedCategories = commonCategories();
 
   Set<String> commonCategories() {
@@ -80,10 +90,13 @@ class _LibraryGroupDialogState extends State<_LibraryGroupDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final names = libraryGroups(widget.books, grouping)
-        .where((group) => group.key != 'missing')
-        .map((group) => group.label)
-        .toList();
+    final names = <String>{
+      if (grouping == LibraryGrouping.collection) ...widget.availableCategories,
+      ...libraryGroups(
+        widget.books,
+        grouping,
+      ).where((group) => group.key != 'missing').map((group) => group.label),
+    }.toList();
     return AlertDialog(
       scrollable: true,
       title: Text('Gom nhóm ${widget.selectedIds.length} sách'),
@@ -107,7 +120,11 @@ class _LibraryGroupDialogState extends State<_LibraryGroupDialog> {
                   if (value == null) return;
                   setState(() {
                     grouping = value;
-                    controller.text = commonValue();
+                    controller.text =
+                        grouping == LibraryGrouping.collection &&
+                            multipleCategories
+                        ? ''
+                        : commonValue();
                   });
                 },
               ),
@@ -223,7 +240,7 @@ class _LibraryGroupDialogState extends State<_LibraryGroupDialog> {
             }
           },
           icon: const Icon(CupertinoIcons.check_mark, size: 16),
-          label: const Text('Áp dụng'),
+          label: Text(multipleCategories ? 'Lưu' : 'Áp dụng'),
         ),
       ],
     );

@@ -411,6 +411,54 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     }
   }
 
+  /// Mark chapters across titles once before applying the optional automatic
+  /// download deletion as one batch. Never chain self-invalidating revisions.
+  Future<void> markManyChaptersRead(
+    Map<String, Iterable<String>> chaptersByBook,
+    bool read, {
+    required int expectedRevision,
+  }) async {
+    final selections = {
+      for (final entry in chaptersByBook.entries)
+        entry.key: entry.value.toSet(),
+    };
+    final updated = <LibraryChapterDeletion>[];
+    await repository.mutateBooks(selections.keys, (book) {
+      final ids = selections[book.id]!;
+      if (!book.chapters
+          .map((chapter) => chapter.id)
+          .toSet()
+          .containsAll(ids)) {
+        throw StateError('Chương đã chọn không còn trong mục lục.');
+      }
+      final next = book.copyWith(
+        chapters: [
+          for (final (index, chapter) in book.chapters.indexed)
+            chapter.copyWith(
+              read: ids.contains(chapter.id)
+                  ? read
+                  : chapterIsRead(book, index),
+            ),
+        ],
+        completed: read ? book.completed : false,
+      );
+      updated.add(LibraryChapterDeletion(next, ids));
+      return next;
+    }, expectedRevision: expectedRevision);
+    try {
+      if (read && ref.mounted) {
+        await ref
+            .read(downloadDeletionProvider.notifier)
+            .deleteManyReadChapters(
+              updated,
+              expectedRevision: expectedRevision,
+            );
+      }
+    } finally {
+      if (ref.mounted) await refresh();
+    }
+  }
+
   Future<void> resetBookReading(String id, {int? expectedRevision}) async {
     await _mutateBook(
       id,

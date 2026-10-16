@@ -12,6 +12,7 @@ class LibraryBookTile extends StatelessWidget {
     super.key,
     required this.book,
     required this.filter,
+    this.coverImage,
     this.selected,
     this.onTap,
     this.onLongPress,
@@ -20,6 +21,7 @@ class LibraryBookTile extends StatelessWidget {
 
   final LibraryBook book;
   final LibraryFilter filter;
+  final ImageProvider<Object>? coverImage;
   final bool? selected;
   final VoidCallback? onTap, onLongPress, onResume;
 
@@ -51,6 +53,7 @@ class LibraryBookTile extends StatelessWidget {
                     BookCover(
                       title: book.title,
                       cover: book.cover,
+                      imageProvider: coverImage,
                       kind: book.kind,
                       unread: filter.showUnreadBadge
                           ? book.chapters.length - readChapterCount(book)

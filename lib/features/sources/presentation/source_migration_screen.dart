@@ -1,16 +1,19 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../../core/format/error_messages.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/format/error_messages.dart';
 import '../../../core/widgets/book_cover.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../../library/data/library_mutation.dart';
+import '../../library/presentation/library_source_label.dart';
+import '../../library/presentation/library_locations.dart';
 import '../domain/catalogue.dart';
 import '../domain/source_migration.dart';
 import '../application/migration_search.dart';
 import 'migration_source_selection.dart';
+import 'source_cover_image.dart';
 
 class SourceMigrationScreen extends ConsumerStatefulWidget {
   const SourceMigrationScreen({
@@ -182,6 +185,7 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
           builder: (_) =>
               _MigrationPreview(preview: preview, selectionOnly: true),
         );
+        checkLibraryRevision(repository.replacementRevision, revision);
         if (accepted == true && mounted && request == generation) {
           context.pop(preview);
         }
@@ -194,14 +198,19 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
         builder: (_) => _MigrationPreview(preview: preview),
       );
       if (replace == null || !mounted || request != generation) return;
+      checkLibraryRevision(repository.replacementRevision, revision);
       setState(() {
         busy = true;
         committing = true;
       });
-      final saved = await service.commit(preview, replaceOld: replace);
+      final saved = await service.commit(
+        preview,
+        replaceOld: replace,
+        expectedRevision: revision,
+      );
       if (!mounted || request != generation) return;
       await ref.read(libraryProvider.notifier).refresh();
-      if (mounted) context.replace('/book/${saved.id}');
+      if (mounted) context.replace(libraryBookLocation(saved.id));
     } catch (e) {
       if (mounted && request == generation) {
         setState(() => error = userFacingError(e));
@@ -303,6 +312,7 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
                       child: BookCover(
                         title: item.title,
                         cover: item.coverUrl,
+                        imageProvider: sourceCoverImage(ref, item),
                         kind: item.kind.name,
                       ),
                     ),
@@ -312,7 +322,7 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(
-                      '${selectedSources.where((source) => source.id == item.sourceId && source.engine == item.engine).firstOrNull?.name ?? item.sourceId}${item.author.isEmpty ? '' : ' · ${item.author}'}',
+                      '${sourceDisplayLabel(engine: item.engine.name, sourceName: selectedSources.where((source) => source.id == item.sourceId && source.engine == item.engine).firstOrNull?.name ?? '', sourceRef: item.ref)}${item.author.isEmpty ? '' : ' · ${item.author}'}',
                     ),
                     onTap: busy ? null : () => choose(item),
                   ),
@@ -330,15 +340,15 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
   );
 }
 
-class _MigrationPreview extends StatefulWidget {
+class _MigrationPreview extends ConsumerStatefulWidget {
   const _MigrationPreview({required this.preview, this.selectionOnly = false});
   final SourceMigrationPreview preview;
   final bool selectionOnly;
   @override
-  State<_MigrationPreview> createState() => _MigrationPreviewState();
+  ConsumerState<_MigrationPreview> createState() => _MigrationPreviewState();
 }
 
-class _MigrationPreviewState extends State<_MigrationPreview> {
+class _MigrationPreviewState extends ConsumerState<_MigrationPreview> {
   bool replace = false;
   @override
   Widget build(BuildContext context) {
@@ -355,7 +365,48 @@ class _MigrationPreviewState extends State<_MigrationPreview> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
-            Text('${value.original.title} → ${value.replacement.title}'),
+            for (final entry in [
+              ('Truyện gốc', value.original),
+              ('Truyện ở nguồn mới', value.replacement),
+            ])
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  key: ValueKey('migration-preview-${entry.$2.id}'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 48,
+                      height: 68,
+                      child: BookCover(
+                        title: entry.$2.title,
+                        cover: entry.$2.cover,
+                        imageProvider: libraryCoverImage(ref, entry.$2),
+                        kind: entry.$2.kind,
+                        showTitle: false,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.$1,
+                            style: Theme.of(context).textTheme.labelMedium,
+                          ),
+                          Text(
+                            entry.$2.title,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          Text(librarySourceLabel(entry.$2)),
+                          Text('${entry.$2.chapters.length} chương'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Text(
               '${value.replacement.chapters.length} chương ở nguồn mới; ghép được ${value.matches.length}/${value.original.chapters.length} chương cũ.',
             ),
@@ -390,6 +441,10 @@ class _MigrationPreviewState extends State<_MigrationPreview> {
                     ? 'Xác nhận thay thế'
                     : 'Chuyển và giữ truyện cũ',
               ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tìm lại kết quả'),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context),

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../domain/library_book.dart';
 import '../domain/reading_statistics.dart';
+import 'book_cover_viewer.dart';
+import 'library_source_label.dart';
 
 class BookDetailHeader extends StatelessWidget {
   const BookDetailHeader({
@@ -15,6 +17,7 @@ class BookDetailHeader extends StatelessWidget {
     required this.onFavorite,
     required this.onEditNotes,
     required this.onResume,
+    this.coverImage,
     this.onCopySource,
     this.onOpenWebsite,
     this.onSearchTitle,
@@ -23,6 +26,7 @@ class BookDetailHeader extends StatelessWidget {
   });
 
   final LibraryBook book;
+  final ImageProvider<Object>? coverImage;
   final bool descriptionExpanded;
   final VoidCallback onToggleDescription, onFavorite, onEditNotes;
   final VoidCallback? onResume, onCopySource, onOpenWebsite;
@@ -34,6 +38,7 @@ class BookDetailHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final secondary = theme.colorScheme.onSurface.withValues(alpha: .64);
     final background = theme.scaffoldBackgroundColor;
+    final image = coverImage ?? _coverProvider(book.cover);
     final chapter = book.chapters.isEmpty
         ? null
         : book.chapters[book.currentChapter.clamp(0, book.chapters.length - 1)];
@@ -47,6 +52,7 @@ class BookDetailHeader extends StatelessWidget {
                 child: _Artwork(
                   key: const ValueKey('book-detail-background'),
                   cover: book.cover,
+                  coverImage: image,
                 ),
               ),
             ),
@@ -81,14 +87,30 @@ class BookDetailHeader extends StatelessWidget {
                       SizedBox(
                         width: coverWidth,
                         height: coverWidth * 1.43,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Semantics(
-                            image: true,
-                            label: 'Bìa ${book.title}',
-                            child: _Artwork(
-                              key: const ValueKey('book-detail-cover'),
-                              cover: book.cover,
+                        child: GestureDetector(
+                          key: const ValueKey('book-detail-open-cover'),
+                          onTap: image == null
+                              ? null
+                              : () => Navigator.of(context).push<void>(
+                                  MaterialPageRoute(
+                                    fullscreenDialog: true,
+                                    builder: (_) => BookCoverViewer(
+                                      title: book.title,
+                                      image: image,
+                                    ),
+                                  ),
+                                ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Semantics(
+                              image: true,
+                              button: image != null,
+                              label: 'Bìa ${book.title}',
+                              child: _Artwork(
+                                key: const ValueKey('book-detail-cover'),
+                                cover: book.cover,
+                                coverImage: image,
+                              ),
                             ),
                           ),
                         ),
@@ -153,9 +175,7 @@ class BookDetailHeader extends StatelessWidget {
                             ],
                             const SizedBox(height: 7),
                             Text(
-                              book.engine == 'local'
-                                  ? 'Trong thiết bị'
-                                  : '${book.engine == 'vbook' ? 'vBook' : 'Tachimanga'}${book.sourceId.isEmpty ? '' : ' · ${book.sourceId}'}',
+                              librarySourceLabel(book),
                               style: TextStyle(color: secondary, fontSize: 12),
                             ),
                             const SizedBox(height: 6),
@@ -303,14 +323,16 @@ class BookDetailHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  book.description,
-                  key: const ValueKey('book-detail-description'),
-                  maxLines: descriptionExpanded ? null : 3,
-                  overflow: descriptionExpanded
-                      ? TextOverflow.visible
-                      : TextOverflow.fade,
-                  style: const TextStyle(fontSize: 14, height: 1.45),
+                SelectionArea(
+                  child: Text(
+                    book.description,
+                    key: const ValueKey('book-detail-description'),
+                    maxLines: descriptionExpanded ? null : 3,
+                    overflow: descriptionExpanded
+                        ? TextOverflow.visible
+                        : TextOverflow.fade,
+                    style: const TextStyle(fontSize: 14, height: 1.45),
+                  ),
                 ),
                 IconButton(
                   tooltip: descriptionExpanded
@@ -424,8 +446,9 @@ class BookDetailHeader extends StatelessWidget {
 }
 
 class _Artwork extends StatefulWidget {
-  const _Artwork({super.key, required this.cover});
+  const _Artwork({super.key, required this.cover, this.coverImage});
   final String cover;
+  final ImageProvider<Object>? coverImage;
 
   @override
   State<_Artwork> createState() => _ArtworkState();
@@ -443,28 +466,14 @@ class _ArtworkState extends State<_Artwork> {
   @override
   void didUpdateWidget(_Artwork oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.cover != widget.cover) resolveCover();
+    if (oldWidget.cover != widget.cover ||
+        oldWidget.coverImage != widget.coverImage) {
+      resolveCover();
+    }
   }
 
   void resolveCover() {
-    provider = null;
-    final cover = widget.cover;
-    try {
-      if (cover.startsWith('data:')) {
-        provider = MemoryImage(
-          base64Decode(cover.substring(cover.indexOf(',') + 1)),
-        );
-      } else {
-        final url = Uri.tryParse(cover);
-        if (url != null &&
-            ['http', 'https'].contains(url.scheme) &&
-            url.hasAuthority) {
-          provider = NetworkImage(cover);
-        }
-      }
-    } on FormatException {
-      provider = null;
-    }
+    provider = widget.coverImage ?? _coverProvider(widget.cover);
   }
 
   @override
@@ -486,4 +495,21 @@ class _ArtworkState extends State<_Artwork> {
       errorBuilder: (_, _, _) => fallback,
     );
   }
+}
+
+ImageProvider<Object>? _coverProvider(String cover) {
+  try {
+    if (cover.startsWith('data:')) {
+      return MemoryImage(base64Decode(cover.substring(cover.indexOf(',') + 1)));
+    }
+    final url = Uri.tryParse(cover);
+    if (url != null &&
+        ['http', 'https'].contains(url.scheme) &&
+        url.hasAuthority) {
+      return NetworkImage(cover);
+    }
+  } on FormatException {
+    return null;
+  }
+  return null;
 }

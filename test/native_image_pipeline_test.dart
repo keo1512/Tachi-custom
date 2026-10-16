@@ -187,6 +187,82 @@ void main() {
   });
 
   testWidgets(
+    'page retry fetches only the failed original page and keeps its neighbour',
+    (tester) async {
+      final source = _ImageSource()..failSecond = true;
+      final (container, _, book) = await setup(source);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(home: ReaderScreen(id: book.id)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(source.pages, [0, 1]);
+      expect(find.text('Không tải được ảnh'), findsOneWidget);
+      final retry = find.text('Thử lại ảnh');
+      await tester.ensureVisible(retry);
+      await tester.pumpAndSettle();
+      source.failSecond = false;
+      await tester.tap(retry);
+      // The page's double-tap zoom recognizer delays the first tap.
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      expect(source.pages, [0, 1, 1]);
+      expect(find.text('Không tải được ảnh'), findsNothing);
+      expect(find.byType(Image), findsNWidgets(2));
+      expect(
+        (await container.read(libraryRepositoryProvider).find(book.id))!
+            .chapters
+            .single
+            .downloaded,
+        false,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      container.dispose();
+    },
+  );
+
+  testWidgets(
+    'retry from a reader opened before restore cannot fetch the replacement library',
+    (tester) async {
+      final source = _ImageSource()..failSecond = true;
+      final (container, repo, book) = await setup(source);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(home: ReaderScreen(id: book.id)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(source.pages, [0, 1]);
+      await repo.clear();
+      await repo.save(book.copyWith(title: 'Replacement'));
+      final replacement = (await repo.snapshot()).encode();
+      source.failSecond = false;
+      final retry = find.text('Thử lại ảnh');
+      await tester.ensureVisible(retry);
+      await tester.tap(retry);
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      expect(source.pages, [0, 1]);
+      expect((await repo.snapshot()).encode(), replacement);
+      expect(
+        find.text(
+          'Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.',
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      container.dispose();
+    },
+  );
+
+  testWidgets(
     'reader renders engine bytes and does not reload them when toggling controls',
     (tester) async {
       final source = _ImageSource();

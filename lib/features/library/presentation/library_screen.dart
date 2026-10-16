@@ -14,12 +14,14 @@ import '../domain/library_categories.dart';
 import '../domain/library_search.dart';
 import '../domain/library_reading.dart';
 import '../application/library_bulk_actions.dart';
+import '../application/library_update_report.dart';
 import '../data/coordinated_preferences.dart';
 import '../data/library_mutation.dart';
 import '../../deep_links/application/deep_link_queue.dart';
 import '../../settings/settings_controller.dart';
 import '../../settings/presentation/settings_widgets.dart';
 import '../../sync/presentation/sync_screen.dart';
+import '../../sources/presentation/source_cover_image.dart';
 import 'library_filter_sheet.dart';
 import 'library_filter_controller.dart';
 import 'library_category_controller.dart';
@@ -35,6 +37,8 @@ import 'library_duplicate_sheet.dart';
 import 'library_filter_presets_bar.dart';
 import 'library_book_metadata.dart';
 import 'library_book_tile.dart';
+import 'library_source_label.dart';
+import 'library_locations.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -49,6 +53,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   LibraryGrouping get grouping => ref.read(libraryGroupingProvider);
   String? selectedGroup;
   bool selecting = false, groupingBusy = false;
+  int? selectionRevision;
   bool downloadingBusy = false, bulkBusy = false;
   bool get selectionBusy => groupingBusy || downloadingBusy || bulkBusy;
   final selectedIds = <String>{};
@@ -97,11 +102,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         0,
         latest.chapters.length - 1,
       );
-      final uri = Uri(
-        pathSegments: ['', 'read', latest.id],
-        queryParameters: {'chapterId': latest.chapters[chapter].id},
+      context.push<void>(
+        libraryReaderLocation(latest, chapter),
+        extra: LibraryLinkHandoff(revision),
       );
-      context.push<void>(uri.toString(), extra: LibraryLinkHandoff(revision));
     });
   }
 
@@ -152,8 +156,39 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   void toggleSelection(String id) => setState(() {
+    if (!selecting) {
+      selectionRevision = ref
+          .read(libraryRepositoryProvider)
+          .replacementRevision;
+    }
     selecting = true;
     if (!selectedIds.remove(id)) selectedIds.add(id);
+  });
+
+  void clearSearch() => setState(() {
+    query = '';
+    queryController.clear();
+  });
+
+  Future<void> resetFilters() => perform(context, () async {
+    await ref
+        .read(libraryFilterProvider.notifier)
+        .save(
+          filter.copyWith(
+            kind: 'all',
+            category: 'Tất cả',
+            source: 'all',
+            excludeSource: false,
+            scanlator: '',
+            unread: LibraryTriState.any,
+            downloaded: LibraryTriState.any,
+            bookmarked: LibraryTriState.any,
+            favorite: LibraryTriState.any,
+            completed: LibraryTriState.any,
+          ),
+          grouping: grouping,
+          groupKey: selectedGroup,
+        );
   });
 
   List<LibraryBook> visibleBooks(
@@ -185,6 +220,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       books: books,
       selectedIds: ids,
       grouping: grouping,
+      availableCategories: ref
+          .read(libraryCategoriesProvider)
+          .all(books)
+          .map((category) => category.name)
+          .toList(),
     );
     if (edit == null || !mounted) return;
     setState(() => groupingBusy = true);
@@ -212,6 +252,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       groupingBusy = false;
       if (count != null) {
         selecting = false;
+        selectionRevision = null;
         selectedIds.clear();
         selectedGroup = null;
         filter = filter.copyWith(category: 'Tất cả');
@@ -358,6 +399,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       bulkBusy = false;
       if (count != null && action == 'delete') {
         selecting = false;
+        selectionRevision = null;
         selectedIds.clear();
       }
     });
@@ -387,14 +429,23 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       constraints: const BoxConstraints(maxWidth: 600),
       builder: (_) => LibraryFilterSheet(
         value: filter,
+        libraryColumns: ref.read(settingsProvider).libraryColumns,
+        onColumnsChanged: (columns) => perform(context, () async {
+          if (preferences is CoordinatedPreferences &&
+              preferences.mutationGeneration != generation) {
+            throw StateError('Thiết lập đã được khôi phục. Hãy mở lại bộ lọc.');
+          }
+          await ref
+              .read(settingsProvider.notifier)
+              .update(libraryColumns: columns);
+        }),
         presetsBuilder: (filter, onApply) =>
             LibraryFilterPresetsBar(filter: filter, onApply: onApply),
         collections: collections,
         sources: {
           for (final book in books)
             if (book.engine != 'local')
-              '${book.engine}:${book.sourceId}':
-                  '${book.engine} · ${book.sourceId}',
+              '${book.engine}:${book.sourceId}': librarySourceLabel(book),
         },
         onChanged: (value) {
           if (mounted) {
@@ -422,7 +473,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final grouping = ref.watch(libraryGroupingProvider);
     filter = ref.watch(libraryFilterProvider).forGroup(grouping, selectedGroup);
     final books = library.value ?? <LibraryBook>[];
+    final updateProgress = ref.watch(libraryUpdateProgressProvider);
     final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    if (selecting && selectionRevision != revision) {
+      selecting = false;
+      selectionRevision = null;
+      selectedIds.clear();
+    }
     final groupOrders = ref.watch(libraryGroupOrderProvider);
     final groups = orderLibraryGroups(
       grouping == LibraryGrouping.collection
@@ -449,6 +506,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               : selecting
               ? () => setState(() {
                   selecting = false;
+                  selectionRevision = null;
                   selectedIds.clear();
                 })
               : () => openSettingsPage(context, const SyncScreen()),
@@ -599,11 +657,18 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 if (v == 'categories') {
                   openSettingsPage(context, const LibraryCategoriesScreen());
                 }
-                if (v == 'select') setState(() => selecting = true);
+                if (v == 'select') {
+                  setState(() {
+                    selecting = true;
+                    selectionRevision = revision;
+                  });
+                }
                 if (v == 'duplicates') showLibraryDuplicates(context, books);
                 if (v == 'random' && visible.isNotEmpty) {
                   context.push(
-                    '/book/${visible[Random().nextInt(visible.length)].id}',
+                    libraryBookLocation(
+                      visible[Random().nextInt(visible.length)].id,
+                    ),
                   );
                 }
                 if (v == 'reorder-groups') reorderGroups(groups);
@@ -688,6 +753,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           data: (books) {
             return Column(
               children: [
+                if (updateProgress != null)
+                  LinearProgressIndicator(
+                    value: updateProgress.fraction,
+                    semanticsLabel:
+                        'Đang kiểm tra chương mới: ${updateProgress.processedBooks}/${updateProgress.requestedBooks} truyện',
+                  ),
                 if (books.isNotEmpty && filter.showCategoryTabs)
                   LibraryGroupTabs(
                     groups: groups,
@@ -717,30 +788,71 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                   icon: CupertinoIcons.book,
                                   title: books.isEmpty
                                       ? 'Tủ sách của bạn'
+                                      : query.trim().isNotEmpty
+                                      ? 'Không có kết quả tìm kiếm'
+                                      : filter.active
+                                      ? 'Không có truyện phù hợp'
                                       : 'Chưa có sách trong kệ này',
                                   description: books.isEmpty
                                       ? 'Thêm manga, truyện chữ hoặc EPUB. Tiến độ và nội dung đã tải được giữ trong máy.'
+                                      : query.trim().isNotEmpty
+                                      ? 'Không tìm thấy truyện cho “${query.trim()}”.'
                                       : 'Đổi bộ lọc hoặc thêm sách vào kệ.',
                                   action: books.isEmpty
                                       ? FilledButton.icon(
-                                          onPressed: importing ? null : import,
-                                          icon: const Icon(CupertinoIcons.plus),
-                                          label: const Text(
-                                            'Nhập EPUB, TXT, CBZ',
+                                          onPressed: () =>
+                                              context.go('/browse'),
+                                          icon: const Icon(
+                                            CupertinoIcons.compass,
+                                          ),
+                                          label: const Text('Khám phá truyện'),
+                                        )
+                                      : query.trim().isNotEmpty
+                                      ? FilledButton(
+                                          onPressed: clearSearch,
+                                          child: const Text('Xóa tìm kiếm'),
+                                        )
+                                      : filter.active
+                                      ? FilledButton(
+                                          onPressed: resetFilters,
+                                          child: const Text('Đặt lại bộ lọc'),
+                                        )
+                                      : selectedGroup != null
+                                      ? FilledButton(
+                                          onPressed: () => setState(
+                                            () => selectedGroup = null,
+                                          ),
+                                          child: const Text(
+                                            'Xem tất cả truyện',
                                           ),
                                         )
                                       : null,
                                   secondary: books.isEmpty
-                                      ? TextButton(
-                                          onPressed: () => perform(
-                                            context,
-                                            () => ref
-                                                .read(libraryProvider.notifier)
-                                                .addExample(),
-                                          ),
-                                          child: const Text(
-                                            'Thử reader với sách mẫu',
-                                          ),
+                                      ? Wrap(
+                                          alignment: WrapAlignment.center,
+                                          children: [
+                                            TextButton(
+                                              onPressed: importing
+                                                  ? null
+                                                  : import,
+                                              child: const Text(
+                                                'Nhập EPUB, TXT, CBZ',
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => perform(
+                                                context,
+                                                () => ref
+                                                    .read(
+                                                      libraryProvider.notifier,
+                                                    )
+                                                    .addExample(),
+                                              ),
+                                              child: const Text(
+                                                'Thử reader với sách mẫu',
+                                              ),
+                                            ),
+                                          ],
                                         )
                                       : null,
                                 ),
@@ -771,6 +883,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                         child: BookCover(
                                           title: b.title,
                                           cover: b.cover,
+                                          imageProvider: libraryCoverImage(
+                                            ref,
+                                            b,
+                                          ),
                                           kind: b.kind,
                                           showTitle: false,
                                         ),
@@ -827,7 +943,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                           ? null
                                           : selecting
                                           ? () => toggleSelection(b.id)
-                                          : () => context.push('/book/${b.id}'),
+                                          : () => context.push(
+                                              libraryBookLocation(b.id),
+                                            ),
                                     );
                                   },
                                 ),
@@ -871,6 +989,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                   final b = visible[i];
                                   return LibraryBookTile(
                                     book: b,
+                                    coverImage: libraryCoverImage(ref, b),
                                     filter: filter,
                                     selected: selecting
                                         ? currentIds.contains(b.id)
@@ -882,7 +1001,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                         ? null
                                         : selecting
                                         ? () => toggleSelection(b.id)
-                                        : () => context.push('/book/${b.id}'),
+                                        : () => context.push(
+                                            libraryBookLocation(b.id),
+                                          ),
                                     onResume:
                                         b.chapters.isEmpty || selectionBusy
                                         ? null

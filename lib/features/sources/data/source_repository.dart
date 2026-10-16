@@ -30,6 +30,8 @@ class SourceRepository {
 
   bool usesNativeImageLoader(CatalogueBook book) => false;
 
+  bool usesNativeCoverLoader(CatalogueBook book) => false;
+
   bool canOpenNativeWebsite(CatalogueBook book) => false;
 
   bool supportsCatalogueBrowsing(SourceEngine engine) => false;
@@ -77,6 +79,9 @@ class SourceRepository {
     int page,
     String url,
   ) => throw UnsupportedError('This engine uses ordinary HTTP images.');
+
+  Future<SourceImageData> fetchCover(CatalogueBook book) =>
+      throw UnsupportedError('This engine uses ordinary HTTP covers.');
 
   bool _externalManga(CatalogueBook book) =>
       book.engine == SourceEngine.tachimanga &&

@@ -252,7 +252,11 @@ ConvertedBackup _readLibrary(Database db) {
       ),
     );
   }
-  return convertExternalLibrary('Tachimanga 5.0 (build511)', titles);
+  return convertExternalLibrary(
+    'Tachimanga 5.0 (build511)',
+    titles,
+    sourceOrderNewestFirst: false,
+  );
 }
 
 /// The optional TrackRecord columns were verified in the provided build511

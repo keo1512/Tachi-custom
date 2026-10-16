@@ -43,7 +43,7 @@ void main() {
     ]);
     final data = jsonDecode(utf8.decode(store.export())) as Map;
     expect(data['version'], 1);
-    expect(data['appVersion'], '1.0.0+9');
+    expect(data['appVersion'], '1.0.0+10');
     expect((data['entries'] as List).map((entry) => entry['type']), [
       'NoSuchMethodError',
       'NoClassDefFoundError',

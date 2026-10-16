@@ -201,7 +201,7 @@ class _LogDiagnosticsState extends ConsumerState<LogDiagnosticsScreen> {
       children: [
         const SettingsRow(
           title: 'TachiBooks',
-          subtitle: 'Phiên bản 1.0.0 · bản 8',
+          subtitle: 'Phiên bản ${DiagnosticLogStore.appVersion}',
           showChevron: false,
         ),
         const SettingsNote(

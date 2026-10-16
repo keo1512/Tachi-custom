@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../../library/data/library_repository.dart';
+import '../../library/data/library_mutation.dart';
 import '../../library/data/library_snapshot.dart';
 import '../../library/data/backup_validation.dart';
 import '../../library/domain/chapter_list_options.dart';
@@ -174,22 +175,23 @@ class SourceMigration {
   Future<LibraryBook> commit(
     SourceMigrationPreview preview, {
     bool replaceOld = false,
+    int? expectedRevision,
   }) async {
+    checkLibraryRevision(repository.replacementRevision, expectedRevision);
     final incoming = _snapshot(preview, replaceOld);
     BackupValidator(repository).validateSnapshot(incoming.encode());
     // Repository performs atomic fingerprint CAS and saves the hydrated recovery
     // image before writing. Edits/downloads since preview reject the entire commit.
-    await repository.replaceSnapshot(
-      incoming,
-      expectedFingerprint: preview.beforeFingerprint,
-    );
+    await _publish(incoming, preview.before, expectedRevision);
     return preview.replacement;
   }
 
   Future<List<LibraryBook>> commitBatch(
     List<SourceMigrationPreview> previews, {
     bool replaceOld = false,
+    int? expectedRevision,
   }) async {
+    checkLibraryRevision(repository.replacementRevision, expectedRevision);
     if (previews.isEmpty || previews.length > 10000) {
       throw const FormatException('Danh sách chuyển nguồn trống hoặc quá lớn.');
     }
@@ -216,11 +218,32 @@ class SourceMigration {
         LibrarySnapshotEntry(preview.replacement, const {}),
     ]);
     BackupValidator(repository).validateSnapshot(incoming.encode());
-    await repository.replaceSnapshot(
-      incoming,
-      expectedFingerprint: fingerprint,
-    );
+    await _publish(incoming, before, expectedRevision);
     return [for (final preview in previews) preview.replacement];
+  }
+
+  Future<void> _publish(
+    LibrarySnapshot incoming,
+    LibrarySnapshot before,
+    int? expectedRevision,
+  ) {
+    if (expectedRevision == null) {
+      return repository.replaceSnapshot(
+        incoming,
+        expectedFingerprint: before.fingerprint,
+      );
+    }
+    // The existing joint-restore hook runs inside the repository's publication
+    // boundary, after queued writes and staging. No configuration is changed.
+    return repository.replaceSnapshotWithConfiguration(
+      incoming,
+      expectedFingerprint: before.fingerprint,
+      recovery: before.encode(),
+      beforeCommit: () async => checkLibraryRevision(
+        repository.replacementRevision,
+        expectedRevision,
+      ),
+    );
   }
 
   LibrarySnapshot _snapshot(SourceMigrationPreview preview, bool replaceOld) =>

@@ -90,15 +90,16 @@ Uint8List tmbFixture({
         ['Ngoài thư viện', ''],
       );
     }
-    db.execute('INSERT INTO Chapter VALUES (10,1,?,?,1,0,4,1000,2,5)', [
+    // Verified build511 source_order follows oldest-to-newest chapters.
+    db.execute('INSERT INTO Chapter VALUES (10,1,?,?,1,0,4,1000,1,5)', [
       '/c1',
       'Chương 1',
     ]);
-    db.execute('INSERT INTO Chapter VALUES (11,1,?,?,0,1,2,2000,1,5)', [
+    db.execute('INSERT INTO Chapter VALUES (11,1,?,?,0,1,2,2000,2,5)', [
       '/c2',
       'Chương 2',
     ]);
-    db.execute('INSERT INTO Chapter VALUES (12,1,?,?,1,0,4,0,0,5)', [
+    db.execute('INSERT INTO Chapter VALUES (12,1,?,?,1,0,4,0,3,5)', [
       '/c3',
       'Chương 3',
     ]);

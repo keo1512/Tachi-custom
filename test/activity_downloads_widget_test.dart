@@ -166,6 +166,8 @@ void main() {
       expect(find.text(other.title), findsNothing);
       await tester.tap(find.byTooltip('Xóa lịch sử ${first.title}'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Xóa lịch sử'));
+      await tester.pumpAndSettle();
       final saved = (await repo.find(first.id))!;
       expect(saved.lastRead, isNull);
       expect(saved.currentChapter, first.currentChapter);

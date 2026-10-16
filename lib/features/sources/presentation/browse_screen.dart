@@ -9,9 +9,11 @@ import '../../settings/presentation/settings_widgets.dart';
 import '../../settings/settings_controller.dart';
 import '../../sync/presentation/sync_screen.dart';
 import '../domain/catalogue.dart';
+import '../domain/source_languages.dart';
 import 'browse_dialogs.dart';
 import 'browse_widgets.dart';
-import 'source_migration_view.dart';
+import 'source_migration_library_screen.dart';
+import 'local_source_screen.dart';
 import 'source_preferences_dialog.dart';
 import 'extension_catalogue_controller.dart';
 import 'extension_catalogue_view.dart';
@@ -111,6 +113,46 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
   Future<void> manageRepositories() async {
     await context.push('/repositories');
     if (mounted) await load();
+  }
+
+  Future<void> showTools() async {
+    final choice = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (ctx) => CupertinoActionSheet(
+        title: const Text('Công cụ nguồn'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'repositories'),
+            child: const Text('Kho tiện ích mở rộng'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'migration'),
+            child: const Text('Chuyển nguồn'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx, 'local'),
+            child: const Text('Truyện trong thiết bị'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Hủy'),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (choice == 'repositories') {
+      await manageRepositories();
+    } else if (choice == 'migration') {
+      await Navigator.of(context).push(
+        CupertinoPageRoute(
+          builder: (_) => const SourceMigrationLibraryScreen(),
+        ),
+      );
+    } else if (choice == 'local') {
+      await Navigator.of(context)
+          .push(CupertinoPageRoute(builder: (_) => const LocalSourceScreen()));
+    }
   }
 
   Future<void> add() async {
@@ -321,6 +363,29 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
 
   Future<void> showPackageInfo(CatalogueExtension package) async {
     final names = {for (final source in sources) source.identity: source.name};
+    if (package.installed && package.sourceIds.isNotEmpty) {
+      try {
+        final loaded = await ref
+            .read(sourceRepositoryProvider)
+            .listSources(package.engine);
+        for (final source in loaded) {
+          names[source.identity] = source.name;
+        }
+      } catch (_) {
+        // Package information remains available when one source cannot load.
+      }
+    }
+    if (!mounted) return;
+    final available = ref
+        .read(extensionCatalogueProvider)
+        .value
+        ?.expand((index) => index.entries)
+        .where((item) => sameExtension(item, package))
+        .firstOrNull;
+    final update =
+        available != null &&
+        package.installed &&
+        (compareExtensionVersions(available.version, package.version) ?? 0) > 0;
     await showCupertinoDialog<void>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
@@ -337,12 +402,32 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
                   : 'Chưa được engine xác nhận đã cài',
               if (package.loadError.isNotEmpty) package.loadError,
               if (package.sourceIds.isNotEmpty)
-                'Nguồn của gói:\n${package.sourceIds.map((id) => names['${package.engine.name}:$id'] ?? id).join('\n')}',
+                'Nguồn của gói:\n${package.sourceIds.map((id) => names['${package.engine.name}:$id'] ?? 'Nguồn chưa nạp').join('\n')}',
               ...package.limitations,
             ].join('\n\n'),
           ),
         ),
         actions: [
+          if (!package.installed || update)
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.pop(ctx);
+                install(update ? available : package);
+              },
+              child: Text(update ? 'Cập nhật' : 'Cài đặt'),
+            ),
+          if (package.installed &&
+              ref
+                  .read(sourceRepositoryProvider)
+                  .supportsExtensionRemoval(package.engine))
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(ctx);
+                uninstall(package);
+              },
+              child: const Text('Gỡ tiện ích'),
+            ),
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Đóng'),
@@ -428,6 +513,18 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
       setState(() => language = selected == '*' ? null : selected);
     }
   }
+
+  Future<void> resetFilters() => perform(context, () async {
+    await ref
+        .read(sourceLanguagesProvider.notifier)
+        .save(const SourceLanguages(null));
+    if (!mounted) return;
+    setState(() {
+      query = '';
+      language = null;
+      searching = false;
+    });
+  });
 
   List<Widget> connectionNotes() {
     return [
@@ -528,8 +625,30 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
           if (visible.isEmpty && !loading)
             BrowseNote(
               sources.isEmpty
-                  ? 'Chưa có nguồn. Mở Phần mở rộng để cài extension.'
+                  ? 'Chưa có nguồn. Mở Tiện ích để cài extension.'
                   : 'Không có nguồn phù hợp với bộ lọc.',
+            ),
+          if (visible.isEmpty && sources.isNotEmpty && !loading)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: resetFilters,
+                child: const Text('Hiện tất cả nguồn'),
+              ),
+            ),
+          if (sources.isEmpty && !loading)
+            Builder(
+              builder: (tabContext) => Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () {
+                    DefaultTabController.of(tabContext).animateTo(1);
+                    setState(() => tab = 1);
+                    load();
+                  },
+                  child: const Text('Mở Tiện ích'),
+                ),
+              ),
             ),
           const BrowseHeading('Trong thiết bị'),
           ListTile(
@@ -544,9 +663,8 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
               style: TextStyle(fontSize: 13),
             ),
             trailing: const Icon(CupertinoIcons.chevron_right, size: 16),
-            onTap: () => perform(
-              context,
-              () => ref.read(libraryProvider.notifier).importFiles(),
+            onTap: () => Navigator.of(context).push(
+              CupertinoPageRoute(builder: (_) => const LocalSourceScreen()),
             ),
           ),
         ],
@@ -578,6 +696,7 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
     onManage: manageRepositories,
     query: query,
     language: language,
+    onResetFilters: resetFilters,
     languages: ref.watch(sourceLanguagesProvider),
     onRefresh: load,
     adding: adding,
@@ -595,10 +714,10 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
       (_, _) => load(),
     );
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Duyệt'),
+          title: const Text('Khám phá'),
           leading: IconButton(
             tooltip: 'Đồng bộ',
             icon: const Icon(CupertinoIcons.cloud),
@@ -614,9 +733,9 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
               }),
             ),
             IconButton(
-              tooltip: 'Kho tiện ích mở rộng',
-              icon: const Icon(CupertinoIcons.plus),
-              onPressed: manageRepositories,
+              tooltip: 'Công cụ nguồn',
+              icon: const Icon(CupertinoIcons.ellipsis),
+              onPressed: showTools,
             ),
             IconButton(
               tooltip: 'Ngôn ngữ',
@@ -635,9 +754,8 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
             dividerColor: Colors.transparent,
             labelPadding: EdgeInsets.zero,
             tabs: const [
-              Tab(text: 'Nguồn'),
-              Tab(text: 'Phần mở rộng'),
-              Tab(text: 'Di chuyển'),
+              Tab(text: 'Nguồn truyện'),
+              Tab(text: 'Tiện ích'),
             ],
             onTap: (value) {
               if (value == tab) return;
@@ -648,7 +766,7 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
         ),
         body: Column(
           children: [
-            if (enabledLanguages != null && tab != 2)
+            if (enabledLanguages != null)
               ListTile(
                 dense: true,
                 title: Text('Đã bật ${enabledLanguages.length} ngôn ngữ'),
@@ -660,9 +778,7 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 child: CupertinoSearchTextField(
                   autofocus: true,
-                  placeholder: tab == 2
-                      ? 'Tên truyện trong thư viện'
-                      : 'Tên nguồn hoặc extension',
+                  placeholder: 'Tên nguồn hoặc tiện ích',
                   onChanged: (value) => setState(() => query = value),
                 ),
               ),
@@ -688,17 +804,7 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
                 ),
               ),
             if (loading) const LinearProgressIndicator(minHeight: 1),
-            Expanded(
-              child: tab == 0
-                  ? sourceList()
-                  : tab == 1
-                  ? extensionList()
-                  : SourceMigrationView(
-                      sources: sources,
-                      onOpenSource: openSource,
-                      query: query,
-                    ),
-            ),
+            Expanded(child: tab == 0 ? sourceList() : extensionList()),
           ],
         ),
       ),

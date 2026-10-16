@@ -31,10 +31,35 @@ Future<void> deleteDownloadedChapters(
   final revision =
       expectedRevision ??
       ref.read(libraryRepositoryProvider).replacementRevision;
+  final ids = chapterIds.toList(growable: false);
+  if (ids.isEmpty) return;
+  final confirmed = await showCupertinoDialog<bool>(
+    context: context,
+    builder: (ctx) => CupertinoAlertDialog(
+      title: const Text('Xóa nội dung đã tải?'),
+      content: Text(
+        'Xóa nội dung tải của ${ids.length} chương trong “${book.title}”. '
+        'Giữ truyện trong thư viện, tiến độ và dấu trang. '
+        'Chương có dấu trang được giữ khi bật bảo vệ.',
+      ),
+      actions: [
+        CupertinoDialogAction(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Hủy'),
+        ),
+        CupertinoDialogAction(
+          isDestructiveAction: true,
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Xóa nội dung'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
   await perform(context, () async {
     final deleted = await controller.deleteChapters(
       book,
-      chapterIds,
+      ids,
       expectedRevision: revision,
     );
     if (context.mounted) {

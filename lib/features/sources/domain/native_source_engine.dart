@@ -37,6 +37,12 @@ abstract interface class NativeImageEngine {
   );
 }
 
+/// Covers use the source's HTTP headers/client, independently of chapter image
+/// hooks. Optional so existing engines keep their ordinary image behavior.
+abstract interface class NativeCoverImageEngine {
+  Future<SourceImageData> fetchCover(CatalogueBook book);
+}
+
 abstract interface class NativeSourceBrowserEngine {
   Future<void> openWebsite(CatalogueBook book);
 }

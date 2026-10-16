@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -83,15 +82,19 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Duyệt').last);
       await tester.pumpAndSettle();
-      expect(find.text('Nguồn'), findsOneWidget);
-      expect(find.text('Phần mở rộng'), findsOneWidget);
-      expect(find.text('Di chuyển'), findsOneWidget);
+      expect(find.text('Nguồn truyện'), findsOneWidget);
+      expect(find.text('Tiện ích'), findsOneWidget);
+      expect(find.text('Di chuyển'), findsNothing);
       expect(find.text('Kết nối Tachimanga'), findsNothing);
       expect(find.text('Kết nối vBook'), findsNothing);
       expect(find.text('Nguồn trong thiết bị'), findsOneWidget);
-      await tester.tap(find.text('Phần mở rộng'));
+      await tester.tap(find.text('Tiện ích'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Kho tiện ích mở rộng'));
+      await tester.tap(find.byTooltip('Công cụ nguồn'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(CupertinoActionSheetAction, 'Kho tiện ích mở rộng'),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(ExtensionRepositoryScreen), findsOneWidget);
       await tester.tap(find.byTooltip('Thêm kho tiện ích mở rộng'));
@@ -105,14 +108,19 @@ void main() {
       await tester.tap(find.text('Thêm').last);
       await tester.pumpAndSettle();
       expect(find.byType(MoreScreen), findsOneWidget);
-      expect(find.text('Chung'), findsOneWidget);
       expect(find.text('Tài khoản'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Cài đặt'), 180);
+      await tester.tap(find.text('Cài đặt'));
+      await tester.pumpAndSettle();
+      expect(find.text('Chung'), findsOneWidget);
       await tester.tap(find.text('Chung'));
       await tester.pumpAndSettle();
       expect(find.byType(GeneralSettingsScreen), findsOneWidget);
       expect(find.text('Nhập sách & truyện'), findsOneWidget);
       expect(find.text('Máy chủ nguồn tùy chọn'), findsOneWidget);
       expect(find.text('Kết nối nguồn'), findsNothing);
+      await tester.tap(find.byTooltip('Quay lại'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Thư viện').last);

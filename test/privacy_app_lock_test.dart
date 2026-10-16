@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -350,6 +351,54 @@ void main() {
 
   for (final width in [320.0, 430.0]) {
     testWidgets(
+      'privacy settings expose incognito for new reader sessions at $width',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(width, 568);
+        addTearDown(tester.view.reset);
+        final storage = await SharedPreferences.getInstance();
+        final platform = FakePrivacyPlatform();
+        final container = ProviderContainer(
+          overrides: [
+            preferencesProvider.overrideWithValue(storage),
+            privacyPlatformProvider.overrideWithValue(platform),
+          ],
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: const TextScaler.linear(1.5)),
+                child: child!,
+              ),
+              home: const PrivacySettingsScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final toggle = find.byKey(const ValueKey('privacy-incognito'));
+        expect(tester.widget<CupertinoSwitch>(toggle).value, false);
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+        expect(container.read(settingsProvider).incognitoMode, true);
+        expect(storage.getBool('incognitoMode'), true);
+        expect(platform.configuredIncognito, true);
+        expect(
+          find.textContaining('Áp dụng cho phiên đọc mở mới'),
+          findsOneWidget,
+        );
+        await tester.tap(toggle);
+        await tester.pumpAndSettle();
+        expect(container.read(settingsProvider).incognitoMode, false);
+        expect(platform.configuredIncognito, false);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
       'privacy gate blocks content until authenticating and settings fit at $width',
       (tester) async {
         tester.view.devicePixelRatio = 1;
@@ -418,4 +467,58 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'landscape lock scrolls long errors and retry countdown without hiding unlock',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(568, 320);
+      addTearDown(tester.view.reset);
+      final storage = await SharedPreferences.getInstance();
+      await storage.setString(
+        AppLockController.preferenceKey,
+        jsonEncode(const PrivacyPreferences(enabled: true).toJson()),
+      );
+      final platform = FakePrivacyPlatform()..answer = false;
+      var now = DateTime(2026, 10, 16, 12);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            preferencesProvider.overrideWithValue(storage),
+            privacyPlatformProvider.overrideWithValue(platform),
+            privacyClockProvider.overrideWithValue(() => now),
+          ],
+          child: MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.5)),
+              child: child!,
+            ),
+            home: const PrivacyGate(
+              child: Scaffold(body: Text('Nội dung riêng tư')),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final unlock = find.byKey(const ValueKey('privacy-unlock'));
+      for (var attempt = 0; attempt < 3; attempt++) {
+        await tester.ensureVisible(unlock);
+        await tester.tap(unlock);
+        await tester.pumpAndSettle();
+      }
+      expect(find.textContaining('Thử lại sau'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      now = now.add(const Duration(seconds: 6));
+      await tester.pump(const Duration(seconds: 6));
+      await tester.ensureVisible(unlock);
+      expect(find.text('Mở khóa'), findsOneWidget);
+      platform.answer = true;
+      await tester.tap(unlock);
+      await tester.pumpAndSettle();
+      expect(find.text('TachiBooks đã khóa'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

@@ -6,15 +6,23 @@ import '../../../core/format/error_messages.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/book_cover.dart';
 import '../../library/domain/library_book.dart';
 import '../../library/presentation/library_view_model.dart';
+import '../../library/presentation/library_source_label.dart';
 import '../domain/catalogue.dart';
 import '../domain/source_migration.dart';
 import 'migration_source_selection.dart';
+import 'source_cover_image.dart';
 
 class BulkSourceMigrationScreen extends ConsumerStatefulWidget {
-  const BulkSourceMigrationScreen({super.key, required this.sources});
+  const BulkSourceMigrationScreen({
+    super.key,
+    required this.sources,
+    this.initialSource = '',
+  });
   final List<CatalogueSource> sources;
+  final String initialSource;
   @override
   ConsumerState<BulkSourceMigrationScreen> createState() =>
       _BulkMigrationState();
@@ -23,11 +31,16 @@ class BulkSourceMigrationScreen extends ConsumerStatefulWidget {
 class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
   final selected = <String>{};
   final previews = <String, SourceMigrationPreview>{};
-  String source = '', query = '';
+  late int selectionRevision = ref
+      .read(libraryRepositoryProvider)
+      .replacementRevision;
+  late String source = widget.initialSource;
+  String query = '';
   String? error;
   bool busy = false;
 
   Future<void> choose(LibraryBook book) async {
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
     final candidates = widget.sources
         .where(
           (s) =>
@@ -40,7 +53,12 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
       candidates: candidates,
       title: book.title,
     );
-    if (targets == null || targets.isEmpty || !mounted) return;
+    if (targets == null ||
+        targets.isEmpty ||
+        !mounted ||
+        revision != ref.read(libraryRepositoryProvider).replacementRevision) {
+      return;
+    }
     final preview = await context.push<SourceMigrationPreview>(
       '/migrate',
       extra: <String, Object>{
@@ -50,7 +68,9 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
         'selectionOnly': true,
       },
     );
-    if (preview != null && mounted) {
+    if (preview != null &&
+        mounted &&
+        revision == ref.read(libraryRepositoryProvider).replacementRevision) {
       try {
         final shared = previews.isEmpty
             ? preview
@@ -67,6 +87,11 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
   }
 
   Future<void> commit() async {
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    if (revision != selectionRevision) {
+      resetAfterReplacement(revision);
+      return;
+    }
     final ready = [
       for (final id in selected)
         if (previews[id] != null) previews[id]!,
@@ -98,21 +123,36 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
       ),
     );
     if (choice == null || !mounted) return;
+    final latestRevision = ref
+        .read(libraryRepositoryProvider)
+        .replacementRevision;
+    if (latestRevision != revision) {
+      resetAfterReplacement(latestRevision);
+      return;
+    }
     setState(() {
       busy = true;
       error = null;
     });
     try {
-      final completed = await SourceMigration(
-        ref.read(libraryRepositoryProvider),
-      ).commitBatch(ready, replaceOld: choice);
+      final repository = ref.read(libraryRepositoryProvider);
+      final completed = await SourceMigration(repository)
+          .commitBatch(ready, replaceOld: choice, expectedRevision: revision);
       if (!mounted) return;
-      await ref.read(libraryProvider.notifier).refresh();
-      if (!mounted) return;
+      final committedRevision = repository.replacementRevision;
+      if (committedRevision != revision + 1) {
+        resetAfterReplacement(committedRevision);
+        return;
+      }
       setState(() {
+        selectionRevision = committedRevision;
         selected.clear();
         previews.clear();
+        error = null;
       });
+      await ref.read(libraryProvider.notifier).refresh();
+      if (!mounted) return;
+      if (repository.replacementRevision != committedRevision) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Đã chuyển ${completed.length} truyện.')),
       );
@@ -125,13 +165,39 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
     }
   }
 
+  void resetAfterReplacement(int revision) {
+    setState(() {
+      selectionRevision = revision;
+      selected.clear();
+      previews.clear();
+      error = 'Thư viện đã được khôi phục. Hãy chọn và xem trước kết quả lại.';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final books = (ref.watch(libraryProvider).value ?? [])
         .where((b) => b.engine != 'local')
         .toList();
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    if (selectionRevision != revision) {
+      selectionRevision = revision;
+      selected.clear();
+      previews.clear();
+      error = 'Thư viện đã được khôi phục. Hãy chọn và xem trước kết quả lại.';
+    }
     final sourceKeys =
         books.map((b) => '${b.engine}:${b.sourceId}').toSet().toList()..sort();
+    final sourceLabels = {
+      for (final book in books)
+        '${book.engine}:${book.sourceId}': librarySourceLabel(book),
+      for (final known in widget.sources)
+        known.identity: sourceDisplayLabel(
+          engine: known.engine.name,
+          sourceName: known.name,
+          sourceRef: known.baseUrl,
+        ),
+    };
     final visible = books
         .where(
           (b) =>
@@ -146,111 +212,137 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
         appBar: AppBar(title: const Text('Chuyển nguồn hàng loạt')),
         body: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: sourceKeys.contains(source) ? source : '',
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Nguồn cũ'),
-                    items: [
-                      const DropdownMenuItem(
-                        value: '',
-                        child: Text('Tất cả nguồn'),
-                      ),
-                      for (final key in sourceKeys)
-                        DropdownMenuItem(
-                          value: key,
-                          child: Text(
-                            widget.sources
-                                    .where((s) => s.identity == key)
-                                    .firstOrNull
-                                    ?.name ??
-                                key,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                    onChanged: busy
-                        ? null
-                        : (v) => setState(() => source = v ?? ''),
-                  ),
-                  TextField(
-                    enabled: !busy,
-                    onChanged: (v) => setState(() => query = v),
-                    decoration: const InputDecoration(
-                      labelText: 'Tìm truyện cũ',
-                    ),
-                  ),
-                  Wrap(
-                    children: [
-                      TextButton(
-                        onPressed: busy
-                            ? null
-                            : () => setState(
-                                () => selected.addAll(visible.map((b) => b.id)),
-                              ),
-                        child: const Text('Chọn tất cả'),
-                      ),
-                      TextButton(
-                        onPressed: busy
-                            ? null
-                            : () => setState(() {
-                                selected.clear();
-                                previews.clear();
-                              }),
-                        child: const Text('Bỏ chọn'),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    'Đã xem trước $ready/${selected.length} truyện. Chọn từng truyện để tìm, kiểm tra và sửa kết quả ghép.',
-                  ),
-                  if (selected.isNotEmpty)
-                    LinearProgressIndicator(value: ready / selected.length),
-                  if (error != null)
-                    Text(
-                      error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                ],
-              ),
-            ),
             Expanded(
-              child: ListView(
-                children: [
-                  for (final book in visible)
-                    ListTile(
-                      leading: Checkbox(
-                        value: selected.contains(book.id),
-                        onChanged: busy
-                            ? null
-                            : (value) => setState(() {
-                                if (value == true) {
-                                  selected.add(book.id);
-                                } else {
-                                  selected.remove(book.id);
-                                  previews.remove(book.id);
-                                }
-                              }),
+              child: ListView.builder(
+                itemCount: visible.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          DropdownButtonFormField<String>(
+                            initialValue: sourceKeys.contains(source)
+                                ? source
+                                : '',
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Nguồn cũ',
+                            ),
+                            items: [
+                              const DropdownMenuItem(
+                                value: '',
+                                child: Text('Tất cả nguồn'),
+                              ),
+                              for (final key in sourceKeys)
+                                DropdownMenuItem(
+                                  value: key,
+                                  child: Text(
+                                    sourceLabels[key]!,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
+                            onChanged: busy
+                                ? null
+                                : (v) => setState(() => source = v ?? ''),
+                          ),
+                          TextField(
+                            enabled: !busy,
+                            onChanged: (v) => setState(() => query = v),
+                            decoration: const InputDecoration(
+                              labelText: 'Tìm truyện cũ',
+                            ),
+                          ),
+                          Wrap(
+                            children: [
+                              TextButton(
+                                onPressed: busy
+                                    ? null
+                                    : () => setState(
+                                        () => selected.addAll(
+                                          visible.map((b) => b.id),
+                                        ),
+                                      ),
+                                child: const Text('Chọn tất cả'),
+                              ),
+                              TextButton(
+                                onPressed: busy
+                                    ? null
+                                    : () => setState(() {
+                                        selected.clear();
+                                        previews.clear();
+                                      }),
+                                child: const Text('Bỏ chọn'),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'Đã xem trước $ready/${selected.length} truyện. Chọn từng truyện để tìm, kiểm tra và sửa kết quả ghép.',
+                          ),
+                          if (selected.isNotEmpty)
+                            LinearProgressIndicator(
+                              value: ready / selected.length,
+                            ),
+                          if (error != null)
+                            Text(
+                              error!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                        ],
                       ),
-                      title: Text(
-                        book.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    );
+                  }
+                  final book = visible[index - 1];
+                  return ListTile(
+                    key: ValueKey('migration-bulk-book-${book.id}'),
+                    leading: SizedBox(
+                      width: 86,
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: selected.contains(book.id),
+                            onChanged: busy
+                                ? null
+                                : (value) => setState(() {
+                                    if (value == true) {
+                                      selected.add(book.id);
+                                    } else {
+                                      selected.remove(book.id);
+                                      previews.remove(book.id);
+                                    }
+                                  }),
+                          ),
+                          SizedBox(
+                            width: 38,
+                            height: 54,
+                            child: BookCover(
+                              title: book.title,
+                              cover: book.cover,
+                              imageProvider: libraryCoverImage(ref, book),
+                              kind: book.kind,
+                              showTitle: false,
+                            ),
+                          ),
+                        ],
                       ),
-                      subtitle: Text(
-                        previews[book.id] == null
-                            ? 'Chưa chọn kết quả'
-                            : '→ ${previews[book.id]!.replacement.title}\nGhép ${previews[book.id]!.matches.length}/${book.chapters.length} chương',
-                      ),
-                      trailing: const Icon(CupertinoIcons.search),
-                      onTap: busy ? null : () => choose(book),
                     ),
-                ],
+                    title: Text(
+                      book.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      previews[book.id] == null
+                          ? '${librarySourceLabel(book)}\nChưa chọn kết quả'
+                          : '${librarySourceLabel(book)}\n→ ${previews[book.id]!.replacement.title}\nGhép ${previews[book.id]!.matches.length}/${book.chapters.length} chương',
+                    ),
+                    trailing: const Icon(CupertinoIcons.search),
+                    onTap: busy ? null : () => choose(book),
+                  );
+                },
               ),
             ),
             SafeArea(

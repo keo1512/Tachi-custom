@@ -24,7 +24,7 @@ const helpTopics = <HelpTopic>[
   ),
   HelpTopic(
     'Thêm kho và cài nguồn',
-    'Vào Duyệt → Phần mở rộng → nút thêm kho, nhập link index.pb/JSON của kho Tachiyomi hoặc link kho vBook phù hợp. Đợi danh sách tải xong, chọn nguồn và bấm Cài. Sau khi engine xác nhận cài thành công, mở nguồn trong tab Nguồn. Không cần kết nối máy chủ ngoài khi dùng engine trên thiết bị. Một extension có thể cần cấu hình tài khoản, địa chỉ thư viện hoặc trình duyệt theo yêu cầu của chính nguồn đó.',
+    'Trong Duyệt, mở Công cụ nguồn → Kho tiện ích mở rộng để thêm link index.pb/JSON của kho Tachiyomi hoặc link kho vBook phù hợp. Đợi danh sách tải xong, chọn tiện ích và bấm Cài. Sau khi engine xác nhận cài thành công, mở nguồn trong Nguồn truyện. Không cần kết nối máy chủ ngoài khi dùng engine trên thiết bị. Một extension có thể cần cấu hình tài khoản, địa chỉ thư viện hoặc trình duyệt theo yêu cầu của chính nguồn đó.',
   ),
   HelpTopic(
     'Tìm truyện và tùy chọn nguồn',
@@ -60,11 +60,11 @@ const helpTopics = <HelpTopic>[
   ),
   HelpTopic(
     'Chuyển nguồn truyện',
-    'Mở Di chuyển, chọn truyện và nguồn đích, tìm rồi chọn kết quả đúng. Xem trước ánh xạ chương trước khi xác nhận. Dữ liệu được giữ khi chương cũ và mới đối chiếu được rõ ràng; app từ chối ánh xạ mơ hồ. Mặc định giữ truyện nguồn cũ để tránh mất nội dung.',
+    'Vào Thêm → Chuyển nguồn, chọn truyện và nguồn đích, tìm rồi chọn kết quả đúng. Xem trước các chương đối chiếu được trước khi xác nhận. Cờ đã đọc và dấu trang được chuyển theo số chương hoặc tên chương duy nhất; vị trí bắt đầu ở đầu chương mới vì nội dung có thể khác. Bản nguồn mới cần tải lại nội dung. Mặc định giữ nguyên truyện và nội dung offline của nguồn cũ; app không tự ghép các chương mơ hồ.',
   ),
   HelpTopic(
     'Nhập truyện cục bộ',
-    'Nhập TXT, EPUB không DRM, CBZ/ZIP hoặc ảnh được thiết bị hỗ trợ. CBZ/ZIP có thể chứa thư mục chương, cover.jpg và details.json. File đầu vào được giữ nguyên. RAR/CBR và việc theo dõi một thư mục ngoài app chưa được hỗ trợ.',
+    'Nhập TXT, EPUB không DRM, CBZ/ZIP hoặc ảnh được thiết bị hỗ trợ. CBZ/ZIP có thể chứa thư mục chương, cover.jpg và details.json. Vào Thêm → Cài đặt → Chung → Truyện từ thư mục trên máy, chọn một thư mục qua Tệp để quét truyện, gồm RAR/CBR không mã hóa và không chia nhiều tập. Quét lại để nhận chương mới; chương đã sao chép vẫn được giữ khi file nguồn không còn. Quyền thư mục chỉ lưu trên thiết bị này và cần chọn lại khi chuyển máy. File đầu vào được giữ nguyên.',
   ),
   HelpTopic(
     'Sao lưu đầy đủ và khôi phục',
@@ -84,7 +84,7 @@ const helpTopics = <HelpTopic>[
   ),
   HelpTopic(
     'Chẩn đoán khi nội dung không mở được',
-    'Vào Chung → Chẩn đoán thư viện để kiểm tra cấu trúc, tệp đính kèm và giải mã ảnh offline. Nếu cờ đã tải không có nội dung, xem trước rồi sửa riêng trạng thái đó. Ảnh không đọc được có thể hỏng hoặc không được decoder thiết bị hỗ trợ; app không tự xóa. Có thể xuất báo cáo chỉ gồm số lượng, không chứa tên truyện hay tài khoản.',
+    'Vào Thêm → Cài đặt → Nâng cao và chẩn đoán → Kiểm tra thư viện để kiểm tra cấu trúc, tệp đính kèm và giải mã ảnh offline. Nếu cờ đã tải không có nội dung, xem trước rồi sửa riêng trạng thái đó. Ảnh không đọc được có thể hỏng hoặc không được decoder thiết bị hỗ trợ; app không tự xóa. Có thể xuất báo cáo chỉ gồm số lượng, không chứa tên truyện hay tài khoản.',
   ),
   HelpTopic(
     'Giao diện, bảo mật và phím điều khiển',

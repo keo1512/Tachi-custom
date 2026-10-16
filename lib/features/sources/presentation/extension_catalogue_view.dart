@@ -7,6 +7,7 @@ import '../data/extension_index.dart';
 import '../domain/catalogue.dart';
 import '../domain/source_languages.dart';
 import 'browse_widgets.dart';
+import 'browse_dialogs.dart';
 import 'extension_catalogue_controller.dart';
 import 'source_catalogue_tools.dart';
 
@@ -33,6 +34,7 @@ class ExtensionCatalogueView extends ConsumerWidget {
     this.onPackageInfo,
     this.onImportApk,
     this.importing = false,
+    this.onResetFilters,
   });
   final List<CatalogueExtension> installed;
   final Set<String> installing;
@@ -54,6 +56,7 @@ class ExtensionCatalogueView extends ConsumerWidget {
   final void Function(CatalogueExtension)? onPackageInfo;
   final VoidCallback? onImportApk;
   final bool importing;
+  final VoidCallback? onResetFilters;
 
   bool _visible(CatalogueExtension item) =>
       item.name.toLowerCase().contains(query.toLowerCase()) &&
@@ -141,28 +144,20 @@ class ExtensionCatalogueView extends ConsumerWidget {
                   : onImportApk,
             ),
           for (final error in engineErrors) BrowseNote(error),
-          ...indexes.when(
-            loading: () => const <Widget>[LinearProgressIndicator()],
-            error: (error, _) => <Widget>[BrowseNote(userFacingError(error))],
-            data: (values) => <Widget>[
-              if (values.isEmpty)
-                const BrowseNote(
-                  'Nhập link kho để xem danh sách, sau đó chọn extension cần cài.',
-                ),
-              for (final index in values) ..._index(context, ref, index),
-            ],
-          ),
           if (installed.any(
             (item) =>
                 (item.installed || item.loadError.isNotEmpty) && _visible(item),
           )) ...[
-            const BrowseHeading('Gói trên thiết bị'),
+            const BrowseHeading('Tiện ích trên thiết bị'),
             for (final item in installed.where(
               (item) =>
                   (item.installed || item.loadError.isNotEmpty) &&
                   _visible(item),
             ))
               ListTile(
+                onTap: onPackageInfo == null
+                    ? null
+                    : () => onPackageInfo!(item),
                 onLongPress: onPackageInfo == null
                     ? null
                     : () => onPackageInfo!(item),
@@ -186,6 +181,18 @@ class ExtensionCatalogueView extends ConsumerWidget {
                     : Text(item.installed ? 'Đã cài' : 'Lỗi nạp'),
               ),
           ],
+          const BrowseHeading('Có sẵn trong kho'),
+          ...indexes.when(
+            loading: () => const <Widget>[LinearProgressIndicator()],
+            error: (error, _) => <Widget>[BrowseNote(userFacingError(error))],
+            data: (values) => <Widget>[
+              if (values.isEmpty)
+                const BrowseNote(
+                  'Nhập link kho để xem danh sách, sau đó chọn extension cần cài.',
+                ),
+              for (final index in values) ..._index(context, ref, index),
+            ],
+          ),
         ],
       ),
     );
@@ -206,12 +213,18 @@ class ExtensionCatalogueView extends ConsumerWidget {
         trailing: IconButton(
           tooltip: 'Gỡ kho khỏi danh sách',
           icon: const Icon(CupertinoIcons.minus_circle),
-          onPressed: () => perform(
-            context,
-            () => ref
-                .read(extensionCatalogueProvider.notifier)
-                .remove(index.identity),
-          ),
+          onPressed: () async {
+            if (!await confirmRemoveRepository(context, index.displayName) ||
+                !context.mounted) {
+              return;
+            }
+            await perform(
+              context,
+              () => ref
+                  .read(extensionCatalogueProvider.notifier)
+                  .remove(index.identity),
+            );
+          },
         ),
       ),
       if (index.error.isNotEmpty)
@@ -220,6 +233,20 @@ class ExtensionCatalogueView extends ConsumerWidget {
           onRetry: () => perform(
             context,
             () => ref.read(extensionCatalogueProvider.notifier).refresh(),
+          ),
+        ),
+      if (index.error.isEmpty && index.entries.isEmpty)
+        const BrowseNote('Kho này chưa có tiện ích để cài đặt.'),
+      if (index.entries.isNotEmpty && entries.isEmpty)
+        const BrowseNote(
+          'Không có tiện ích phù hợp với từ khóa hoặc ngôn ngữ đã chọn.',
+        ),
+      if (index.entries.isNotEmpty && entries.isEmpty && onResetFilters != null)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: onResetFilters,
+            child: const Text('Hiện tất cả tiện ích'),
           ),
         ),
       for (final item in entries)
@@ -242,6 +269,7 @@ class ExtensionCatalogueView extends ConsumerWidget {
                 (match.version == item.version ||
                     (versionOrder != null && versionOrder >= 0));
             return ListTile(
+              onTap: onPackageInfo == null ? null : () => onPackageInfo!(item),
               onLongPress: onPackageInfo == null
                   ? null
                   : () => onPackageInfo!(item),

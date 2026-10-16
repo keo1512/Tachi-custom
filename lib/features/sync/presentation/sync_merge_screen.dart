@@ -8,6 +8,7 @@ import '../domain/sync_engine.dart';
 import '../../../core/format/vietnamese_format.dart';
 import '../../library/domain/library_book.dart';
 import '../../library/domain/library_reading.dart';
+import 'sync_setting_comparison.dart';
 
 class SyncMergeScreen extends ConsumerStatefulWidget {
   const SyncMergeScreen({super.key, required this.conflict});
@@ -83,6 +84,15 @@ class _SyncMergeScreenState extends ConsumerState<SyncMergeScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
+                if (item.key.startsWith('setting:')) ...[
+                  SyncSettingComparison(
+                    settingKey: item.key.substring(8),
+                    label: _settingLabel(item.key.substring(8)),
+                    local: item.local,
+                    remote: item.remote,
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 if (item.key.startsWith('book:')) ...[
                   Text('Trên máy: ${_bookSummary(item.local)}'),
                   Text('Trên cloud: ${_bookSummary(item.remote)}'),

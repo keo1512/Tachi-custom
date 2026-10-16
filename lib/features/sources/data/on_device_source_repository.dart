@@ -89,6 +89,18 @@ class OnDeviceSourceRepository extends SourceRepository
       runtimes[book.engine] is NativeImageEngine;
 
   @override
+  bool usesNativeCoverLoader(CatalogueBook book) =>
+      runtimes[book.engine] is NativeCoverImageEngine;
+
+  @override
+  Future<SourceImageData> fetchCover(CatalogueBook book) {
+    final runtime = runtimes[book.engine];
+    return runtime is NativeCoverImageEngine
+        ? (runtime as NativeCoverImageEngine).fetchCover(book)
+        : super.fetchCover(book);
+  }
+
+  @override
   bool canOpenNativeWebsite(CatalogueBook book) =>
       runtimes[book.engine] is NativeSourceBrowserEngine;
 

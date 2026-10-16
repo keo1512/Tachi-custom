@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,10 +7,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/feedback.dart';
 import '../../library/domain/library_book.dart';
+import '../../library/data/library_mutation.dart';
 import '../../library/presentation/activity_book_cover.dart';
 import '../../library/presentation/library_view_model.dart';
+import '../../library/presentation/library_locations.dart';
 import '../../settings/settings_controller.dart';
+import '../../sources/presentation/source_cover_image.dart';
 import 'download_actions.dart';
+import 'download_deletion_controller.dart';
 import 'download_queue_controller.dart';
 import 'download_queue_bulk_actions.dart';
 import 'download_settings_screen.dart';
@@ -194,16 +200,20 @@ class DownloadsScreen extends ConsumerWidget {
             ),
           Expanded(
             child: queue.tasks.isEmpty
-                ? const Center(
+                ? Center(
                     child: SingleChildScrollView(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Σ(ಠ_ಠ)', style: TextStyle(fontSize: 40)),
-                          SizedBox(height: 24),
-                          Text(
+                          const Text('Σ(ಠ_ಠ)', style: TextStyle(fontSize: 40)),
+                          const SizedBox(height: 24),
+                          const Text(
                             'Không có tải xuống',
                             style: TextStyle(fontSize: 15),
+                          ),
+                          TextButton(
+                            onPressed: () => context.go('/'),
+                            child: const Text('Chọn truyện trong thư viện'),
                           ),
                         ],
                       ),
@@ -254,7 +264,10 @@ class DownloadsScreen extends ConsumerWidget {
                         key: ValueKey('download-book-$bookId'),
                         leading: book == null
                             ? const Icon(CupertinoIcons.book)
-                            : ActivityBookCover(book),
+                            : ActivityBookCover(
+                                book,
+                                coverImage: libraryCoverImage(ref, book),
+                              ),
                         title: Text(
                           book?.title ?? 'Sách không còn trong thư viện',
                           maxLines: 1,
@@ -340,13 +353,25 @@ class DownloadsScreen extends ConsumerWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 14),
                               ),
-                              subtitle: Text(switch (task.status) {
-                                DownloadJobStatus.pending => 'Chờ tải',
-                                DownloadJobStatus.active => 'Đang tải',
-                                DownloadJobStatus.paused => 'Đã tạm dừng',
-                                DownloadJobStatus.failed =>
-                                  'Lỗi: ${userFacingError(task.error ?? 'Lỗi tải nguồn')}',
-                              }),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(switch (task.status) {
+                                    DownloadJobStatus.pending => 'Chờ tải',
+                                    DownloadJobStatus.active => 'Đang tải',
+                                    DownloadJobStatus.paused => 'Đã tạm dừng',
+                                    DownloadJobStatus.failed =>
+                                      'Lỗi: ${userFacingError(task.error ?? 'Lỗi tải nguồn')}',
+                                  }),
+                                  if (task.status == DownloadJobStatus.active)
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 6),
+                                      child: LinearProgressIndicator(
+                                        semanticsLabel: 'Đang tải chương',
+                                      ),
+                                    ),
+                                ],
+                              ),
                               leading: task.status == DownloadJobStatus.active
                                   ? const CupertinoActivityIndicator()
                                   : Icon(
@@ -388,10 +413,16 @@ class DownloadsScreen extends ConsumerWidget {
                                       value: 'resume',
                                       child: Text('Tiếp tục chương'),
                                     ),
-                                  const PopupMenuItem(
-                                    value: 'now',
-                                    child: Text('Tải chương ngay'),
-                                  ),
+                                  if (task.status == DownloadJobStatus.failed)
+                                    const PopupMenuItem(
+                                      value: 'now',
+                                      child: Text('Thử lại chương'),
+                                    ),
+                                  if (task.status != DownloadJobStatus.failed)
+                                    const PopupMenuItem(
+                                      value: 'now',
+                                      child: Text('Tải chương ngay'),
+                                    ),
                                   const PopupMenuItem(
                                     value: 'cancel',
                                     child: Text('Hủy tải chương'),
@@ -410,116 +441,295 @@ class DownloadsScreen extends ConsumerWidget {
   }
 }
 
-class RecentDownloadsScreen extends ConsumerWidget {
+class RecentDownloadsScreen extends ConsumerStatefulWidget {
   const RecentDownloadsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
-    appBar: AppBar(title: const Text('Gần đây đã tải xuống')),
-    body: ref
-        .watch(libraryProvider)
-        .when(
-          loading: () => const Center(child: CupertinoActivityIndicator()),
-          error: (error, _) => Center(child: Text(userFacingError(error))),
-          data: (books) {
-            final revision = ref
-                .read(libraryRepositoryProvider)
-                .replacementRevision;
-            final entries = <({LibraryBook book, int index})>[
-              for (final book in books)
-                for (var index = 0; index < book.chapters.length; index++)
-                  if (book.chapters[index].downloaded)
-                    (book: book, index: index),
-            ];
-            if (entries.isEmpty) {
-              return const Center(child: Text('Chưa có chương đã tải'));
-            }
-            // No download timestamp exists in LibraryBook. List available offline
-            // chapters without implying a fabricated most-recent ordering.
-            return ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              itemCount: entries.length,
-              itemBuilder: (context, index) {
-                final entry = entries[index];
-                return ListTile(
-                  leading: ActivityBookCover(entry.book),
-                  title: Text(
-                    entry.book.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 15),
-                  ),
-                  subtitle: Text(
-                    entry.book.chapters[entry.index].title,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  trailing:
-                      entry.book.engine == 'local' && entry.book.kind != 'manga'
-                      ? const Icon(
-                          CupertinoIcons.checkmark_circle_fill,
-                          size: 22,
-                        )
-                      : PopupMenuButton<String>(
-                          tooltip: entry.book.kind == 'manga'
-                              ? 'Xuất CBZ ${entry.book.chapters[entry.index].title}'
-                              : 'Tùy chọn ${entry.book.chapters[entry.index].title}',
-                          onSelected: (action) {
-                            if (action == 'delete' || action == 'delete-book') {
-                              deleteDownloadedChapters(
-                                context,
-                                ref,
-                                entry.book,
-                                action == 'delete'
-                                    ? [entry.book.chapters[entry.index].id]
-                                    : entry.book.chapters
-                                          .where(
-                                            (chapter) => chapter.downloaded,
-                                          )
-                                          .map((chapter) => chapter.id),
-                                expectedRevision: revision,
-                              );
-                            } else {
-                              saveDownloadedCbz(
-                                context,
-                                ref,
-                                entry.book,
-                                expectedRevision: revision,
-                                chapterIds: action == 'chapter'
-                                    ? [entry.book.chapters[entry.index].id]
-                                    : null,
-                              );
-                            }
-                          },
-                          itemBuilder: (_) => [
-                            if (entry.book.kind == 'manga') ...const [
-                              PopupMenuItem(
-                                value: 'chapter',
-                                child: Text('Xuất chương này thành CBZ'),
-                              ),
-                              PopupMenuItem(
-                                value: 'book',
-                                child: Text('Xuất các chương đã tải thành CBZ'),
-                              ),
-                            ],
-                            if (entry.book.engine != 'local') ...const [
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Xóa nội dung tải của chương'),
-                              ),
-                              PopupMenuItem(
-                                value: 'delete-book',
-                                child: Text('Xóa các chương đã tải của truyện'),
-                              ),
-                            ],
-                          ],
-                        ),
-                  onTap: () => context.push(
-                    '/read/${entry.book.id}?chapter=${entry.index}',
+  ConsumerState<RecentDownloadsScreen> createState() => _RecentDownloadsState();
+}
+
+class _RecentDownloadsState extends ConsumerState<RecentDownloadsScreen> {
+  bool selecting = false, busy = false;
+  int? selectionRevision;
+  final selected = <String>{};
+  String identity(LibraryBook book, int index) =>
+      jsonEncode([book.id, book.chapters[index].id]);
+
+  void toggle(LibraryBook book, int index) {
+    if (busy || book.engine == 'local') return;
+    setState(() {
+      if (!selecting) {
+        selecting = true;
+        selectionRevision = ref
+            .read(libraryRepositoryProvider)
+            .replacementRevision;
+      }
+      final value = identity(book, index);
+      if (!selected.add(value)) selected.remove(value);
+    });
+  }
+
+  void finish() => setState(() {
+    selecting = false;
+    selected.clear();
+    selectionRevision = null;
+  });
+
+  Future<void> deleteSelection(List<LibraryBook> books) async {
+    if (busy || selected.isEmpty || selectionRevision == null) return;
+    final revision = selectionRevision!;
+    final chosen = <LibraryBook, List<String>>{};
+    for (final book in books.where((book) => book.engine != 'local')) {
+      final ids = [
+        for (var i = 0; i < book.chapters.length; i++)
+          if (book.chapters[i].downloaded &&
+              selected.contains(identity(book, i)))
+            book.chapters[i].id,
+      ];
+      if (ids.isNotEmpty) chosen[book] = ids;
+    }
+    if (chosen.isEmpty) return;
+    final confirmed = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Xóa nội dung đã tải?'),
+        content: Text(
+          'Xóa nội dung của ${selected.length} chương đã chọn. Truyện vẫn ở trong thư viện; chương có dấu trang được giữ khi bật bảo vệ.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xóa đã chọn'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => busy = true);
+    final done = await perform(context, () async {
+      final controller = ref.read(downloadDeletionProvider.notifier);
+      return controller.deleteMany([
+        for (final entry in chosen.entries)
+          LibraryChapterDeletion(entry.key, entry.value),
+      ], expectedRevision: revision);
+    });
+    if (!mounted) return;
+    setState(() => busy = false);
+    if (done != null) {
+      finish();
+      message(context, 'Đã xóa nội dung tải của $done chương');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final library = ref.watch(libraryProvider);
+    final books = library.value ?? <LibraryBook>[];
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    if (selecting && selectionRevision != revision) {
+      selecting = false;
+      selected.clear();
+      selectionRevision = null;
+    }
+    final eligible = {
+      for (final book in books.where((book) => book.engine != 'local'))
+        for (var i = 0; i < book.chapters.length; i++)
+          if (book.chapters[i].downloaded) identity(book, i),
+    };
+    selected.retainAll(eligible);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          selecting ? '${selected.length} đã chọn' : 'Gần đây đã tải xuống',
+        ),
+        leading: selecting
+            ? IconButton(
+                tooltip: 'Hủy chọn nội dung tải',
+                onPressed: busy ? null : finish,
+                icon: const Icon(CupertinoIcons.xmark),
+              )
+            : null,
+        actions: [
+          if (selecting) ...[
+            IconButton(
+              tooltip: 'Chọn tất cả chương đã tải',
+              onPressed: busy
+                  ? null
+                  : () => setState(() => selected.addAll(eligible)),
+              icon: const Icon(CupertinoIcons.checkmark_circle),
+            ),
+            IconButton(
+              tooltip: 'Xóa nội dung đã chọn',
+              onPressed: busy || selected.isEmpty
+                  ? null
+                  : () => deleteSelection(books),
+              icon: const Icon(CupertinoIcons.trash),
+            ),
+          ] else
+            IconButton(
+              tooltip: 'Chọn chương đã tải',
+              onPressed: eligible.isEmpty
+                  ? null
+                  : () => setState(() {
+                      selecting = true;
+                      selectionRevision = revision;
+                    }),
+              icon: const Icon(CupertinoIcons.checkmark_circle),
+            ),
+        ],
+      ),
+      body: ref
+          .watch(libraryProvider)
+          .when(
+            loading: () => const Center(child: CupertinoActivityIndicator()),
+            error: (error, _) => EmptyPanel(
+              icon: CupertinoIcons.exclamationmark_circle,
+              title: 'Không mở được nội dung đã tải',
+              description: userFacingError(error),
+              action: TextButton(
+                onPressed: () => ref.invalidate(libraryProvider),
+                child: const Text('Thử lại'),
+              ),
+            ),
+            data: (books) {
+              final revision = ref
+                  .read(libraryRepositoryProvider)
+                  .replacementRevision;
+              final entries = <({LibraryBook book, int index})>[
+                for (final book in books)
+                  for (var index = 0; index < book.chapters.length; index++)
+                    if (book.chapters[index].downloaded)
+                      (book: book, index: index),
+              ];
+              if (entries.isEmpty) {
+                return EmptyPanel(
+                  icon: CupertinoIcons.arrow_down_circle,
+                  title: 'Chưa có chương đã tải',
+                  description: 'Mở truyện trong thư viện và chọn chương để đọc ngoại tuyến.',
+                  action: TextButton(
+                    onPressed: () => context.go('/'),
+                    child: const Text('Mở thư viện'),
                   ),
                 );
-              },
-            );
-          },
-        ),
-  );
+              }
+              // No download timestamp exists in LibraryBook. List available offline
+              // chapters without implying a fabricated most-recent ordering.
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                itemCount: entries.length,
+                itemBuilder: (context, index) {
+                  final entry = entries[index];
+                  return ListTile(
+                    leading: selecting && entry.book.engine != 'local'
+                        ? Checkbox(
+                            semanticLabel:
+                                'Chọn ${entry.book.title} ${entry.book.chapters[entry.index].title}',
+                            value: selected.contains(
+                              identity(entry.book, entry.index),
+                            ),
+                            onChanged: busy
+                                ? null
+                                : (_) => toggle(entry.book, entry.index),
+                          )
+                        : ActivityBookCover(
+                            entry.book,
+                            coverImage: libraryCoverImage(ref, entry.book),
+                          ),
+                    title: Text(
+                      entry.book.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                    subtitle: Text(
+                      entry.book.chapters[entry.index].title,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    trailing: selecting
+                        ? (entry.book.engine == 'local'
+                              ? const Icon(CupertinoIcons.lock)
+                              : null)
+                        : entry.book.engine == 'local' &&
+                              entry.book.kind != 'manga'
+                        ? const Icon(
+                            CupertinoIcons.checkmark_circle_fill,
+                            size: 22,
+                          )
+                        : PopupMenuButton<String>(
+                            tooltip: entry.book.kind == 'manga'
+                                ? 'Xuất CBZ ${entry.book.chapters[entry.index].title}'
+                                : 'Tùy chọn ${entry.book.chapters[entry.index].title}',
+                            onSelected: (action) {
+                              if (action == 'delete' ||
+                                  action == 'delete-book') {
+                                deleteDownloadedChapters(
+                                  context,
+                                  ref,
+                                  entry.book,
+                                  action == 'delete'
+                                      ? [entry.book.chapters[entry.index].id]
+                                      : entry.book.chapters
+                                            .where(
+                                              (chapter) => chapter.downloaded,
+                                            )
+                                            .map((chapter) => chapter.id),
+                                  expectedRevision: revision,
+                                );
+                              } else {
+                                saveDownloadedCbz(
+                                  context,
+                                  ref,
+                                  entry.book,
+                                  expectedRevision: revision,
+                                  chapterIds: action == 'chapter'
+                                      ? [entry.book.chapters[entry.index].id]
+                                      : null,
+                                );
+                              }
+                            },
+                            itemBuilder: (_) => [
+                              if (entry.book.kind == 'manga') ...const [
+                                PopupMenuItem(
+                                  value: 'chapter',
+                                  child: Text('Xuất chương này thành CBZ'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'book',
+                                  child: Text(
+                                    'Xuất các chương đã tải thành CBZ',
+                                  ),
+                                ),
+                              ],
+                              if (entry.book.engine != 'local') ...const [
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Xóa nội dung tải của chương'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete-book',
+                                  child: Text(
+                                    'Xóa các chương đã tải của truyện',
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                    onLongPress: () => toggle(entry.book, entry.index),
+                    onTap: () => selecting
+                        ? toggle(entry.book, entry.index)
+                        : context.push(
+                            libraryReaderLocation(entry.book, entry.index),
+                          ),
+                  );
+                },
+              );
+            },
+          ),
+    );
+  }
 }

@@ -114,6 +114,16 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Xóa các chương đã tải của truyện'));
         await tester.pumpAndSettle();
+        expect(find.text('Xóa nội dung đã tải?'), findsOneWidget);
+        await tester.tap(find.text('Hủy'));
+        await tester.pumpAndSettle();
+        expect((await repo.find(book.id))!.chapters.first.downloaded, true);
+        await tester.tap(find.byTooltip('Xuất CBZ Unprotected').first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Xóa các chương đã tải của truyện'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Xóa nội dung'));
+        await tester.pumpAndSettle();
         expect(
           (await repo.find(book.id))!.chapters
               .map((chapter) => chapter.downloaded),
@@ -163,6 +173,8 @@ void main() {
       );
       final restored = (await repo.snapshot()).encode();
       await tester.tap(find.text('Xóa nội dung tải của chương'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xóa nội dung'));
       await tester.pumpAndSettle();
       expect((await repo.snapshot()).encode(), restored);
       expect(find.textContaining('khôi phục'), findsOneWidget);

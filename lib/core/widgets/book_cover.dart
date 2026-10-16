@@ -7,6 +7,7 @@ class BookCover extends StatelessWidget {
     super.key,
     required this.title,
     this.cover = '',
+    this.imageProvider,
     this.kind = 'novel',
     this.unread = 0,
     this.downloaded = 0,
@@ -15,12 +16,14 @@ class BookCover extends StatelessWidget {
     this.local = false,
   });
   final String title, cover, kind;
+  final ImageProvider<Object>? imageProvider;
   final int unread, downloaded;
   final bool showDownloadedBadge;
   final bool showTitle, local;
 
   @override
   Widget build(BuildContext context) {
+    final image = imageProvider ?? _coverProvider(cover);
     final colors = <List<Color>>[
       [const Color(0xFF203A46), const Color(0xFF65817C)],
       [const Color(0xFFB98660), const Color(0xFF503D39)],
@@ -47,19 +50,34 @@ class BookCover extends StatelessWidget {
                   ),
                 ),
               ),
-              if (cover.startsWith('data:'))
-                Image.memory(
-                  base64Decode(cover.substring(cover.indexOf(',') + 1)),
+              if (image != null)
+                Image(
+                  image: image,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                )
-              else if (cover.isNotEmpty)
-                Image.network(
-                  cover,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  frameBuilder: (_, child, frame, synchronous) =>
+                      synchronous || frame != null
+                      ? child
+                      : const Center(
+                          child: Icon(
+                            Icons.hourglass_top,
+                            key: ValueKey('book-cover-loading'),
+                            size: 20,
+                            color: Colors.white70,
+                          ),
+                        ),
+                  errorBuilder: (_, _, _) => const Center(
+                    child: Tooltip(
+                      message: 'Chưa tải được ảnh bìa',
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        key: ValueKey('book-cover-error'),
+                        size: 24,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ),
                 ),
-              if (cover.isEmpty)
+              if (image == null)
                 LayoutBuilder(
                   builder: (_, constraints) => Padding(
                     padding: EdgeInsets.all(constraints.maxWidth * .12),
@@ -87,38 +105,40 @@ class BookCover extends StatelessWidget {
                   ),
                 ),
               ),
-              if(showTitle) Positioned(
-                left: 5,
-                right: 5,
-                bottom: 5,
-                child: Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+              if (showTitle)
+                Positioned(
+                  left: 5,
+                  right: 5,
+                  bottom: 5,
+                  child: Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
               Positioned(
                 left: 8,
                 right: 8,
                 top: 8,
-                child: Row(
-                  children: [
-                    if(local) const Icon(Icons.folder, size:16,color:Colors.white),
-                    if (unread > 0)
-                      Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: _Badge('$unread', const Color(0xFFAFC4FF)),
-                        ),
-                      ),
-                    if (showDownloadedBadge && downloaded > 0)
-                      _Badge('$downloaded', const Color(0xFF34835C)),
-                  ],
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.topLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (local)
+                        const Icon(Icons.folder, size: 16, color: Colors.white),
+                      if (unread > 0)
+                        _Badge('$unread', const Color(0xFFAFC4FF)),
+                      if (showDownloadedBadge && downloaded > 0)
+                        _Badge('$downloaded', const Color(0xFF34835C)),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -126,6 +146,18 @@ class BookCover extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+ImageProvider<Object>? _coverProvider(String cover) {
+  if (cover.isEmpty) return null;
+  try {
+    if (cover.startsWith('data:')) {
+      return MemoryImage(base64Decode(cover.substring(cover.indexOf(',') + 1)));
+    }
+    return NetworkImage(cover);
+  } on FormatException {
+    return null;
   }
 }
 

@@ -1,4 +1,5 @@
 import '../../../core/format/error_messages.dart';
+import '../../../core/diagnostics/diagnostic_log.dart';
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -37,6 +38,20 @@ class NativeMangaImageWindow extends ChangeNotifier {
   bool wants(int index) => _wanted.contains(index);
   double aspectRatioAt(int index) => _ratios[index] ?? 2 / 3;
   Size? pixelSizeAt(int index) => _sizes[index];
+
+  /// A failed page remains visible until the reader explicitly retries it.
+  /// Keep its measured dimensions and do not refetch neighbouring ready pages.
+  void retry(int index) {
+    if (_disposed || index < 0 || index >= count || !_wanted.contains(index)) {
+      return;
+    }
+    _errors.remove(index);
+    _images.remove(index);
+    _focus = index;
+    notifyListeners();
+    unawaited(_pump());
+  }
+
   @visibleForTesting
   int get retainedImages => _images.length;
   @visibleForTesting
@@ -112,7 +127,10 @@ class NativeMangaImageWindow extends ChangeNotifier {
             buffer.dispose();
           }
         } catch (error) {
-          if (!_disposed && _wanted.contains(index)) _errors[index] = error;
+          if (!_disposed && _wanted.contains(index)) {
+            _errors[index] = error;
+            DiagnosticLogs.error('source', error);
+          }
         }
         if (!_disposed && _wanted.contains(index)) notifyListeners();
       }
@@ -142,12 +160,14 @@ class NativeMangaPage extends StatefulWidget {
     required this.error,
     required this.loading,
     required this.onReady,
+    this.onRetry,
   });
   final NativeMangaImage? image;
   final double aspectRatio;
   final Object? error;
   final bool loading;
   final void Function(bool success) onReady;
+  final VoidCallback? onRetry;
 
   @override
   State<NativeMangaPage> createState() => _NativeMangaPageState();
@@ -184,11 +204,9 @@ class _NativeMangaPageState extends State<NativeMangaPage> {
           _evict();
           if (widget.error != null) {
             widget.onReady(false);
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(userFacingError(widget.error ?? 'Lỗi tải ảnh')),
-              ),
+            return ReaderPageError(
+              error: widget.error!,
+              onRetry: widget.onRetry,
             );
           }
           return widget.loading
@@ -230,10 +248,48 @@ class _NativeMangaPageState extends State<NativeMangaPage> {
           },
           errorBuilder: (_, error, _) {
             widget.onReady(false);
-            return Center(child: Text(userFacingError(error)));
+            return ReaderPageError(error: error, onRetry: widget.onRetry);
           },
         );
       },
+    ),
+  );
+}
+
+class ReaderPageError extends StatelessWidget {
+  const ReaderPageError({super.key, required this.error, this.onRetry});
+  final Object error;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.broken_image_outlined,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 8),
+            const Text('Không tải được ảnh', textAlign: TextAlign.center),
+            const SizedBox(height: 4),
+            Text(
+              userFacingError(error),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            if (onRetry != null)
+              TextButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Thử lại ảnh'),
+              ),
+          ],
+        ),
+      ),
     ),
   );
 }

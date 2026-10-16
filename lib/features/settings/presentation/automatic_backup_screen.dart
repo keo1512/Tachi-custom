@@ -9,6 +9,7 @@ import '../../library/application/backup_activity.dart';
 import '../../library/application/automatic_backup_status.dart';
 import '../../library/data/automatic_backup_store.dart';
 import '../../library/data/backup_directory_platform.dart';
+import '../../library/data/external_automatic_backup_store.dart';
 import '../../library/presentation/library_view_model.dart';
 import 'backup_settings_screen.dart';
 import 'backup_restore_progress_screen.dart';
@@ -23,8 +24,12 @@ class AutomaticBackupScreen extends ConsumerStatefulWidget {
 
 class _AutomaticBackupScreenState extends ConsumerState<AutomaticBackupScreen> {
   bool busy = false;
+  bool loading = true;
+  int loadGeneration = 0;
   List<StoredBackup> backups = [];
+  AutomaticBackupStore? listedStore;
   String? error;
+  ({int count, bool configuration})? completedRestore;
   @override
   void initState() {
     super.initState();
@@ -32,17 +37,26 @@ class _AutomaticBackupScreenState extends ConsumerState<AutomaticBackupScreen> {
   }
 
   Future<void> refresh() async {
+    final generation = ++loadGeneration;
+    if (mounted) setState(() => loading = true);
     try {
       final store = await ref.read(automaticBackupStoreProvider.future);
       final list = await store.list();
-      if (mounted) {
+      if (mounted && generation == loadGeneration) {
         setState(() {
           backups = list;
+          listedStore = store;
           error = null;
+          loading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() => error = userFacingError(e));
+      if (mounted && generation == loadGeneration) {
+        setState(() {
+          error = userFacingError(e);
+          loading = false;
+        });
+      }
     }
   }
 
@@ -70,6 +84,8 @@ class _AutomaticBackupScreenState extends ConsumerState<AutomaticBackupScreen> {
   });
 
   Future<void> actions(StoredBackup item) async {
+    final store = listedStore;
+    if (busy || loading || store == null) return;
     final action = await showCupertinoModalPopup<String>(
       context: context,
       builder: (ctx) => CupertinoActionSheet(
@@ -96,8 +112,37 @@ class _AutomaticBackupScreenState extends ConsumerState<AutomaticBackupScreen> {
       ),
     );
     if (action == null || !mounted) return;
+    if (action == 'delete') {
+      final accepted = await showCupertinoDialog<bool>(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Xóa bản sao lưu?'),
+          content: Text(
+            '${item.name}\nBản sao lưu này sẽ bị xóa. Thư viện đang dùng được giữ nguyên.',
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy'),
+            ),
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Xóa'),
+            ),
+          ],
+        ),
+      );
+      if (accepted != true || !mounted) return;
+    }
     await run(() async {
-      final store = await ref.read(automaticBackupStoreProvider.future);
+      final current = await ref.read(automaticBackupStoreProvider.future);
+      if (!mounted) return;
+      if (!identical(current, store)) {
+        throw StateError(
+          'Vị trí sao lưu đã thay đổi. Hãy mở lại bản sao lưu từ danh sách mới.',
+        );
+      }
       if (action == 'delete') {
         await store.delete(item.name);
         return;
@@ -129,14 +174,22 @@ class _AutomaticBackupScreenState extends ConsumerState<AutomaticBackupScreen> {
         restoreConfiguration: choice.restoreConfiguration,
       );
       if (count == null) return;
+      if (mounted) {
+        setState(() {
+          completedRestore = (
+            count: count,
+            configuration: choice.restoreConfiguration,
+          );
+        });
+      }
       await activity.restored();
       if (!mounted) return;
       await ref.read(libraryProvider.notifier).refresh();
       if (mounted) {
-        message(
+        showBackupRestoreCompleted(
           context,
-          'Đã khôi phục $count truyện mới'
-          '${choice.restoreConfiguration ? ' và cấu hình ứng dụng' : ''}.',
+          books: count,
+          restoredConfiguration: choice.restoreConfiguration,
         );
       }
     });
@@ -150,9 +203,20 @@ class _AutomaticBackupScreenState extends ConsumerState<AutomaticBackupScreen> {
     final destination = ref.watch(backupDirectoryLocationProvider);
     String date(DateTime? value) =>
         value == null ? 'Chưa có' : vietnameseDateTime(value);
+    final backupLocation = switch (listedStore) {
+      ExternalAutomaticBackupStore(:final location) =>
+        '${location.label} / TachiBooks-Backups',
+      _ => 'Trong dữ liệu ứng dụng',
+    };
     return SettingsPage(
       title: 'Sao lưu tự động',
       children: [
+        if (completedRestore case final completed?)
+          BackupRestoreCompleted(
+            books: completed.count,
+            restoredConfiguration: completed.configuration,
+            enabled: !busy,
+          ),
         const SettingsHeading('Vị trí sao lưu tự động'),
         destination.when(
           loading: () => const SettingsRow(title: 'Đang kiểm tra vị trí…'),
@@ -243,16 +307,29 @@ class _AutomaticBackupScreenState extends ConsumerState<AutomaticBackupScreen> {
                 }),
         ),
         const SettingsHeading('Các bản đã lưu'),
-        if (error != null) SettingsNote(error!),
-        if (backups.isEmpty && error == null)
+        if (loading)
+          const SettingsRow(
+            title: 'Đang đọc danh sách sao lưu…',
+            trailing: CupertinoActivityIndicator(),
+          ),
+        if (error != null) ...[
+          SettingsNote(error!),
+          SettingsRow(
+            title: 'Thử lại danh sách sao lưu',
+            icon: CupertinoIcons.refresh,
+            onTap: busy || loading ? null : refresh,
+          ),
+        ],
+        if (!loading && backups.isEmpty && error == null)
           const SettingsNote('Chưa có bản sao lưu tự động.'),
         for (final item in backups)
           SettingsRow(
-            title: vietnameseDateTime(item.createdAt),
+            title: item.name,
             subtitle:
-                '${vietnameseNumber(item.size / (1024 * 1024), decimals: 2)} MB',
+                '${vietnameseDateTime(item.createdAt)} · ${vietnameseNumber(item.size / (1024 * 1024), decimals: 2)} MB\n'
+                '$backupLocation',
             icon: CupertinoIcons.doc,
-            onTap: busy ? null : () => actions(item),
+            onTap: busy || loading ? null : () => actions(item),
           ),
       ],
     );

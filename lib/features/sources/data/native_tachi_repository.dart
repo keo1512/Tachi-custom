@@ -26,6 +26,7 @@ class NativeTachiRepository
     implements
         NativeSourceEngine,
         NativeImageEngine,
+        NativeCoverImageEngine,
         NativeSourceBrowserEngine,
         NativeSourceMaintenanceEngine,
         NativeCatalogueBrowserEngine,
@@ -577,6 +578,45 @@ class NativeTachiRepository
   }
 
   @override
+  Future<SourceImageData> fetchCover(CatalogueBook book) {
+    // Covers share the serial JNI image queue, with their timeout beginning
+    // only when the request reaches the native worker.
+    final result = _imageTail.then((_) => _fetchCover(book));
+    _imageTail = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return result;
+  }
+
+  Future<SourceImageData> _fetchCover(CatalogueBook book) async {
+    final url = Uri.tryParse(book.coverUrl);
+    final sourceId = BigInt.tryParse(book.sourceId);
+    if (book.engine != SourceEngine.tachimanga ||
+        sourceId == null ||
+        sourceId.toSigned(64) != sourceId ||
+        book.coverUrl.isEmpty ||
+        book.coverUrl.length > 16384 ||
+        book.coverUrl.contains(RegExp(r'[\x00-\x20\\]')) ||
+        url == null ||
+        (url.hasScheme && !['http', 'https'].contains(url.scheme)) ||
+        url.userInfo.isNotEmpty ||
+        url.hasFragment) {
+      throw const ApiException(
+        'Nguồn hoặc URL ảnh bìa không hợp lệ.',
+        code: 'INVALID_SOURCE_DATA',
+      );
+    }
+    // The native source resolves relative cover URLs using its own base URL.
+    // A legacy numeric book reference does not prevent loading its saved cover.
+    return _sourceImage(
+      _map(
+        await _call('cover', {'sourceId': book.sourceId, 'url': book.coverUrl}),
+      ),
+    );
+  }
+
+  @override
   Future<SourceImageData> fetchImage(
     CatalogueBook book,
     CatalogueChapter chapter,
@@ -621,6 +661,10 @@ class NativeTachiRepository
         'url': url,
       }),
     );
+    return _sourceImage(image);
+  }
+
+  SourceImageData _sourceImage(Map<String, dynamic> image) {
     final encoded = _text(image['base64'], required: true);
     if (encoded.length > 11184812) {
       throw const ApiException('Ảnh vượt giới hạn 8 MB.');

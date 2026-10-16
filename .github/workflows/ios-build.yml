@@ -6,7 +6,7 @@ on:
       build_number:
         description: Positive iOS build number
         required: true
-        default: '9'
+        default: '10'
         type: string
       native_smoke:
         description: Run native integration checks when UIKit or platform bridges change

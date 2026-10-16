@@ -206,7 +206,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'ZZZ_NO_MATCH');
       await tester.pumpAndSettle();
-      expect(find.text('Chưa có sách trong kệ này'), findsOneWidget);
+      expect(find.text('Không có kết quả tìm kiếm'), findsOneWidget);
       await _pull(tester, find.byType(CustomScrollView));
       await tester.pumpAndSettle();
       expect(

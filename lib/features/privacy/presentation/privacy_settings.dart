@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/feedback.dart';
+import '../../settings/settings_controller.dart';
 import '../../settings/presentation/settings_widgets.dart';
 import '../application/app_lock_controller.dart';
 import '../domain/privacy_preferences.dart';
@@ -25,8 +26,30 @@ class _PrivacySettingsState extends ConsumerState<PrivacySettings> {
   Widget build(BuildContext context) {
     final state = ref.watch(appLockProvider);
     final controller = ref.read(appLockProvider.notifier);
+    final incognito = ref.watch(
+      settingsProvider.select((settings) => settings.incognitoMode),
+    );
     return Column(
       children: [
+        const SettingsHeading('Riêng tư khi đọc'),
+        SettingsRow(
+          title: 'Chế độ ẩn danh',
+          subtitle: 'Không ghi tiến độ, lịch sử hoặc thời gian đọc mới',
+          icon: CupertinoIcons.eyeglasses,
+          trailing: CupertinoSwitch(
+            key: const ValueKey('privacy-incognito'),
+            value: incognito,
+            onChanged: (value) => perform(
+              context,
+              () => ref
+                  .read(settingsProvider.notifier)
+                  .update(incognitoMode: value),
+            ),
+          ),
+        ),
+        const SettingsNote(
+          'Áp dụng cho phiên đọc mở mới. Phiên đang mở giữ chế độ đã chọn khi bắt đầu; dấu trang bạn chủ động thêm vẫn được lưu.',
+        ),
         const SettingsHeading('Khóa ứng dụng'),
         SettingsRow(
           title: 'Khóa TachiBooks',
@@ -45,10 +68,12 @@ class _PrivacySettingsState extends ConsumerState<PrivacySettings> {
           'Dùng Face ID, Touch ID hoặc mã khóa iPhone/iPad. iOS quản lý mã khóa và giới hạn thử sai; TachiBooks không lưu mã thiết bị.',
         ),
         if (state.error != null) SettingsNote(state.error!),
-        SettingsRow(
-          title: 'Tự khóa sau khi rời ứng dụng',
-          trailing: DropdownButton<int>(
+        const SettingsRow(title: 'Tự khóa sau khi rời ứng dụng'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: DropdownButton<int>(
             key: const ValueKey('privacy-delay'),
+            isExpanded: true,
             value: state.preferences.delaySeconds,
             items: const [
               DropdownMenuItem(value: 0, child: Text('Ngay lập tức')),
@@ -63,11 +88,15 @@ class _PrivacySettingsState extends ConsumerState<PrivacySettings> {
             },
           ),
         ),
-        if (state.preferences.enabled)
-          SettingsRow(
+        if (state.preferences.enabled) ...[
+          const SettingsRow(
             title: 'Tự khóa khi không có thao tác',
             subtitle: 'Khi ứng dụng vẫn đang mở',
-            trailing: DropdownButton<int>(
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: DropdownButton<int>(
+              isExpanded: true,
               value: state.preferences.idleSeconds,
               items: const [
                 DropdownMenuItem(value: 0, child: Text('Tắt')),
@@ -82,6 +111,7 @@ class _PrivacySettingsState extends ConsumerState<PrivacySettings> {
               },
             ),
           ),
+        ],
         if (state.preferences.enabled)
           SettingsRow(
             title: 'Khóa ngay',

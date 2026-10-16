@@ -119,7 +119,8 @@ void main() {
       expect((await fixture.repo.find('paged'))!.chapters.first.read, false);
       client.response.complete(_ImageResponse(Uint8List(0), statusCode: 503));
       await _waitForImages(tester);
-      expect(find.textContaining('Không tải được ảnh.'), findsOneWidget);
+      expect(find.text('Không tải được ảnh'), findsOneWidget);
+      expect(find.text('Thử lại ảnh'), findsOneWidget);
       expect((await fixture.repo.find('paged'))!.chapters.first.read, false);
       await _dispose(tester, fixture.container);
       expect((await fixture.repo.find('paged'))!.chapters.first.read, false);

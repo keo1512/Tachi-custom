@@ -1,4 +1,9 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -9,8 +14,199 @@ import 'package:tachi_books/features/sources/data/source_repository.dart';
 import 'package:tachi_books/features/sources/domain/catalogue.dart';
 import 'package:tachi_books/features/sources/presentation/source_migration_screen.dart';
 import 'package:tachi_books/features/sources/presentation/source_bulk_migration_screen.dart';
+import 'package:tachi_books/core/widgets/book_cover.dart';
+import 'package:tachi_books/core/theme/app_theme.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    for (final family in [
+      'NotoSans',
+      'CupertinoSystemText',
+      'CupertinoSystemDisplay',
+    ]) {
+      await (FontLoader(
+        family,
+      )..addFont(rootBundle.load('assets/fonts/notosans.ttf'))).load();
+    }
+  });
+  for (final selectionOnly in [false, true]) {
+    testWidgets(
+      'same-byte restore while reviewing a ${selectionOnly ? 'bulk target' : 'single migration'} rejects confirmation',
+      (tester) async {
+        final repository = MemoryLibraryRepository();
+        await repository.save(
+          LibraryBook(
+            id: 'old',
+            title: 'Old title',
+            engine: 'vbook',
+            sourceId: 'old-source',
+            sourceRef: '/old',
+            chapters: const [
+              BookChapter(id: '/c', title: 'One', index: 0, number: 1),
+            ],
+          ),
+        );
+        final before = await repository.snapshot();
+        final sources = _Sources();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              libraryRepositoryProvider.overrideWithValue(repository),
+              sourceRepositoryProvider.overrideWithValue(sources),
+            ],
+            child: MaterialApp(
+              home: SourceMigrationScreen(
+                bookId: 'old',
+                source: _source,
+                selectionOnly: selectionOnly,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ListTile, 'New title').first);
+        await tester.pumpAndSettle();
+        await repository.replaceSnapshot(
+          before,
+          expectedFingerprint: before.fingerprint,
+        );
+        final action = find.text(
+          selectionOnly ? 'Dùng kết quả này' : 'Chuyển và giữ truyện cũ',
+        );
+        await tester.ensureVisible(action);
+        await tester.tap(action);
+        await tester.pumpAndSettle();
+        expect((await repository.snapshot()).fingerprint, before.fingerprint);
+        expect(
+          find.textContaining('Thư viện đã được thay đổi hoặc khôi phục'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        sources.dispose();
+      },
+    );
+  }
+  testWidgets(
+    'restore while confirming bulk migration invalidates a same-byte preview',
+    (tester) async {
+      final repository = MemoryLibraryRepository();
+      await repository.save(
+        LibraryBook(
+          id: 'old',
+          title: 'Old title',
+          engine: 'vbook',
+          sourceId: 'old-source',
+          sourceRef: '/old',
+          chapters: const [
+            BookChapter(id: '/c', title: 'One', index: 0, number: 1),
+          ],
+        ),
+      );
+      final before = await repository.snapshot();
+      final sources = _Sources();
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) =>
+                const BulkSourceMigrationScreen(sources: [_source]),
+          ),
+          GoRoute(
+            path: '/migrate',
+            builder: (_, _) => const SourceMigrationScreen(
+              bookId: 'old',
+              source: _source,
+              selectionOnly: true,
+            ),
+          ),
+        ],
+      );
+      late ProviderContainer container;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            libraryRepositoryProvider.overrideWithValue(repository),
+            sourceRepositoryProvider.overrideWithValue(sources),
+          ],
+          child: Builder(
+            builder: (context) {
+              container = ProviderScope.containerOf(context);
+              return MaterialApp.router(routerConfig: router);
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('migration-bulk-book-old')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('New source · vi'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'New title').first);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Dùng kết quả này'));
+      await tester.tap(find.text('Dùng kết quả này'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Xem lại và chuyển 1 truyện'));
+      await tester.pumpAndSettle();
+      await repository.replaceSnapshot(
+        before,
+        expectedFingerprint: before.fingerprint,
+      );
+      await container.read(libraryProvider.notifier).refresh();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chuyển và giữ truyện cũ'));
+      await tester.pumpAndSettle();
+      expect((await repository.snapshot()).fingerprint, before.fingerprint);
+      expect(find.text('Xem lại và chuyển 0 truyện'), findsOneWidget);
+      expect(
+        find.textContaining('Hãy chọn và xem trước kết quả lại'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      router.dispose();
+      sources.dispose();
+    },
+  );
+  testWidgets('bulk migration keeps distant covers lazy for a large library', (
+    tester,
+  ) async {
+    final repository = MemoryLibraryRepository();
+    for (var i = 0; i < 200; i++) {
+      await repository.save(
+        LibraryBook(
+          id: 'book-$i',
+          title: 'Truyện $i',
+          engine: 'vbook',
+          sourceId: 'old-source',
+          sourceRef: '/$i',
+        ),
+      );
+    }
+    final sources = _Sources();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          libraryRepositoryProvider.overrideWithValue(repository),
+          sourceRepositoryProvider.overrideWithValue(sources),
+        ],
+        child: const MaterialApp(
+          home: BulkSourceMigrationScreen(sources: [_source]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('migration-bulk-book-book-199')),
+      findsNothing,
+    );
+    expect(find.byType(BookCover).evaluate().length, lessThan(15));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    sources.dispose();
+  });
   testWidgets(
     'bulk review selects target without writing, then commits default keep-old action',
     (tester) async {
@@ -65,17 +261,56 @@ void main() {
             libraryRepositoryProvider.overrideWithValue(repository),
             sourceRepositoryProvider.overrideWithValue(sources),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: MaterialApp.router(
+            theme: appTheme(Brightness.dark),
+            routerConfig: router,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: const TextScaler.linear(1.5)),
+              child: RepaintBoundary(
+                key: const ValueKey('migration-preview-capture'),
+                child: child!,
+              ),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(ListTile, 'Old title').first);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('migration-bulk-book-old')),
+        140,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await Scrollable.ensureVisible(
+        tester.element(find.byKey(const ValueKey('migration-bulk-book-old'))),
+        alignment: .5,
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(BookCover), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('migration-bulk-book-old')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('New source · vi'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'New title').first);
       await tester.pumpAndSettle();
       expect(find.byType(CheckboxListTile), findsNothing);
+      expect(find.text('Truyện gốc'), findsOneWidget);
+      expect(find.text('Truyện ở nguồn mới'), findsOneWidget);
+      expect(find.text('1 chương'), findsNWidgets(2));
+      expect(find.text('Tìm lại kết quả'), findsOneWidget);
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(const ValueKey('migration-preview-capture')),
+      );
+      await tester.runAsync(() async {
+        final image = await boundary.toImage(pixelRatio: 1);
+        try {
+          final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+          await File('artifacts/ui-spec-migration-preview-320.png')
+              .writeAsBytes(bytes!.buffer.asUint8List());
+        } finally {
+          image.dispose();
+        }
+      });
       await tester.ensureVisible(find.text('Dùng kết quả này'));
       await tester.tap(find.text('Dùng kết quả này'));
       await tester.pumpAndSettle();
@@ -86,6 +321,10 @@ void main() {
       await tester.tap(find.text('Chuyển và giữ truyện cũ'));
       await tester.pumpAndSettle();
       expect((await repository.list()).length, 2);
+      expect(
+        find.textContaining('Hãy chọn và xem trước kết quả lại'),
+        findsNothing,
+      );
       expect(await repository.find('old'), isNotNull);
       expect(find.text('Đã chuyển 1 truyện.'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -154,6 +393,7 @@ void main() {
       await tester.tap(find.widgetWithText(ListTile, 'New title').first);
       await tester.pumpAndSettle();
       expect(find.text('Xem trước chuyển nguồn'), findsOneWidget);
+      expect(find.byType(BookCover), findsNWidgets(3));
       expect(
         tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
         isFalse,

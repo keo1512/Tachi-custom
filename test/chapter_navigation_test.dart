@@ -216,7 +216,7 @@ void main() {
   );
 
   testWidgets(
-    'long press marks the original chapter under filtering and reverse sort',
+    'chapter menu marks the original chapter under filtering and reverse sort',
     (tester) async {
       final fixture = await _openDetail(tester);
       await tester.tap(find.byTooltip('Lọc và sắp xếp chương'));
@@ -238,7 +238,7 @@ void main() {
         'Chương một: Mở đầu',
       ]);
 
-      await tester.longPress(find.text('Chương ba: Kết thúc'));
+      await tester.tap(find.byTooltip('Thao tác Chương ba: Kết thúc'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Hủy'));
       await tester.pumpAndSettle();
@@ -248,13 +248,13 @@ void main() {
             .toJson(),
         fixture.book.copyWith(chapterListPreferences: const {}).toJson(),
       );
-      await tester.longPress(find.text('Chương ba: Kết thúc'));
+      await tester.tap(find.byTooltip('Thao tác Chương ba: Kết thúc'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Đánh dấu đã đọc'));
       await tester.pumpAndSettle();
       await _expectReadAction(tester, fixture, 2, true);
 
-      await tester.longPress(find.text('Chương ba: Kết thúc'));
+      await tester.tap(find.byTooltip('Thao tác Chương ba: Kết thúc'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Đánh dấu chưa đọc'));
       await tester.pumpAndSettle();
@@ -294,7 +294,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Đóng'));
       await tester.pumpAndSettle();
-      await tester.longPress(find.text('Chương hai: Bước ngoặt'));
+      await tester.tap(find.byTooltip('Thao tác Chương hai: Bước ngoặt'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Đánh dấu chưa đọc'));
       await tester.pumpAndSettle();
@@ -324,7 +324,7 @@ void main() {
     'chapter action opened before a replacement cannot modify the new library',
     (tester) async {
       final fixture = await _openDetail(tester);
-      await tester.longPress(find.text('Chương ba: Kết thúc'));
+      await tester.tap(find.byTooltip('Thao tác Chương ba: Kết thúc'));
       await tester.pumpAndSettle();
       await fixture.repository.clear();
       final replacement = fixture.book.copyWith(

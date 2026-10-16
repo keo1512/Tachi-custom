@@ -76,6 +76,13 @@ void main() {
         await tester.pumpAndSettle();
         expect(await repository.readChapter('one', 0), isNull);
         expect(await repository.recoverySnapshot(), isNotNull);
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+        await _scrollTo(tester, find.text('Quản lý truyện cục bộ'));
+        await tester.tap(find.text('Quản lý truyện cục bộ'));
+        await tester.pumpAndSettle();
+        expect(find.text('Truyện trong thiết bị'), findsOneWidget);
+        expect(find.text('Nhập truyện từ Files'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       },

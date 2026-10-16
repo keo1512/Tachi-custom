@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/feedback.dart';
 import '../domain/library_categories.dart';
+import '../domain/library_grouping.dart';
 import 'library_category_controller.dart';
+import 'library_group_order_controller.dart';
 import 'library_view_model.dart';
 
 class LibraryCategoriesScreen extends ConsumerStatefulWidget {
@@ -40,8 +42,29 @@ class _LibraryCategoriesScreenState
             autofocus: true,
             maxLength: 256,
             decoration: const InputDecoration(labelText: 'Tên danh mục'),
-            validator: (value) =>
-                (value ?? '').trim().isEmpty ? 'Nhập tên danh mục.' : null,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            validator: (value) {
+              final candidate = (value ?? '').trim();
+              if (candidate.isEmpty) return 'Nhập tên danh mục.';
+              if (candidate != name &&
+                  const [
+                    'Tất cả',
+                    'Đang đọc',
+                    'Yêu thích',
+                    'Hoàn thành',
+                    'Mặc định',
+                  ].contains(candidate)) {
+                return 'Chọn tên khác các mục hệ thống.';
+              }
+              final categories = ref
+                  .read(libraryCategoriesProvider)
+                  .all(ref.read(libraryProvider).value ?? const []);
+              if (candidate != name &&
+                  categories.any((c) => c.name == candidate)) {
+                return 'Danh mục này đã tồn tại.';
+              }
+              return null;
+            },
             onFieldSubmitted: (_) {
               if (form.currentState!.validate()) {
                 Navigator.pop(ctx, controller.text.trim());
@@ -60,7 +83,7 @@ class _LibraryCategoriesScreenState
                 Navigator.pop(ctx, controller.text.trim());
               }
             },
-            child: const Text('Lưu'),
+            child: Text(name == null ? 'Tạo' : 'Lưu'),
           ),
         ],
       ),
@@ -150,10 +173,17 @@ class _LibraryCategoriesScreenState
   Widget build(BuildContext context) {
     final registry = ref.watch(libraryCategoriesProvider);
     final books = ref.watch(libraryProvider).value ?? const [];
-    final categories = registry.all(books);
+    final orderedGroups = orderLibraryGroups(
+      libraryCategoryGroups(books, registry),
+      ref.watch(libraryGroupOrderProvider)[LibraryGrouping.collection.name] ??
+          const [],
+    );
+    final categories = [
+      for (final group in orderedGroups) registry.policyFor(group.label),
+    ];
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Danh mục thư viện'),
+        title: const Text('Quản lý danh mục'),
         actions: [
           IconButton(
             tooltip: 'Tạo danh mục',
@@ -162,90 +192,117 @@ class _LibraryCategoriesScreenState
           ),
         ],
       ),
-      body: ListView(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              'Một truyện có thể thuộc nhiều danh mục. Danh mục mặc định áp dụng cho truyện mới; truyện hiện có giữ nguyên. Loại trừ được ưu tiên khi một truyện thuộc cả danh mục cho phép và loại trừ.',
-            ),
+      body: ReorderableListView.builder(
+        buildDefaultDragHandles: false,
+        header: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'Giữ tay nắm và kéo để đổi thứ tự danh mục. Một truyện có thể thuộc nhiều danh mục. Danh mục mặc định áp dụng cho truyện mới; truyện hiện có giữ nguyên. Loại trừ được ưu tiên khi một truyện thuộc cả danh mục cho phép và loại trừ.',
           ),
-          for (final category in categories)
-            ExpansionTile(
-              key: ValueKey('category-settings-${category.name}'),
-              title: Text(category.name),
-              subtitle: Text(
-                '${books.where((book) => book.categories.contains(category.name)).length} truyện',
+        ),
+        itemCount: categories.length,
+        onReorderItem: (oldIndex, newIndex) {
+          if (busy) return;
+          final order = orderedGroups.map((group) => group.key).toList();
+          order.insert(newIndex, order.removeAt(oldIndex));
+          change(() async {
+            await ref
+                .read(libraryGroupOrderProvider.notifier)
+                .setOrder(LibraryGrouping.collection, order);
+            return null;
+          });
+        },
+        itemBuilder: (context, index) {
+          final category = categories[index];
+          return ExpansionTile(
+            key: ValueKey('category-settings-${category.name}'),
+            leading: ReorderableDelayedDragStartListener(
+              index: index,
+              enabled: !busy,
+              child: Tooltip(
+                message: 'Kéo để đổi thứ tự ${category.name}',
+                child: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Icon(CupertinoIcons.line_horizontal_3),
+                ),
               ),
-              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              children: [
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Mặc định khi thêm truyện'),
-                  value: registry.defaultCategories.contains(category.name),
-                  onChanged: busy
-                      ? null
-                      : (value) => change(() async {
-                          final selected = registry.defaultCategories.toSet();
-                          if (value == true) {
-                            selected.add(category.name);
-                          } else {
-                            selected.remove(category.name);
-                          }
-                          await ref
-                              .read(libraryCategoriesProvider.notifier)
-                              .setDefaults(selected);
-                          return null;
-                        }),
-                ),
-                policy(
-                  'Cập nhật tự động',
-                  category.update,
-                  busy
-                      ? null
-                      : (value) => change(() async {
-                          await ref
-                              .read(libraryCategoriesProvider.notifier)
-                              .setPolicy(category.name, update: value);
-                          return null;
-                        }),
-                ),
-                const SizedBox(height: 16),
-                policy(
-                  'Tự tải chương mới',
-                  category.download,
-                  busy
-                      ? null
-                      : (value) => change(() async {
-                          await ref
-                              .read(libraryCategoriesProvider.notifier)
-                              .setPolicy(category.name, download: value);
-                          return null;
-                        }),
-                ),
-                if (category.name != 'Mặc định')
-                  Row(
-                    children: [
-                      TextButton.icon(
-                        onPressed: busy ? null : () => rename(category.name),
-                        icon: const Icon(CupertinoIcons.pencil, size: 18),
-                        label: const Text('Đổi tên'),
-                      ),
-                      TextButton.icon(
-                        onPressed: busy ? null : () => remove(category.name),
-                        icon: const Icon(CupertinoIcons.trash, size: 18),
-                        label: const Text('Xóa'),
-                      ),
-                    ],
-                  ),
-              ],
             ),
-          if (categories.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Text('Chưa có danh mục. Nhấn + để tạo danh mục đầu tiên.'),
+            title: Text(category.name),
+            subtitle: Text(
+              '${books.where((book) => book.categories.contains(category.name)).length} truyện',
             ),
-        ],
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Mặc định khi thêm truyện'),
+                value: registry.defaultCategories.contains(category.name),
+                onChanged: busy
+                    ? null
+                    : (value) => change(() async {
+                        final selected = registry.defaultCategories.toSet();
+                        if (value == true) {
+                          selected.add(category.name);
+                        } else {
+                          selected.remove(category.name);
+                        }
+                        await ref
+                            .read(libraryCategoriesProvider.notifier)
+                            .setDefaults(selected);
+                        return null;
+                      }),
+              ),
+              policy(
+                'Cập nhật tự động',
+                category.update,
+                busy
+                    ? null
+                    : (value) => change(() async {
+                        await ref
+                            .read(libraryCategoriesProvider.notifier)
+                            .setPolicy(category.name, update: value);
+                        return null;
+                      }),
+              ),
+              const SizedBox(height: 16),
+              policy(
+                'Tự tải chương mới',
+                category.download,
+                busy
+                    ? null
+                    : (value) => change(() async {
+                        await ref
+                            .read(libraryCategoriesProvider.notifier)
+                            .setPolicy(category.name, download: value);
+                        return null;
+                      }),
+              ),
+              if (category.name != 'Mặc định')
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: busy ? null : () => rename(category.name),
+                      icon: const Icon(CupertinoIcons.pencil, size: 18),
+                      label: const Text('Đổi tên'),
+                    ),
+                    TextButton.icon(
+                      onPressed: busy ? null : () => remove(category.name),
+                      icon: const Icon(CupertinoIcons.trash, size: 18),
+                      label: const Text('Xóa'),
+                    ),
+                  ],
+                ),
+            ],
+          );
+        },
+        footer: categories.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.all(32),
+                child: Text(
+                  'Chưa có danh mục. Nhấn + để tạo danh mục đầu tiên.',
+                ),
+              )
+            : null,
       ),
     );
   }

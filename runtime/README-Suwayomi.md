@@ -1,6 +1,6 @@
 # Suwayomi companion cho extension APK
 
-App kết nối Suwayomi để nạp và thực thi extension APK của hệ Tachiyomi/Tachimanga. Runtime này chạy trên máy tính; app Flutter không chứa JVM/AndroidCompat trên điện thoại. Nội dung đã tải/import vào thư viện app được đọc offline độc lập với companion.
+Tài liệu này dành cho chế độ máy chủ Suwayomi tùy chọn, chạy trên máy tính để nạp extension APK của hệ Tachiyomi/Tachimanga. Source iOS hiện tích hợp JVM/AndroidCompat qua `packages/tachi_runtime` và chọn engine trên thiết bị khi URL máy chủ để trống. Chỉ cấu hình Suwayomi khi muốn dùng companion; việc có engine trong source hoặc IPA chưa xác nhận mọi extension chạy được trên iPhone. Nội dung đã tải/import vào thư viện app được đọc offline độc lập với companion.
 
 ## Công cụ
 

@@ -85,6 +85,59 @@ class DownloadDeletionController extends Notifier<DownloadDeletionPolicy> {
     int? expectedRevision,
   }) => _delete(selection, chapterIds, expectedRevision: expectedRevision);
 
+  /// Cancels pending writes before one atomic commit across the selected books.
+  /// The caller's revision is retained across every asynchronous queue write.
+  Future<int> deleteMany(
+    Iterable<LibraryChapterDeletion> selections, {
+    required int expectedRevision,
+    bool readOnly = false,
+  }) async {
+    if (!ref.mounted) return 0;
+    final values = checkedChapterDeletions(selections);
+    final repository = ref.read(libraryRepositoryProvider);
+    checkLibraryRevision(repository.replacementRevision, expectedRevision);
+    final queue = ref.read(downloadQueueProvider.notifier);
+    final bookIds = values.map((selection) => selection.book.id).toSet();
+    void guard() {
+      if (!ref.mounted) throw StateError('Thao tác đã dừng.');
+      checkLibraryRevision(repository.replacementRevision, expectedRevision);
+    }
+
+    await queue.cancelMany(
+      ref
+          .read(downloadQueueProvider)
+          .tasks
+          .where((task) => bookIds.contains(task.bookId))
+          .map((task) => task.identity),
+      expectedRevision: expectedRevision,
+      guard: guard,
+    );
+    if (!ref.mounted) return 0;
+    guard();
+    final count = await repository.deleteDownloadedChaptersBatch(
+      values,
+      expectedRevision: expectedRevision,
+      protectBookmarks: state.protectBookmarks,
+      readOnly: readOnly,
+    );
+    if (ref.mounted && count > 0) {
+      await ref.read(libraryProvider.notifier).refresh();
+    }
+    return count;
+  }
+
+  Future<int> deleteManyReadChapters(
+    Iterable<LibraryChapterDeletion> selections, {
+    required int expectedRevision,
+  }) {
+    if (!ref.mounted || !state.afterManualRead) return Future.value(0);
+    return deleteMany(
+      selections.where((selection) => selection.book.engine != 'local'),
+      expectedRevision: expectedRevision,
+      readOnly: true,
+    );
+  }
+
   /// Invoke after leaving the reader or completing an explicit read action.
   /// Never delete during the reader's live session: deletion invalidates reads.
   Future<int> deleteReadChapters(

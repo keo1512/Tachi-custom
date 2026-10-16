@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../downloads/presentation/download_queue_controller.dart';
 import '../../settings/settings_controller.dart';
+import '../../sources/presentation/source_cover_image.dart';
 import '../domain/library_book.dart';
 import '../domain/library_reading.dart';
 import '../domain/library_update_events.dart';
@@ -14,6 +17,8 @@ import 'library_view_model.dart';
 import '../application/library_update_report.dart';
 import '../domain/library_update_result.dart';
 import 'library_update_report_panel.dart';
+import 'library_source_label.dart';
+import 'library_locations.dart';
 
 class UpdatesScreen extends ConsumerStatefulWidget {
   const UpdatesScreen({super.key});
@@ -26,6 +31,107 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
   bool unreadOnly = false, includeExistingUnread = false;
   String? category;
   LibraryUpdateProgress? progress;
+  bool selecting = false, selectionBusy = false;
+  final selected = <String>{};
+  int? selectionRevision;
+  String? selectionAnchor;
+
+  String entryKey(LibraryUpdateEntry entry) =>
+      jsonEncode([entry.book.id, entry.chapter.id]);
+
+  void finishSelection() => setState(() {
+    selecting = false;
+    selected.clear();
+    selectionRevision = null;
+    selectionAnchor = null;
+  });
+
+  void select(LibraryUpdateEntry entry) {
+    if (selectionBusy) return;
+    setState(() {
+      if (!selecting) {
+        selecting = true;
+        selectionRevision = ref
+            .read(libraryRepositoryProvider)
+            .replacementRevision;
+      }
+      final identity = entryKey(entry);
+      if (!selected.add(identity)) selected.remove(identity);
+      selectionAnchor = identity;
+    });
+  }
+
+  void selectRange(LibraryUpdateEntry entry, List<LibraryUpdateEntry> visible) {
+    if (!selecting || selectionAnchor == null) {
+      select(entry);
+      return;
+    }
+    if (selectionBusy) return;
+    final first = visible.indexWhere(
+      (item) => entryKey(item) == selectionAnchor,
+    );
+    final last = visible.indexWhere(
+      (item) => entryKey(item) == entryKey(entry),
+    );
+    if (first < 0 || last < 0) return;
+    setState(() {
+      final start = first < last ? first : last;
+      final end = first < last ? last : first;
+      selected.addAll(visible.sublist(start, end + 1).map(entryKey));
+    });
+  }
+
+  Future<void> selectionAction(
+    String action,
+    List<LibraryUpdateEntry> visible,
+  ) async {
+    if (selectionBusy || selectionRevision == null) return;
+    if (action == 'all' || action == 'invert') {
+      setState(() {
+        final values = visible.map(entryKey).toSet();
+        if (action == 'invert') values.removeAll(selected);
+        selected
+          ..clear()
+          ..addAll(values);
+      });
+      return;
+    }
+    final chosen = visible
+        .where((entry) => selected.contains(entryKey(entry)))
+        .toList();
+    if (chosen.isEmpty) return;
+    final revision = selectionRevision!;
+    setState(() => selectionBusy = true);
+    final done = await perform(context, () async {
+      if (action == 'download') {
+        final queue = ref.read(downloadQueueProvider.notifier);
+        for (final entry in chosen.where(
+          (entry) => !entry.chapter.downloaded,
+        )) {
+          await queue.enqueue(entry.book.id, [
+            entry.chapter.id,
+          ], expectedRevision: revision);
+        }
+        await queue.start();
+      } else {
+        final groups = <String, List<String>>{};
+        for (final entry in chosen) {
+          groups.putIfAbsent(entry.book.id, () => []).add(entry.chapter.id);
+        }
+        await ref
+            .read(libraryProvider.notifier)
+            .markManyChaptersRead(
+              groups,
+              action == 'read',
+              expectedRevision: revision,
+            );
+      }
+      return true;
+    });
+    if (!mounted) return;
+    setState(() => selectionBusy = false);
+    if (done == true) finishSelection();
+  }
 
   Future<void> retryFailed() async {
     final previous = ref.read(libraryUpdateReportProvider);
@@ -132,7 +238,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
     );
     if (!mounted || action == null) return;
     if (action == 'book') {
-      context.push('/book/${entry.book.id}');
+      context.push(libraryBookLocation(entry.book.id));
       return;
     }
     await perform(
@@ -154,90 +260,162 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
     final queue = ref.watch(downloadQueueProvider);
     final report = ref.watch(libraryUpdateReportProvider);
     final currentProgress = ref.watch(libraryUpdateProgressProvider);
+    final visible = entries(library.value ?? []);
+    if (selecting &&
+        selectionRevision !=
+            ref.read(libraryRepositoryProvider).replacementRevision) {
+      selecting = false;
+      selected.clear();
+      selectionRevision = null;
+      selectionAnchor = null;
+    }
+    selected.retainAll(visible.map(entryKey));
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cập nhật'),
-        leading: IconButton(
-          tooltip: 'Sao lưu và dữ liệu',
-          icon: const Icon(Icons.cloud_done_outlined),
-          onPressed: () => context.go('/more'),
-        ),
+        title: Text(selecting ? '${selected.length} đã chọn' : 'Cập nhật'),
+        leading: selecting
+            ? IconButton(
+                tooltip: 'Hủy chọn chương cập nhật',
+                icon: const Icon(CupertinoIcons.xmark),
+                onPressed: selectionBusy ? null : finishSelection,
+              )
+            : IconButton(
+                tooltip: 'Sao lưu và dữ liệu',
+                icon: const Icon(Icons.cloud_done_outlined),
+                onPressed: () => context.go('/more'),
+              ),
         actions: [
-          IconButton(
-            tooltip: 'Thiết lập',
-            icon: const Icon(CupertinoIcons.gear_solid),
-            onPressed: () => context.go('/more'),
-          ),
-          if (updating)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: CupertinoActivityIndicator(),
-            )
-          else
+          if (selecting)
             PopupMenuButton<String>(
-              tooltip: 'Tùy chọn cập nhật',
-              icon: const Icon(Icons.more_vert),
-              onSelected: (action) {
-                if (action == 'update') {
-                  update();
-                } else if (action == 'all-categories') {
-                  setState(() => category = null);
-                } else if (action == 'unread-only') {
-                  setState(() => unreadOnly = !unreadOnly);
-                } else if (action == 'existing-unread') {
-                  setState(
-                    () => includeExistingUnread = !includeExistingUnread,
-                  );
-                } else if (action.startsWith('category:')) {
-                  setState(
-                    () => category = action.substring('category:'.length),
-                  );
-                } else {
-                  download(entries(library.value ?? []));
-                }
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(
-                  value: 'update',
-                  child: Text('Kiểm tra chương mới'),
-                ),
-                const PopupMenuItem(
-                  value: 'download',
-                  child: Text('Tải các chương đang hiển thị'),
-                ),
-                CheckedPopupMenuItem(
-                  value: 'unread-only',
-                  checked: unreadOnly,
-                  child: const Text('Chỉ chương chưa đọc'),
-                ),
-                CheckedPopupMenuItem(
-                  value: 'existing-unread',
-                  checked: includeExistingUnread,
-                  child: const Text('Xem cả chương chưa đọc đã có'),
-                ),
-                const PopupMenuDivider(),
-                CheckedPopupMenuItem(
-                  value: 'all-categories',
-                  checked: category == null,
-                  child: const Text('Tất cả kệ'),
-                ),
-                for (final name
-                    in ((library.value ?? [])
-                        .expand((book) => book.categories)
-                        .toSet()
-                        .toList()
-                      ..sort()))
-                  CheckedPopupMenuItem(
-                    value: 'category:$name',
-                    checked: category == name,
-                    child: Text(name),
-                  ),
+              tooltip: 'Chọn nhiều chương cập nhật',
+              enabled: !selectionBusy,
+              onSelected: (action) => selectionAction(action, visible),
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'all', child: Text('Chọn tất cả')),
+                PopupMenuItem(value: 'invert', child: Text('Đảo lựa chọn')),
               ],
+            )
+          else ...[
+            IconButton(
+              tooltip: 'Thiết lập',
+              icon: const Icon(CupertinoIcons.gear_solid),
+              onPressed: () => context.go('/more'),
             ),
+            if (updating)
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: CupertinoActivityIndicator(),
+              )
+            else
+              PopupMenuButton<String>(
+                tooltip: 'Tùy chọn cập nhật',
+                icon: const Icon(Icons.more_vert),
+                onSelected: (action) {
+                  if (action == 'update') {
+                    update();
+                  } else if (action == 'all-categories') {
+                    setState(() => category = null);
+                  } else if (action == 'unread-only') {
+                    setState(() => unreadOnly = !unreadOnly);
+                  } else if (action == 'existing-unread') {
+                    setState(
+                      () => includeExistingUnread = !includeExistingUnread,
+                    );
+                  } else if (action.startsWith('category:')) {
+                    setState(
+                      () => category = action.substring('category:'.length),
+                    );
+                  } else if (action == 'select') {
+                    setState(() {
+                      selecting = true;
+                      selectionRevision = ref
+                          .read(libraryRepositoryProvider)
+                          .replacementRevision;
+                    });
+                  } else {
+                    download(entries(library.value ?? []));
+                  }
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: 'update',
+                    child: Text('Kiểm tra chương mới'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'download',
+                    child: Text('Tải các chương đang hiển thị'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'select',
+                    child: Text('Chọn nhiều chương'),
+                  ),
+                  CheckedPopupMenuItem(
+                    value: 'unread-only',
+                    checked: unreadOnly,
+                    child: const Text('Chỉ chương chưa đọc'),
+                  ),
+                  CheckedPopupMenuItem(
+                    value: 'existing-unread',
+                    checked: includeExistingUnread,
+                    child: const Text('Xem cả chương chưa đọc đã có'),
+                  ),
+                  const PopupMenuDivider(),
+                  CheckedPopupMenuItem(
+                    value: 'all-categories',
+                    checked: category == null,
+                    child: const Text('Tất cả kệ'),
+                  ),
+                  for (final name
+                      in ((library.value ?? [])
+                          .expand((book) => book.categories)
+                          .toSet()
+                          .toList()
+                        ..sort()))
+                    CheckedPopupMenuItem(
+                      value: 'category:$name',
+                      checked: category == name,
+                      child: Text(name),
+                    ),
+                ],
+              ),
+          ],
         ],
       ),
       body: Column(
         children: [
+          if (selecting)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                children: [
+                  TextButton.icon(
+                    onPressed: selected.isEmpty || selectionBusy
+                        ? null
+                        : () => selectionAction('download', visible),
+                    icon: const Icon(
+                      CupertinoIcons.arrow_down_circle,
+                      size: 18,
+                    ),
+                    label: const Text('Tải đã chọn'),
+                  ),
+                  TextButton.icon(
+                    onPressed: selected.isEmpty || selectionBusy
+                        ? null
+                        : () => selectionAction('read', visible),
+                    icon: const Icon(CupertinoIcons.checkmark_circle, size: 18),
+                    label: const Text('Đánh dấu đã đọc'),
+                  ),
+                  TextButton(
+                    onPressed: selected.isEmpty || selectionBusy
+                        ? null
+                        : () => selectionAction('unread', visible),
+                    child: const Text('Đánh dấu chưa đọc'),
+                  ),
+                ],
+              ),
+            ),
           LibraryUpdateReportPanel(
             report: report,
             progress: currentProgress ?? progress,
@@ -310,14 +488,39 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                         ),
                         child: Row(
                           children: [
-                            ActivityBookCover(entry.book),
+                            if (selecting)
+                              SizedBox(
+                                width: 32,
+                                child: Checkbox(
+                                  value: selected.contains(entryKey(entry)),
+                                  semanticLabel:
+                                      'Chọn ${entry.book.title} ${entry.chapter.title}',
+                                  onChanged: selectionBusy
+                                      ? null
+                                      : (_) => select(entry),
+                                ),
+                              ),
+                            ActivityBookCover(
+                              entry.book,
+                              coverImage: libraryCoverImage(ref, entry.book),
+                            ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: InkWell(
-                                onTap: () => context.push(
-                                  '/read/${entry.book.id}?chapter=${entry.index}',
-                                ),
-                                onLongPress: () => chapterActions(entry),
+                                onTap: () => selecting
+                                    ? select(entry)
+                                    : context.push(
+                                        libraryReaderLocation(
+                                          entry.book,
+                                          entry.index,
+                                        ),
+                                      ),
+                                onLongPress: () => selecting
+                                    ? selectRange(entry, unread)
+                                    : select(entry),
+                                onDoubleTap: selecting
+                                    ? null
+                                    : () => chapterActions(entry),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 3,
@@ -333,7 +536,6 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                                         style: const TextStyle(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w400,
-                                          color: Color(0xFF99999B),
                                         ),
                                       ),
                                       const SizedBox(height: 4),
@@ -341,14 +543,22 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                                         entry.chapter.title,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: Color(0xFF99999B),
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                      Text(
+                                        chapterIsRead(entry.book, entry.index)
+                                            ? 'Đã đọc'
+                                            : 'Chưa đọc',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                         ),
                                       ),
                                       const SizedBox(height: 3),
                                       Text(
-                                        '${discoveredDateLabel(entry.chapter.discoveredAt)} · ${entry.book.engine == 'vbook' ? 'vBook' : 'Tachimanga'} · ${entry.book.sourceId}',
+                                        '${discoveredDateLabel(entry.chapter.discoveredAt)} · ${librarySourceLabel(entry.book)}',
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
@@ -365,30 +575,32 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            IconButton(
-                              tooltip: entry.chapter.downloaded
-                                  ? 'Đã tải chương'
-                                  : 'Tải chương ${entry.chapter.title}',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 44,
+                            if (!selecting)
+                              IconButton(
+                                tooltip: entry.chapter.downloaded
+                                    ? 'Đã tải chương'
+                                    : 'Tải chương ${entry.chapter.title}',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 44,
+                                ),
+                                icon: active
+                                    ? const CupertinoActivityIndicator()
+                                    : Icon(
+                                        entry.chapter.downloaded
+                                            ? CupertinoIcons
+                                                  .checkmark_circle_fill
+                                            : CupertinoIcons.arrow_down_circle,
+                                        size: 23,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
+                                      ),
+                                onPressed: entry.chapter.downloaded || active
+                                    ? null
+                                    : () => download([entry]),
                               ),
-                              icon: active
-                                  ? const CupertinoActivityIndicator()
-                                  : Icon(
-                                      entry.chapter.downloaded
-                                          ? CupertinoIcons.checkmark_circle_fill
-                                          : CupertinoIcons.arrow_down_circle,
-                                      size: 23,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface,
-                                    ),
-                              onPressed: entry.chapter.downloaded || active
-                                  ? null
-                                  : () => download([entry]),
-                            ),
                           ],
                         ),
                       );
@@ -619,6 +831,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         error: (error, _) => _ActivityEmpty(
           title: 'Không mở được lịch sử',
           description: userFacingError(error),
+          action: TextButton(
+            onPressed: () => ref.invalidate(libraryProvider),
+            child: const Text('Thử lại'),
+          ),
         ),
         data: (books) {
           final query = search.text.trim().toLowerCase();
@@ -651,6 +867,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         description: query.isEmpty
                             ? 'Sách bạn đọc sẽ xuất hiện ở đây.'
                             : 'Thử tìm theo tên sách hoặc tên chương.',
+                        action: TextButton(
+                          onPressed: () {
+                            if (query.isEmpty) {
+                              context.go('/');
+                            } else {
+                              setState(search.clear);
+                            }
+                          },
+                          child: Text(
+                            query.isEmpty ? 'Mở thư viện' : 'Xóa tìm kiếm',
+                          ),
+                        ),
                       )
                     : RefreshIndicator(
                         onRefresh: ref.read(libraryProvider.notifier).refresh,
@@ -690,9 +918,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                     onLongPress: () => select(book),
                                     onTap: () => selecting
                                         ? select(book)
-                                        : context.push('/book/${book.id}'),
+                                        : context.push(
+                                            libraryBookLocation(book.id),
+                                          ),
                                     child: ActivityBookCover(
                                       book,
+                                      coverImage: libraryCoverImage(ref, book),
                                       width: 82,
                                       height: 120,
                                     ),
@@ -705,8 +936,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                           ? select(book)
                                           : context.push(
                                               chapterIndex == null
-                                                  ? '/book/${book.id}'
-                                                  : '/read/${book.id}?chapter=$chapterIndex',
+                                                  ? libraryBookLocation(book.id)
+                                                  : libraryReaderLocation(
+                                                      book,
+                                                      chapterIndex,
+                                                    ),
                                             ),
                                       child: Column(
                                         crossAxisAlignment:
@@ -748,6 +982,33 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                               ),
                                             ],
                                           ),
+                                          if (!selecting)
+                                            Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: TextButton.icon(
+                                                onPressed: chapterIndex == null
+                                                    ? () => context.push(
+                                                        libraryBookLocation(
+                                                          book.id,
+                                                        ),
+                                                      )
+                                                    : () => context.push(
+                                                        libraryReaderLocation(
+                                                          book,
+                                                          chapterIndex,
+                                                        ),
+                                                      ),
+                                                icon: const Icon(
+                                                  CupertinoIcons.play_fill,
+                                                  size: 14,
+                                                ),
+                                                label: Text(
+                                                  chapterIndex == null
+                                                      ? 'Mở truyện'
+                                                      : 'Tiếp tục đọc',
+                                                ),
+                                              ),
+                                            ),
                                         ],
                                       ),
                                     ),
@@ -766,14 +1027,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                       padding: EdgeInsets.zero,
                                       onPressed: clearing
                                           ? null
-                                          : () => perform(
-                                              context,
-                                              () => ref
-                                                  .read(
-                                                    libraryProvider.notifier,
-                                                  )
-                                                  .clearHistory([book.id]),
-                                            ),
+                                          : () => clear([book]),
                                     ),
                                 ],
                               ),

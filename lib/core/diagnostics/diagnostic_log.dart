@@ -171,6 +171,7 @@ class DiagnosticLogStore {
   final SharedPreferences preferences;
   final bool Function()? canRecord;
   static const key = 'deviceDiagnosticLogV1';
+  static const appVersion = '1.0.0+10';
   static const maxEntries = 100, maxBytes = 128 * 1024;
   Future<void> _pending = Future<void>.value();
   final _changes = StreamController<void>.broadcast();
@@ -278,7 +279,7 @@ class DiagnosticLogStore {
       jsonEncode({
         'schema': 'tachi-books-diagnostic-log',
         'version': 1,
-        'appVersion': '1.0.0+9',
+        'appVersion': appVersion,
         'entries': read().map((e) => e.toJson()).toList(),
       }),
     ),

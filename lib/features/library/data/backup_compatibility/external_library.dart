@@ -81,6 +81,7 @@ ConvertedBackup convertExternalLibrary(
   String format,
   List<ExternalTitle> titles, {
   List<String> warnings = const [],
+  bool sourceOrderNewestFirst = true,
 }) {
   final result = <LibrarySnapshotEntry>[];
   final ids = <String>{};
@@ -101,10 +102,13 @@ ConvertedBackup convertExternalLibrary(
       throw const FormatException('Sao lưu có truyện trùng nguồn và URL.');
     }
     if (title.source == '0') localSources++;
-    // Both verified schemas use source_order=0 for the newest chapter.
+    // Mihon orders newest first; the verified Tachimanga schema orders oldest
+    // first. Normalize both to the reader's oldest-to-newest chapter sequence.
     final ordered = title.chapters.indexed.toList()
       ..sort((a, b) {
-        final order = b.$2.order.compareTo(a.$2.order);
+        final order = sourceOrderNewestFirst
+            ? b.$2.order.compareTo(a.$2.order)
+            : a.$2.order.compareTo(b.$2.order);
         return order == 0 ? a.$1.compareTo(b.$1) : order;
       });
     final chapters = ordered.map((entry) => entry.$2).toList();

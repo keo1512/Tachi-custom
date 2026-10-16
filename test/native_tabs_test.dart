@@ -124,9 +124,15 @@ void main() {
       expect(_last(outbound)['visible'], true);
       expect(_last(outbound)['index'], 0);
       await _nativeSelect(tester, 5);
+      await tester.ensureVisible(find.text('Cài đặt'));
+      await tester.tap(find.text('Cài đặt'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Chung'));
       await tester.pumpAndSettle();
       expect(find.byType(GeneralSettingsScreen), findsOneWidget);
+      expect(_last(outbound)['visible'], false);
+      await tester.tap(find.byTooltip('Quay lại'));
+      await tester.pumpAndSettle();
       expect(_last(outbound)['visible'], false);
       await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
@@ -146,6 +152,9 @@ void main() {
     (tester) async {
       final prefs = await _openApp(tester);
       await _nativeSelect(tester, 5);
+      await tester.ensureVisible(find.text('Cài đặt'));
+      await tester.tap(find.text('Cài đặt'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Giao diện'));
       await tester.pumpAndSettle();
       expect(find.byType(AppearanceSettingsScreen), findsOneWidget);
@@ -167,6 +176,9 @@ void main() {
       expect(configuration['titles'], mainTabLabels);
       expect(configuration['visible'], false);
       expect(configuration['index'], 5);
+      await tester.tap(find.byTooltip('Quay lại'));
+      await tester.pumpAndSettle();
+      expect(_last(outbound)['visible'], false);
       await tester.tap(find.byTooltip('Quay lại'));
       await tester.pumpAndSettle();
       expect(_last(outbound)['index'], 5);

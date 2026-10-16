@@ -60,7 +60,7 @@ void main() {
         const BrowseScreen(),
         picker: () async => input,
       );
-      await tester.tap(find.text('Phần mở rộng'));
+      await tester.tap(find.text('Tiện ích'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Nhập extension APK từ Files'));
       await tester.pumpAndSettle();
@@ -91,7 +91,7 @@ void main() {
         picker: () async =>
             selections++ == 0 ? null : Uint8List.fromList([0x50, 0x4b, 3, 4]),
       );
-      await tester.tap(find.text('Phần mở rộng'));
+      await tester.tap(find.text('Tiện ích'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Nhập extension APK từ Files'));
       await tester.pumpAndSettle();
@@ -117,7 +117,7 @@ void main() {
       const BrowseScreen(),
       packages: [_package('a', '2')],
     );
-    await tester.tap(find.text('Phần mở rộng'));
+    await tester.tap(find.text('Tiện ích'));
     await tester.pumpAndSettle();
     expect(find.text('Đã cài bản mới hơn'), findsOneWidget);
     expect(find.text('Cập nhật'), findsNothing);
@@ -214,7 +214,7 @@ void main() {
         const BrowseScreen(),
         packages: [_package('a', '2'), _package('b', '2')],
       );
-      await tester.tap(find.text('Phần mở rộng'));
+      await tester.tap(find.text('Tiện ích'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Cập nhật tất cả (2)'));
       await tester.pump();
@@ -249,7 +249,7 @@ void main() {
         const BrowseScreen(),
         packages: [_package('a', '1')],
       );
-      await tester.tap(find.text('Phần mở rộng'));
+      await tester.tap(find.text('Tiện ích'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byTooltip('Gỡ Package a'));
       await tester.tap(find.byTooltip('Gỡ Package a'));

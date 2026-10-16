@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/diagnostics/diagnostic_log.dart';
 import '../../library/presentation/library_view_model.dart';
+import '../../library/presentation/library_locations.dart';
 import '../../library/presentation/library_add_categories.dart';
 import '../../settings/settings_controller.dart';
 import '../domain/catalogue.dart';
@@ -13,6 +14,7 @@ import '../domain/source_filters.dart';
 import 'source_filter_sheet.dart';
 import 'source_catalogue_tools.dart';
 import 'source_result_tile.dart';
+import 'source_cover_image.dart';
 
 class SourceSearchScreen extends ConsumerStatefulWidget {
   const SourceSearchScreen({
@@ -33,6 +35,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
   String? error;
   String submittedQuery = '';
   bool busy = false, searched = false, hasMore = true;
+  bool retryMore = false;
   int request = 0, page = 1;
   SourceBrowseMode? mode;
   String layout = 'comfortable';
@@ -110,7 +113,12 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
     engine: widget.source.engine,
   );
 
-  Future<void> search({bool more = false}) async {
+  Future<void> refresh() => search(preserveResults: true);
+
+  Future<void> retry() =>
+      search(more: retryMore, preserveResults: !retryMore && books.isNotEmpty);
+
+  Future<void> search({bool more = false, bool preserveResults = false}) async {
     final query = more ? submittedQuery : text.text.trim();
     if (!mounted ||
         (mode == null && query.isEmpty && selectedFilters == null) ||
@@ -123,7 +131,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
       busy = true;
       error = null;
       searched = true;
-      if (!more) {
+      if (!more && !preserveResults) {
         books = [];
         hasMore = true;
       }
@@ -168,6 +176,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
         DiagnosticLogs.error('source', e);
         setState(() {
           error = userFacingError(e);
+          retryMore = more;
           busy = false;
         });
       }
@@ -179,7 +188,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
       ref.read(libraryProvider).value ?? const [],
     )[book.identity];
     if (existing != null) {
-      context.push('/book/${existing.id}');
+      context.push(libraryBookLocation(existing.id));
       return;
     }
     if (adding.contains(book.identity)) return;
@@ -195,7 +204,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
     );
     if (!mounted) return;
     setState(() => adding.remove(book.identity));
-    if (item != null) context.push('/book/${item.id}');
+    if (item != null) context.push(libraryBookLocation(item.id));
   }
 
   @override
@@ -211,23 +220,32 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            CupertinoIcons.search,
+            error == null
+                ? CupertinoIcons.search
+                : CupertinoIcons.exclamationmark_circle,
             size: 36,
             color: CupertinoColors.secondaryLabel.resolveFrom(context),
           ),
           const SizedBox(height: 12),
           Text(
-            searched && !busy ? 'Không có kết quả' : 'Tìm truyện',
+            error != null
+                ? 'Chưa tải được truyện'
+                : searched && !busy
+                ? 'Không có kết quả'
+                : 'Tìm truyện',
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
           Text(
-            'Tìm trong ${widget.source.name}',
+            error ?? 'Tìm trong ${widget.source.name}',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
               color: CupertinoColors.secondaryLabel.resolveFrom(context),
             ),
           ),
+          if (error != null)
+            TextButton(onPressed: retry, child: const Text('Thử lại')),
         ],
       ),
     ),
@@ -311,11 +329,10 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
             child: CupertinoSlidingSegmentedControl<String>(
-              groupValue: mode?.name ?? 'search',
+              groupValue: mode?.name,
               children: const {
                 'popular': Text('Phổ biến'),
                 'latest': Text('Mới nhất'),
-                'search': Text('Tìm kiếm'),
               },
               onValueChanged: (value) {
                 if (value == null) return;
@@ -335,7 +352,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
           ),
         const Divider(height: 1),
         if (busy) const LinearProgressIndicator(minHeight: 2),
-        if (error != null)
+        if (error != null && books.isNotEmpty)
           Material(
             color: CupertinoColors.systemGroupedBackground.resolveFrom(context),
             child: Padding(
@@ -353,9 +370,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: busy
-                        ? null
-                        : () => search(more: books.isNotEmpty),
+                    onPressed: busy ? null : retry,
                     child: const Text('Thử lại'),
                   ),
                 ],
@@ -367,10 +382,15 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
               ? busy
                     ? const Center(child: CupertinoActivityIndicator())
                     : RefreshIndicator(
-                        onRefresh: search,
+                        onRefresh: refresh,
                         child: ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          children: [SizedBox(height: 220, child: empty())],
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 40),
+                              child: empty(),
+                            ),
+                          ],
                         ),
                       )
               : LayoutBuilder(
@@ -390,6 +410,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
                     Widget result(int index, {bool list = false}) {
                       final book = books[index];
                       return SourceResultTile(
+                        coverImage: sourceCoverImage(ref, book),
                         book: book,
                         inLibrary: library.containsKey(book.identity),
                         pending: adding.contains(book.identity),
@@ -399,7 +420,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
                     }
 
                     return RefreshIndicator(
-                      onRefresh: search,
+                      onRefresh: refresh,
                       child: NotificationListener<ScrollNotification>(
                         onNotification: (notification) {
                           if (notification is ScrollUpdateNotification &&

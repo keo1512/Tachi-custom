@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../domain/library_book.dart';
 import '../domain/library_reading.dart';
 import 'library_filter_sheet.dart';
+import 'library_source_label.dart';
 
 /// The same enabled facts are shown in list, grid and cover-only layouts.
 /// Grid rows reserve space below the cover rather than obscuring its artwork.
@@ -30,13 +31,7 @@ class LibraryBookMetadata extends StatelessWidget {
 
   List<({String key, String text, IconData icon})> get entries {
     final read = readChapterCount(book);
-    final source = book.engine == 'local'
-        ? 'Trong thiết bị'
-        : book.sourceName.isNotEmpty
-        ? book.sourceName
-        : Uri.tryParse(book.sourceRef)?.host.isNotEmpty == true
-        ? Uri.parse(book.sourceRef).host
-        : '${book.engine == 'vbook' ? 'vBook' : 'Tachimanga'} · ${book.sourceId}';
+    final source = librarySourceLabel(book);
     final update = book.lastUpdated?.toLocal();
     return [
       if (filter.showSource)

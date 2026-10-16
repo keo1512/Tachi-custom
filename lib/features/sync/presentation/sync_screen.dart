@@ -7,9 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../settings/presentation/settings_widgets.dart';
 import '../../settings/presentation/backup_settings_screen.dart';
 import '../application/sync_controller.dart';
-import '../domain/sync_engine.dart';
 import '../data/sync_platform.dart';
 import 'sync_merge_screen.dart';
+import 'sync_status_panel.dart';
 import '../../../core/format/vietnamese_format.dart';
 
 class AccountScreen extends ConsumerWidget {
@@ -85,14 +85,8 @@ class AccountScreen extends ConsumerWidget {
             trailing: state.busy ? const CupertinoActivityIndicator() : null,
           ),
         ],
-        if (state.message?.isNotEmpty == true) SettingsNote(state.message!),
-        if (state.progress != null)
-          SettingsNote(
-            '${state.progress!.direction == SyncTransferDirection.upload ? 'Tải lên' : 'Tải về'}: '
-            '${state.progress!.total == 0 ? 0 : (state.progress!.completed * 100 ~/ state.progress!.total)}% '
-            '· ${vietnameseNumber(state.progress!.completed / 1048576, decimals: 2)} / ${vietnameseNumber(state.progress!.total / 1048576, decimals: 2)} MiB'
-            '${state.progress!.reused == 0 ? '' : ' · Dùng lại ${vietnameseNumber(state.progress!.reused / 1048576, decimals: 2)} MiB'}',
-          ),
+        if (state.busy || state.error || state.message?.isNotEmpty == true)
+          SyncStatusPanel(state: state),
       ],
     );
   }
@@ -193,14 +187,7 @@ class SyncScreen extends ConsumerWidget {
               'Lần đồng bộ thành công: ${vietnameseDateTime(state.lastSyncedAt!)}',
             ),
         ],
-        if (state.message?.isNotEmpty == true) SettingsNote(state.message!),
-        if (state.progress != null)
-          SettingsNote(
-            '${state.progress!.direction == SyncTransferDirection.upload ? 'Tải lên' : 'Tải về'}: '
-            '${state.progress!.total == 0 ? 0 : (state.progress!.completed * 100 ~/ state.progress!.total)}% '
-            '· ${vietnameseNumber(state.progress!.completed / 1048576, decimals: 2)} / ${vietnameseNumber(state.progress!.total / 1048576, decimals: 2)} MiB'
-            '${state.progress!.reused == 0 ? '' : ' · Dùng lại ${vietnameseNumber(state.progress!.reused / 1048576, decimals: 2)} MiB'}',
-          ),
+        SyncStatusPanel(state: state),
         if (state.conflict && conflict != null) ...[
           const SettingsHeading('Hai bản thư viện khác nhau'),
           SettingsNote(
@@ -233,16 +220,42 @@ class SyncScreen extends ConsumerWidget {
           icon: CupertinoIcons.arrow_counterclockwise,
           onTap: () => openSettingsPage(context, const BackupSettingsScreen()),
         ),
-        const SettingsNote(
-          'Đồng bộ sách, tiến độ, dấu trang, thiết lập công khai và toàn bộ nội dung chương đã lưu. Tài khoản nguồn, cookie, khóa app và hàng đợi tải giữ riêng trên từng máy. Không tự cắt bỏ nội dung để giảm kích thước.',
-        ),
-        const SettingsNote(
-          'Mỗi bản cloud tham chiếu đầy đủ nội dung đã lưu, tối đa 128 MiB. Các phần nội dung không đổi được dùng lại giữa các bản và tải về từ cache đã kiểm tra. Định dạng cloud cũ vẫn đọc được; bản mới cần quy tắc Firestore cập nhật. Ba mục lục cloud gần nhất được giữ. Media dùng chung và bản tải dở chưa tự dọn để tránh mất nội dung. Khi hết hạn mức Firebase miễn phí, thư viện trên máy vẫn được giữ nguyên.',
-        ),
-        const SettingsNote(
-          'Khi bật đồng bộ, thay đổi được gửi sau một khoảng chờ, khi mở lại ứng dụng hoặc khi có mạng trở lại. Kiểm tra định kỳ mỗi 15 phút khi app ở phía trước; các lượt tự động cách nhau ít nhất một phút. Không thể cập nhật cloud khi mất mạng hoặc iOS đình chỉ app.',
+        SettingsRow(
+          title: 'Dữ liệu và giới hạn đồng bộ',
+          subtitle: 'Nội dung offline, tự đồng bộ và bảo toàn thư viện',
+          icon: CupertinoIcons.info_circle,
+          onTap: () => openSettingsPage(context, const _SyncDataDetails()),
         ),
       ],
     );
   }
+}
+
+class _SyncDataDetails extends StatelessWidget {
+  const _SyncDataDetails();
+
+  @override
+  Widget build(BuildContext context) => const SettingsPage(
+    title: 'Dữ liệu đồng bộ',
+    children: [
+      SettingsHeading('Nội dung được mang theo'),
+      SettingsNote(
+        'Sách, tiến độ, dấu trang, thiết lập và toàn bộ nội dung chương đã lưu được đồng bộ. '
+        'EPUB, TXT và CBZ đã nhập có thể đọc offline trên thiết bị nhận. '
+        'Tài khoản nguồn, cookie, khóa ứng dụng và hàng đợi tải được giữ riêng trên từng máy.',
+      ),
+      SettingsHeading('Dung lượng và phục hồi'),
+      SettingsNote(
+        'Mỗi bản đồng bộ có giới hạn 128 MiB; nội dung không đổi được dùng lại. '
+        'Ba bản gần nhất được giữ để phục hồi. Khi vượt dung lượng hoặc hết hạn mức miễn phí, '
+        'ứng dụng báo lỗi và giữ thư viện trên máy; không tự bỏ nội dung.',
+      ),
+      SettingsHeading('Đồng bộ tự động'),
+      SettingsNote(
+        'Khi bật đồng bộ, thay đổi được gửi sau một khoảng chờ, khi mở lại ứng dụng hoặc khi có mạng trở lại. '
+        'Ứng dụng kiểm tra định kỳ mỗi 15 phút ở phía trước; các lượt tự động cách nhau ít nhất một phút. '
+        'Đồng bộ sẽ chờ khi mất mạng hoặc iOS tạm dừng ứng dụng.',
+      ),
+    ],
+  );
 }

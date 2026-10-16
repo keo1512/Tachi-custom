@@ -389,6 +389,41 @@ void main() {
   );
 
   testWidgets(
+    'auto scroll status pauses and resumes without changing saved options',
+    (tester) async {
+      final fixture = await _open(tester, size: const Size(320, 568));
+      await _waitForImages(tester);
+      await fixture.container.read(readerOptionsProvider.notifier).patch({
+        'autoScroll': true,
+        'autoScrollSpeed': 80,
+      });
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      final scroll = _verticalScroll(tester);
+      expect(find.text('Tự cuộn · 80 px/giây'), findsOneWidget);
+      expect(scroll.offset, greaterThan(0));
+      await tester.tap(find.byTooltip('Tạm dừng tự cuộn'));
+      await tester.pump();
+      final pausedAt = scroll.offset;
+      await tester.pump(const Duration(seconds: 2));
+      expect(scroll.offset, pausedAt);
+      expect(find.text('Đã tạm dừng tự cuộn'), findsOneWidget);
+      expect(fixture.container.read(readerOptionsProvider).autoScroll, true);
+      await tester.tap(find.byTooltip('Tiếp tục tự cuộn'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      expect(scroll.offset, greaterThan(pausedAt));
+      expect(find.byType(PageView), findsNothing);
+      expect(tester.takeException(), isNull);
+      await fixture.container.read(readerOptionsProvider.notifier).patch({
+        'autoScroll': false,
+      });
+      await tester.pumpAndSettle();
+      await _dispose(tester, fixture);
+    },
+  );
+
+  testWidgets(
     'auto scrolling waits while settings or nested advanced dialog covers reader',
     (tester) async {
       final fixture = await _open(tester);
@@ -545,6 +580,7 @@ void main() {
     ready.complete();
     await tester.pumpAndSettle();
     expect(find.text('Chưa mở được chương'), findsOneWidget);
+    expect(find.text('Nhật ký và chẩn đoán'), findsOneWidget);
     expect(_scaffold(tester).backgroundColor, Colors.black);
     expect(
       Theme.of(tester.element(find.text('Chưa mở được chương'))).brightness,

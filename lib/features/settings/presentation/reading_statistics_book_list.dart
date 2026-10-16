@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/feedback.dart';
 import '../../library/application/reading_statistics_controller.dart';
@@ -20,6 +21,7 @@ class ReadingStatisticsBookList extends ConsumerStatefulWidget {
 }
 
 class _BookStatisticsState extends ConsumerState<ReadingStatisticsBookList> {
+  final search = TextEditingController();
   String query = '';
   String? selectedBookId;
   bool saving = false;
@@ -28,6 +30,12 @@ class _BookStatisticsState extends ConsumerState<ReadingStatisticsBookList> {
   void initState() {
     super.initState();
     selectedBookId = widget.initialBookId;
+  }
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
   }
 
   void _guard() {
@@ -160,6 +168,7 @@ class _BookStatisticsState extends ConsumerState<ReadingStatisticsBookList> {
             Padding(
               padding: const EdgeInsets.all(12),
               child: CupertinoSearchTextField(
+                controller: search,
                 placeholder: 'Tìm truyện',
                 onChanged: (value) =>
                     setState(() => query = value.trim().toLowerCase()),
@@ -174,8 +183,19 @@ class _BookStatisticsState extends ConsumerState<ReadingStatisticsBookList> {
               child: statistics.when(
                 loading: () =>
                     const Center(child: CupertinoActivityIndicator()),
-                error: (error, _) =>
-                    Center(child: SettingsNote(userFacingError(error))),
+                error: (error, _) => ListView(
+                  children: [
+                    SettingsNote(userFacingError(error)),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () =>
+                            ref.invalidate(readingStatisticsProvider),
+                        icon: const Icon(CupertinoIcons.refresh),
+                        label: const Text('Thử lại'),
+                      ),
+                    ),
+                  ],
+                ),
                 data: (stats) {
                   final books =
                       stats.books
@@ -190,8 +210,32 @@ class _BookStatisticsState extends ConsumerState<ReadingStatisticsBookList> {
                           (left, right) => left.title.compareTo(right.title),
                         );
                   if (books.isEmpty) {
-                    return const Center(
-                      child: Text('Không có truyện phù hợp.'),
+                    return ListView(
+                      children: [
+                        SettingsNote(
+                          stats.books.isEmpty
+                              ? 'Thêm truyện vào thư viện để theo dõi trạng thái, tiến độ và đánh giá.'
+                              : 'Không có truyện phù hợp.',
+                        ),
+                        if (stats.books.isEmpty)
+                          Center(
+                            child: TextButton(
+                              onPressed: () => context.go('/'),
+                              child: const Text('Mở thư viện'),
+                            ),
+                          ),
+                        if (query.isNotEmpty || selectedBookId != null)
+                          Center(
+                            child: TextButton(
+                              onPressed: () => setState(() {
+                                search.clear();
+                                query = '';
+                                selectedBookId = null;
+                              }),
+                              child: const Text('Hiện tất cả truyện'),
+                            ),
+                          ),
+                      ],
                     );
                   }
                   return ListView.builder(

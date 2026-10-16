@@ -14,6 +14,53 @@ import 'package:tachi_books/features/sources/domain/catalogue.dart';
 import 'package:tachi_books/features/sources/presentation/source_preferences_dialog.dart';
 
 void main() {
+  testWidgets('source preference load failure can retry inside the dialog', (
+    tester,
+  ) async {
+    var requests = 0;
+    final repository = SourceRepository(
+      tachimangaUrl: 'https://server.test',
+      vbookUrl: '',
+      client: MockClient(
+        (_) async =>
+            ++requests == 1 ? http.Response('', 503) : http.Response('[]', 200),
+      ),
+    );
+    addTearDown(repository.dispose);
+    const source = CatalogueSource(
+      id: '1',
+      name: 'Nguồn thử',
+      lang: 'vi',
+      baseUrl: 'https://source.test',
+      kind: ContentKind.manga,
+      engine: SourceEngine.tachimanga,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sourceRepositoryProvider.overrideWithValue(repository)],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => showSourcePreferences(context, source),
+                child: const Text('Mở'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Mở'));
+    await tester.pumpAndSettle();
+    expect(find.text('Thử lại'), findsOneWidget);
+    expect(requests, 1);
+    await tester.tap(find.text('Thử lại'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nguồn này không có cấu hình riêng.'), findsOneWidget);
+    expect(find.text('Thử lại'), findsNothing);
+    expect(requests, 2);
+    expect(tester.takeException(), isNull);
+  });
   for (final size in [const Size(320, 568), const Size(430, 932)]) {
     testWidgets(
       'source category and unsupported actions remain clear at $size',

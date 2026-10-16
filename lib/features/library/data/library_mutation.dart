@@ -19,6 +19,27 @@ class LibraryChapterRead {
   String get chapterId => book.chapters[index].id;
 }
 
+/// An immutable selection for one atomic deletion across multiple titles.
+class LibraryChapterDeletion {
+  LibraryChapterDeletion(this.book, Iterable<String> chapterIds)
+    : chapterIds = Set.unmodifiable(chapterIds);
+  final LibraryBook book;
+  final Set<String> chapterIds;
+}
+
+List<LibraryChapterDeletion> checkedChapterDeletions(
+  Iterable<LibraryChapterDeletion> selections,
+) {
+  final values = List<LibraryChapterDeletion>.unmodifiable(selections);
+  if (values.length > 10000 ||
+      values.map((value) => value.book.id).toSet().length != values.length) {
+    throw const FormatException(
+      'Danh sách xóa có truyện trùng hoặc quá nhiều truyện.',
+    );
+  }
+  return values;
+}
+
 String bookSourceIdentity(LibraryBook book) =>
     jsonEncode([book.engine, book.sourceId, book.sourceRef, book.kind]);
 

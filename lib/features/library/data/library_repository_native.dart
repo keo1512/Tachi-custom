@@ -483,10 +483,26 @@ class _IsarLibraryRepository extends LibraryRepository {
     bool protectBookmarks = true,
     bool readOnly = false,
   }) {
-    final requested = chapterIds.toSet();
+    return deleteDownloadedChaptersBatch(
+      [LibraryChapterDeletion(expected, chapterIds)],
+      expectedRevision: expectedRevision,
+      protectBookmarks: protectBookmarks,
+      readOnly: readOnly,
+    );
+  }
+
+  @override
+  Future<int> deleteDownloadedChaptersBatch(
+    Iterable<LibraryChapterDeletion> selections, {
+    required int expectedRevision,
+    bool protectBookmarks = true,
+    bool readOnly = false,
+  }) {
+    final values = checkedChapterDeletions(selections);
     return _serialized(() async {
       var count = 0;
-      final candidates = <String>{}, retained = <String>{};
+      final cleanup =
+          <({String id, Set<String> candidates, Set<String> retained})>[];
       final assetPattern = RegExp(r'tachi-asset://[a-f0-9]{64}/[a-f0-9]{64}');
       Iterable<String> references(ChapterRecord chapter) => [
         ...assetPattern
@@ -498,64 +514,75 @@ class _IsarLibraryRepository extends LibraryRepository {
       ];
       await _isar.writeTxn(() async {
         checkLibraryRevision(replacementRevision, expectedRevision);
-        final row = await _bookRow(expected.id);
-        if (row == null) throw StateError('Sách đã được xóa khỏi thư viện');
-        final book = _book(row);
-        if (bookSourceIdentity(book) != bookSourceIdentity(expected)) {
-          throw StateError('Nguồn của sách đã thay đổi. Hãy mở lại sách.');
+        for (final selection in values) {
+          final expected = selection.book;
+          final candidates = <String>{}, retained = <String>{};
+          final row = await _bookRow(expected.id);
+          if (row == null) throw StateError('Sách đã được xóa khỏi thư viện');
+          final book = _book(row);
+          if (bookSourceIdentity(book) != bookSourceIdentity(expected)) {
+            throw StateError('Nguồn của sách đã thay đổi. Hãy mở lại sách.');
+          }
+          final indices = downloadDeletionIndices(
+            book,
+            selection.chapterIds,
+            protectBookmarks: protectBookmarks,
+            readOnly: readOnly,
+          ).toSet();
+          final cached = await _isar.chapterRecords
+              .filter()
+              .bookIdEqualTo(book.id)
+              .findAll();
+          final deleted = cached
+              .where((chapter) => indices.contains(chapter.chapterIndex))
+              .toList();
+          final actual = {
+            ...deleted.map((chapter) => chapter.chapterIndex),
+            ...indices.where((index) => book.chapters[index].downloaded),
+          };
+          if (actual.isEmpty) continue;
+          final chapters = [...book.chapters];
+          for (final index in actual) {
+            chapters[index] = chapters[index].copyWith(downloaded: false);
+          }
+          final updated = book.copyWith(chapters: chapters);
+          validateBook(updated);
+          row.payload = jsonEncode(updated.toJson());
+          await _isar.chapterRecords.deleteAll(
+            deleted.map((chapter) => chapter.id).toList(),
+          );
+          await _isar.libraryRecords.put(row);
+          count += actual.length;
+          candidates.addAll(deleted.expand(references));
+          retained.addAll(
+            cached
+                .where((chapter) => !actual.contains(chapter.chapterIndex))
+                .expand(references),
+          );
+          retained.addAll(
+            assetPattern.allMatches(book.cover).map((match) => match.group(0)!),
+          );
+          retained.addAll(
+            assetPattern
+                .allMatches(book.originalCover)
+                .map((match) => match.group(0)!),
+          );
+          cleanup.add((
+            id: book.id,
+            candidates: candidates,
+            retained: retained,
+          ));
         }
-        final indices = downloadDeletionIndices(
-          book,
-          requested,
-          protectBookmarks: protectBookmarks,
-          readOnly: readOnly,
-        ).toSet();
-        final cached = await _isar.chapterRecords
-            .filter()
-            .bookIdEqualTo(book.id)
-            .findAll();
-        final deleted = cached
-            .where((chapter) => indices.contains(chapter.chapterIndex))
-            .toList();
-        final actual = {
-          ...deleted.map((chapter) => chapter.chapterIndex),
-          ...indices.where((index) => book.chapters[index].downloaded),
-        };
-        if (actual.isEmpty) return;
-        final chapters = [...book.chapters];
-        for (final index in actual) {
-          chapters[index] = chapters[index].copyWith(downloaded: false);
-        }
-        final updated = book.copyWith(chapters: chapters);
-        validateBook(updated);
-        row.payload = jsonEncode(updated.toJson());
-        await _isar.chapterRecords.deleteAll(
-          deleted.map((chapter) => chapter.id).toList(),
-        );
-        await _isar.libraryRecords.put(row);
-        count = actual.length;
-        candidates.addAll(deleted.expand(references));
-        retained.addAll(
-          cached
-              .where((chapter) => !actual.contains(chapter.chapterIndex))
-              .expand(references),
-        );
-        retained.addAll(
-          assetPattern.allMatches(book.cover).map((match) => match.group(0)!),
-        );
-        retained.addAll(
-          assetPattern
-              .allMatches(book.originalCover)
-              .map((match) => match.group(0)!),
-        );
       });
       if (count > 0) {
         _invalidatePendingReads();
-        await _attachments.removeUnreferenced(
-          expected.id,
-          candidates,
-          retained,
-        );
+        for (final entry in cleanup) {
+          await _attachments.removeUnreferenced(
+            entry.id,
+            entry.candidates,
+            entry.retained,
+          );
+        }
       }
       return count;
     });

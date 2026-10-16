@@ -72,6 +72,7 @@ public final class ExtensionHost {
                     case "chapters":result=chapters(args);break;
                     case "chapter":result=chapter(args);break;
                     case "image":result=image(args);break;
+                    case "cover":result=cover(args);break;
                     case "browserSession":result=BrowserSession.apply(args,registry.source(required(args,"sourceId")));break;
                     case "preferences":result=preferences(args);break;
                     case "setPreference":result=setPreference(args);break;
@@ -203,6 +204,33 @@ public final class ExtensionHost {
             if(!response.isSuccessful()||response.body()==null)throw new IOException("Image HTTP response failed");
             if(response.body().contentLength()>MAX_IMAGE_BYTES)throw new IOException("Image size exceeds native response limit");
             ByteArrayOutputStream output=new ByteArrayOutputStream();try(InputStream input=response.body().byteStream()){byte[] block=new byte[32768];int read;while((read=input.read(block))!=-1){if(output.size()+(long)read>MAX_IMAGE_BYTES)throw new IOException("Image size exceeds native response limit");output.write(block,0,read);}}
+            JsonObject result=new JsonObject();result.addProperty("base64",Base64.getEncoder().encodeToString(output.toByteArray()));result.addProperty("mimeType",response.header("Content-Type","application/octet-stream"));return result;
+        }
+    }
+    private static JsonObject cover(JsonObject args)throws Exception{
+        CatalogueSource source=registry.source(required(args,"sourceId"));
+        if(!(source instanceof HttpSource))throw new IllegalArgumentException("Source has no HTTP cover loader");
+        HttpSource http=(HttpSource)source;String raw=required(args,"url");
+        // Thumbnail URLs may point at a CDN or be relative to the source base.
+        // Reject schemes, credentials, fragments and controls before OkHttp
+        // normalizes them; never accept a caller-provided header or client.
+        for(int i=0;i<raw.length();i++)if(raw.charAt(i)<=32||raw.charAt(i)=='\\')throw new IllegalArgumentException("Cover URL is invalid");
+        java.net.URI parsed;
+        try{parsed=new java.net.URI(raw);}catch(java.net.URISyntaxException invalid){throw new IllegalArgumentException("Cover URL is invalid");}
+        if(parsed.getRawUserInfo()!=null||parsed.getRawFragment()!=null||parsed.getScheme()!=null&&!("http".equalsIgnoreCase(parsed.getScheme())||"https".equalsIgnoreCase(parsed.getScheme())))throw new IllegalArgumentException("Cover URL is invalid");
+        HttpUrl base=HttpUrl.parse(http.getBaseUrl());
+        HttpUrl url=parsed.isAbsolute()?HttpUrl.parse(raw):base==null?null:base.resolve(raw);
+        if(url==null||!url.username().isEmpty()||!url.password().isEmpty())throw new IllegalArgumentException("Cover URL is invalid");
+        // Mihon covers use GET(thumbnailUrl, source.headers) with source.client;
+        // chapter getImage/imageRequest overrides can transform page URLs and
+        // must not be applied to a cover. The client retains its cookie jar and
+        // source interceptors, including browser clearance when available.
+        Request request=new Request.Builder().url(url).headers(http.getHeaders()).build();
+        try(Response response=http.getClient().newCall(request).execute()){
+            if(!response.isSuccessful()||response.body()==null)throw new IOException("Cover HTTP response failed");
+            if(response.body().contentLength()>MAX_IMAGE_BYTES)throw new IOException("Cover size exceeds native response limit");
+            ByteArrayOutputStream output=new ByteArrayOutputStream();try(InputStream input=response.body().byteStream()){byte[] block=new byte[32768];int read;while((read=input.read(block))!=-1){if(output.size()+(long)read>MAX_IMAGE_BYTES)throw new IOException("Cover size exceeds native response limit");output.write(block,0,read);}}
+            if(output.size()==0)throw new IOException("Cover response is empty");
             JsonObject result=new JsonObject();result.addProperty("base64",Base64.getEncoder().encodeToString(output.toByteArray()));result.addProperty("mimeType",response.header("Content-Type","application/octet-stream"));return result;
         }
     }

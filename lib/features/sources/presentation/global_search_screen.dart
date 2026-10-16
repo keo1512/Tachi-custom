@@ -7,12 +7,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/widgets/feedback.dart';
 import '../../library/presentation/library_view_model.dart';
+import '../../library/presentation/library_locations.dart';
 import '../../library/presentation/library_add_categories.dart';
 import '../domain/catalogue.dart';
 import 'browse_widgets.dart';
 import 'global_search_controller.dart';
 import 'source_catalogue_tools.dart';
 import 'source_result_tile.dart';
+import 'source_cover_image.dart';
 import 'source_search_screen.dart';
 
 class GlobalSearchScreen extends ConsumerStatefulWidget {
@@ -58,7 +60,7 @@ class _GlobalSearchState extends ConsumerState<GlobalSearchScreen> {
             height: MediaQuery.sizeOf(ctx).height * .5,
             child: Column(
               children: [
-                Row(
+                Wrap(
                   children: [
                     TextButton(
                       onPressed: () => update(
@@ -120,7 +122,7 @@ class _GlobalSearchState extends ConsumerState<GlobalSearchScreen> {
       ref.read(libraryProvider).value ?? const [],
     )[book.identity];
     if (existing != null) {
-      context.push('/book/${existing.id}');
+      context.push(libraryBookLocation(existing.id));
       return;
     }
     if (!adding.add(book.identity)) return;
@@ -145,7 +147,7 @@ class _GlobalSearchState extends ConsumerState<GlobalSearchScreen> {
     );
     if (!mounted) return;
     setState(() => adding.remove(book.identity));
-    if (added != null) context.push('/book/${added.id}');
+    if (added != null) context.push(libraryBookLocation(added.id));
   }
 
   @override
@@ -206,7 +208,17 @@ class _GlobalSearchState extends ConsumerState<GlobalSearchScreen> {
                       BrowseNote(
                         widget.sources.isEmpty
                             ? 'Chưa có nguồn đã cài để tìm kiếm.'
+                            : selected.isEmpty
+                            ? 'Chưa chọn nguồn tham gia tìm kiếm.'
                             : 'Nhập tên truyện và chọn nguồn để tìm kiếm.',
+                      ),
+                    if (controller.results.isEmpty && widget.sources.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: chooseSources,
+                          child: const Text('Chọn nguồn tìm kiếm'),
+                        ),
                       ),
                     for (final result in controller.results) ...[
                       ListTile(
@@ -251,6 +263,7 @@ class _GlobalSearchState extends ConsumerState<GlobalSearchScreen> {
                               return SizedBox(
                                 width: 116,
                                 child: SourceResultTile(
+                                  coverImage: sourceCoverImage(ref, book),
                                   book: book,
                                   inLibrary: library.containsKey(book.identity),
                                   pending: adding.contains(book.identity),

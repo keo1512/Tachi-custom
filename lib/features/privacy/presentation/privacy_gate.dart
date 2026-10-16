@@ -106,55 +106,58 @@ class _PrivacyGateState extends ConsumerState<PrivacyGate>
               color: Theme.of(context).scaffoldBackgroundColor,
               child: SafeArea(
                 child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 360),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(CupertinoIcons.lock_shield, size: 64),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'TachiBooks đã khóa',
-                            style: TextStyle(fontSize: 22),
-                          ),
-                          if (state.locked && !state.obscured) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              state.capabilities.label,
-                              textAlign: TextAlign.center,
+                  child: SingleChildScrollView(
+                    key: const ValueKey('privacy-lock-scroll'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(CupertinoIcons.lock_shield, size: 64),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'TachiBooks đã khóa',
+                              style: TextStyle(fontSize: 22),
                             ),
-                            if (state.error != null) ...[
+                            if (state.locked && !state.obscured) ...[
                               const SizedBox(height: 12),
-                              Text(state.error!, textAlign: TextAlign.center),
-                            ],
-                            const SizedBox(height: 24),
-                            FilledButton.icon(
-                              key: const ValueKey('privacy-unlock'),
-                              onPressed:
-                                  state.authenticating ||
-                                      remaining > 0 ||
-                                      !state.configurationValid
-                                  ? null
-                                  : () => unawaited(
-                                      ref
-                                          .read(appLockProvider.notifier)
-                                          .unlock(),
-                                    ),
-                              icon: state.authenticating
-                                  ? const CupertinoActivityIndicator()
-                                  : const Icon(CupertinoIcons.lock_open),
-                              label: Text(
-                                state.authenticating
-                                    ? 'Đang xác thực'
-                                    : remaining > 0
-                                    ? 'Thử lại sau ${remaining}s'
-                                    : 'Mở khóa',
+                              Text(
+                                state.capabilities.label,
+                                textAlign: TextAlign.center,
                               ),
-                            ),
+                              if (state.error != null) ...[
+                                const SizedBox(height: 12),
+                                Text(state.error!, textAlign: TextAlign.center),
+                              ],
+                              const SizedBox(height: 24),
+                              FilledButton.icon(
+                                key: const ValueKey('privacy-unlock'),
+                                onPressed:
+                                    state.authenticating ||
+                                        remaining > 0 ||
+                                        !state.configurationValid
+                                    ? null
+                                    : () => unawaited(
+                                        ref
+                                            .read(appLockProvider.notifier)
+                                            .unlock(),
+                                      ),
+                                icon: state.authenticating
+                                    ? const CupertinoActivityIndicator()
+                                    : const Icon(CupertinoIcons.lock_open),
+                                label: Text(
+                                  state.authenticating
+                                      ? 'Đang xác thực'
+                                      : remaining > 0
+                                      ? 'Thử lại sau ${remaining}s'
+                                      : 'Mở khóa',
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ),

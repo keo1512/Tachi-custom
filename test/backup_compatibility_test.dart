@@ -180,6 +180,17 @@ void main() {
         ),
         isTrue,
       );
+      // Check only the known source/URL identity, without printing private
+      // titles. The real build511 source_order increases toward newer chapters.
+      final known = preview.snapshot.entries
+          .singleWhere(
+            (entry) =>
+                entry.book.sourceId == '8689080191405841403' &&
+                entry.book.sourceRef == '/manga/1106-na-kang-lim',
+          )
+          .book;
+      expect(known.chapters.first.id, '${known.sourceRef}/chapters/1');
+      expect(known.chapters.last.id, '${known.sourceRef}/chapters/172');
       expect(await file.readAsBytes(), bytes);
       expect(file.statSync().modified, before.modified);
       // Deliberately print no titles, account values or other personal metadata.
