@@ -311,6 +311,7 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
                       height: 64,
                       child: BookCover(
                         title: item.title,
+                        showTitle: false,
                         cover: item.coverUrl,
                         imageProvider: sourceCoverImage(ref, item),
                         kind: item.kind.name,

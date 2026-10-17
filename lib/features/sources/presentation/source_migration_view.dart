@@ -101,6 +101,7 @@ class SourceMigrationView extends ConsumerWidget {
                     width: 42,
                     height: 60,
                     child: BookCover(
+                      showTitle: false,
                       title: book.title,
                       cover: book.cover,
                       kind: book.kind,

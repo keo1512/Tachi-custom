@@ -82,6 +82,89 @@ void main() {
         client: client ?? MockClient((_) async => http.Response('', 500)),
       );
 
+  for (final outcome in [
+    'unique',
+    'ambiguous',
+    'missing',
+    'failed-candidate',
+  ]) {
+    test(
+      'restored metadata resolution requires all saved chapter URLs and a unique exact-source result: $outcome',
+      () async {
+        const restored = CatalogueBook(
+          ref: '42',
+          title: 'Original title',
+          sourceId: _sourceId,
+          kind: ContentKind.manga,
+          engine: SourceEngine.tachimanga,
+          knownChapterRefs: ['/chapter/one', '/chapter/two'],
+        );
+        var searches = 0, details = 0;
+        final host = _Host((method, args) {
+          expect(args['sourceId'], _sourceId);
+          if (method == 'search') {
+            searches++;
+            return {
+              'items': [
+                {'ref': '/wrong', 'title': restored.title},
+                {'ref': '/right', 'title': restored.title},
+              ],
+            };
+          }
+          if (method == 'chapters') {
+            if (args['ref'] == '/wrong' && outcome == 'failed-candidate') {
+              throw const ApiException(
+                'Candidate could not be verified',
+                code: 'TIMEOUT',
+              );
+            }
+            return [
+              {'ref': '/chapter/one', 'title': 'One', 'index': 0},
+              {
+                'ref':
+                    outcome == 'ambiguous' ||
+                        (args['ref'] == '/right' && outcome == 'unique')
+                    ? '/chapter/two'
+                    : '/unrelated',
+                'title': 'Two',
+                'index': 1,
+              },
+            ];
+          }
+          expect(method, 'detail');
+          details++;
+          expect(args['ref'], '/right');
+          return {
+            'ref': '/right',
+            'title': restored.title,
+            'author': 'Real author',
+            'status': 1,
+          };
+        });
+        final repo = repository(host);
+        if (outcome == 'unique') {
+          expect((await repo.detail(restored)).author, 'Real author');
+          expect(
+            (await repo.chapters(restored)).map((c) => c.ref),
+            restored.knownChapterRefs,
+          );
+          expect(searches, 1);
+          expect(details, 1);
+          expect(restored.ref, '42');
+        } else {
+          await expectLater(
+            repo.detail(restored),
+            _apiCode(
+              outcome == 'failed-candidate'
+                  ? 'TIMEOUT'
+                  : 'RESTORED_TITLE_UNRESOLVED',
+            ),
+          );
+          expect(details, 0);
+        }
+      },
+    );
+  }
   test('native errors preserve bounded exception types and reject provider identifiers', () async {
     for (final type in [
       'NoSuchMethodError',
@@ -702,6 +785,45 @@ void main() {
       expect(host.requests, isEmpty);
     },
   );
+
+  test('restored numeric manga IDs do not block known chapter URLs or source image hooks', () async {
+    const restored = CatalogueBook(
+      ref: '42',
+      title: 'Restored',
+      sourceId: _sourceId,
+      kind: ContentKind.manga,
+      engine: SourceEngine.tachimanga,
+    );
+    final host = _Host((method, args) {
+      expect(args['sourceId'], _sourceId);
+      if (method == 'chapter') {
+        expect(args['ref'], _chapter.ref);
+        return {
+          'images': ['https://images.example/a.jpg'],
+        };
+      }
+      expect(method, 'image');
+      expect(args['chapterRef'], _chapter.ref);
+      return {
+        'base64': base64Encode([255, 216, 255, 1]),
+        'mimeType': 'image/jpeg',
+      };
+    });
+    final repo = repository(host);
+    final content = await repo.chapter(restored, _chapter);
+    expect(content.images, ['https://images.example/a.jpg']);
+    final image = await repo.fetchImage(
+      restored,
+      _chapter,
+      0,
+      content.images.single,
+    );
+    expect(image.bytes, [255, 216, 255, 1]);
+    await expectLater(
+      repo.detail(restored),
+      _apiCode('RESTORED_TITLE_UNRESOLVED'),
+    );
+  });
 
   test(
     'inline image headers override root per-page headers without losing Cookie',

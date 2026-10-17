@@ -8,6 +8,7 @@ import '../../library/application/reading_statistics_controller.dart';
 import '../../library/domain/library_book.dart';
 import '../../library/domain/library_reading.dart';
 import '../../library/domain/reading_statistics.dart';
+import '../../library/domain/book_reading_times.dart';
 import '../../sources/presentation/source_cover_image.dart';
 import '../settings_controller.dart';
 import 'reading_statistics_book_list.dart';
@@ -191,6 +192,19 @@ class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
         'Hồ sơ tracker là dữ liệu có trong bản sao lưu đã nhập. '
         'Thống kê không đăng nhập, gọi dịch vụ hoặc khẳng định tài khoản đang kết nối.',
       ),
+      const SettingsHeading('Thời lượng đọc theo truyện'),
+      const SettingsNote(
+        'Chỉ tính thời gian đã ghi nhận cho từng truyện. Thời gian tổng từ phiên bản cũ không được tự chia cho các truyện.',
+      ),
+      if (stats.longestReadBooks.isEmpty)
+        const SettingsNote(
+          'Chưa có thời lượng theo truyện. Mở và đọc truyện để bắt đầu ghi nhận.',
+        ),
+      for (final book in stats.longestReadBooks)
+        _bookCount(
+          book,
+          '${stats.longestReadBooks.indexOf(book) + 1}. ${readingDurationLabel(stats.readingSecondsOf(book))}',
+        ),
       const SettingsHeading('Đọc nhiều chương nhất'),
       if (stats.mostReadBooks.isEmpty)
         const SettingsNote('Chưa có chương được ghi nhận đã đọc.'),

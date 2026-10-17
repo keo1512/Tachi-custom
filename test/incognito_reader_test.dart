@@ -7,6 +7,8 @@ import 'package:tachi_books/app.dart';
 import 'package:tachi_books/core/widgets/book_cover.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
+import 'package:tachi_books/features/library/domain/book_reading_times.dart';
+import 'package:tachi_books/features/library/application/reading_statistics_controller.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/reader/presentation/reader_screen.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
@@ -20,6 +22,62 @@ void main() {
           (_) async => 1,
         );
   });
+
+  testWidgets(
+    'per-book time splits midnight, pauses in background and counts resumed sessions once',
+    (tester) async {
+      var clock = DateTime(2030, 1, 1, 23, 59, 55);
+      final fixture = await _open(tester, false, clock: () => clock);
+      clock = clock.add(const Duration(seconds: 12));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pumpAndSettle();
+      expect(
+        BookReadingTimes.decode(
+          fixture.preferences.getString(BookReadingTimes.preferenceKey),
+        ).of(fixture.book.id),
+        12,
+      );
+      expect(fixture.preferences.getInt('readSeconds:2030-1-1'), 5);
+      expect(fixture.preferences.getInt('readSeconds:2030-1-2'), 7);
+      clock = clock.add(const Duration(minutes: 10));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      clock = clock.add(const Duration(seconds: 8));
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pumpAndSettle();
+      expect(
+        BookReadingTimes.decode(
+          fixture.preferences.getString(BookReadingTimes.preferenceKey),
+        ).of(fixture.book.id),
+        20,
+      );
+      expect(fixture.preferences.getInt('readSeconds:2030-1-2'), 15);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      await _dispose(tester, fixture.container);
+    },
+  );
+
+  testWidgets(
+    'restore invalidates time from a reader opened on the old library',
+    (tester) async {
+      var clock = DateTime(2030, 1, 1, 10);
+      final fixture = await _open(tester, false, clock: () => clock);
+      final snapshot = await fixture.repo.snapshot();
+      await fixture.repo.replaceSnapshot(
+        snapshot,
+        expectedFingerprint: snapshot.fingerprint,
+      );
+      clock = clock.add(const Duration(minutes: 5));
+      await _dispose(tester, fixture.container);
+      expect(
+        fixture.preferences.getString(BookReadingTimes.preferenceKey),
+        isNull,
+      );
+      expect(_readSeconds(fixture.preferences), fixture.seconds);
+    },
+  );
 
   for (final private in [false, true]) {
     testWidgets(
@@ -46,8 +104,18 @@ void main() {
                 'Private auto-save must preserve all prior reading metadata.',
           );
           expect(_readSeconds(fixture.preferences), fixture.seconds);
+          expect(
+            fixture.preferences.getString(BookReadingTimes.preferenceKey),
+            isNull,
+          );
         } else {
           expect(saved.currentChapter, 1);
+          expect(
+            BookReadingTimes.decode(
+              fixture.preferences.getString(BookReadingTimes.preferenceKey),
+            ).of(fixture.book.id),
+            greaterThan(0),
+          );
           expect(saved.progress, .5);
           expect(saved.lastRead!.isAfter(fixture.book.lastRead!), true);
           expect(
@@ -184,7 +252,11 @@ typedef _Fixture = ({
   int seconds,
 });
 
-Future<_Fixture> _open(WidgetTester tester, bool incognito) async {
+Future<_Fixture> _open(
+  WidgetTester tester,
+  bool incognito, {
+  DateTime Function()? clock,
+}) async {
   final now = DateTime.now();
   SharedPreferences.setMockInitialValues({
     'incognitoMode': incognito,
@@ -237,6 +309,8 @@ Future<_Fixture> _open(WidgetTester tester, bool incognito) async {
   }
   final container = ProviderContainer(
     overrides: [
+      if (clock != null)
+        readingStatisticsClockProvider.overrideWithValue(clock),
       preferencesProvider.overrideWithValue(preferences),
       libraryRepositoryProvider.overrideWithValue(repo),
     ],

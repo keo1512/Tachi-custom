@@ -11,6 +11,7 @@ class LibraryGroupTabs extends StatelessWidget {
     required this.onSelected,
     required this.grouping,
     this.onReorder,
+    this.onManage,
   });
   final List<LibraryGroup> groups;
   final String? selectedKey;
@@ -18,6 +19,7 @@ class LibraryGroupTabs extends StatelessWidget {
   final ValueChanged<String?> onSelected;
   final LibraryGrouping grouping;
   final VoidCallback? onReorder;
+  final VoidCallback? onManage;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -35,13 +37,24 @@ class LibraryGroupTabs extends StatelessWidget {
         ),
       SizedBox(
         height: 42,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
           children: [
-            tab(context, null, 'Tất cả', total),
-            for (final group in groups)
-              tab(context, group.key, group.label, group.bookIds.length),
+            Expanded(
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                children: [
+                  for (final group in groups)
+                    tab(context, group.key, group.label, group.bookIds.length),
+                ],
+              ),
+            ),
+            if (onManage != null)
+              IconButton(
+                tooltip: 'Quản lý danh mục',
+                onPressed: onManage,
+                icon: const Icon(Icons.add, size: 20),
+              ),
           ],
         ),
       ),

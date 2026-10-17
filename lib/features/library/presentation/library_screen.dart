@@ -39,6 +39,9 @@ import 'library_book_metadata.dart';
 import 'library_book_tile.dart';
 import 'library_source_label.dart';
 import 'library_locations.dart';
+import 'library_folder_tile.dart';
+import 'library_folders_controller.dart';
+import 'library_folder_name_dialog.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -52,6 +55,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   bool searching = false, importing = false;
   LibraryGrouping get grouping => ref.read(libraryGroupingProvider);
   String? selectedGroup;
+  String? selectedFolder;
   bool selecting = false, groupingBusy = false;
   int? selectionRevision;
   bool downloadingBusy = false, bulkBusy = false;
@@ -69,6 +73,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     query = viewSession.query;
     searching = viewSession.searching;
     selectedGroup = viewSession.selectedGroup;
+    selectedFolder = viewSession.selectedFolder;
     queryController = TextEditingController(text: query);
   }
 
@@ -77,12 +82,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     viewSession.query = query;
     viewSession.searching = searching;
     viewSession.selectedGroup = selectedGroup;
+    viewSession.selectedFolder = selectedFolder;
     queryController.dispose();
     super.dispose();
   }
 
   Future<void> reorderGroups(List<LibraryGroup> groups) async {
-    final mode = grouping;
+    const mode = LibraryGrouping.collection;
     final keys = await showLibraryGroupOrderSheet(context, groups);
     if (keys == null || !mounted) return;
     await perform(
@@ -150,8 +156,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     await ref.read(libraryGroupingProvider.notifier).setGrouping(mode);
     if (!mounted) return;
     setState(() {
-      selectedGroup = null;
-      filter = filter.copyWith(category: 'Tất cả');
+      selectedFolder = null;
     });
   }
 
@@ -186,7 +191,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             favorite: LibraryTriState.any,
             completed: LibraryTriState.any,
           ),
-          grouping: grouping,
+          grouping: LibraryGrouping.collection,
           groupKey: selectedGroup,
         );
   });
@@ -213,7 +218,86 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       ..sort(filter.compare);
   }
 
+  Future<String?> folderName({String? initial}) => showDialog<String>(
+    context: context,
+    builder: (_) => LibraryFolderNameDialog(initial: initial),
+  );
+
   Future<void> groupSelected(List<LibraryBook> books, Set<String> ids) async {
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    final name = await folderName();
+    if (name == null || !mounted) return;
+    setState(() => groupingBusy = true);
+    final saved = await perform(context, () async {
+      await ref
+          .read(libraryFoldersProvider.notifier)
+          .assign(ids, name, expectedRevision: revision);
+      return true;
+    });
+    if (!mounted) return;
+    setState(() {
+      groupingBusy = false;
+      if (saved == true) {
+        selecting = false;
+        selectedIds.clear();
+        selectionRevision = null;
+        selectedFolder = null;
+      }
+    });
+  }
+
+  Future<void> manageFolder(LibraryGroup folder) async {
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    final names = ref.read(libraryFoldersProvider).names;
+    final ids = (ref.read(libraryProvider).value ?? <LibraryBook>[])
+        .where((book) => names[book.id] == folder.label)
+        .map((book) => book.id)
+        .toList();
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      useSafeArea: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(folder.label),
+              subtitle: Text(
+                '${folder.bookIds.length} truyện trong danh mục này',
+              ),
+            ),
+            ListTile(
+              leading: const Icon(CupertinoIcons.pencil),
+              title: const Text('Đổi tên thư mục'),
+              onTap: () => Navigator.pop(ctx, 'rename'),
+            ),
+            ListTile(
+              leading: const Icon(CupertinoIcons.folder_badge_minus),
+              title: const Text('Bỏ thư mục, giữ các truyện'),
+              onTap: () => Navigator.pop(ctx, 'remove'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == null || !mounted) return;
+    final name = action == 'rename'
+        ? await folderName(initial: folder.label)
+        : null;
+    if (!mounted || (action == 'rename' && name == null)) return;
+    await perform(
+      context,
+      () => ref
+          .read(libraryFoldersProvider.notifier)
+          .assign(ids, name, expectedRevision: revision),
+    );
+    if (mounted) setState(() => selectedFolder = null);
+  }
+
+  Future<void> editSelectedMetadata(
+    List<LibraryBook> books,
+    Set<String> ids,
+  ) async {
     final revision = ref.read(libraryRepositoryProvider).replacementRevision;
     final edit = await showLibraryGroupDialog(
       context,
@@ -244,17 +328,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           ),
     );
     if (!mounted) return;
-    if (count != null) {
-      await perform(context, () => changeGrouping(edit.grouping));
-      if (!mounted) return;
-    }
     setState(() {
       groupingBusy = false;
       if (count != null) {
         selecting = false;
         selectionRevision = null;
         selectedIds.clear();
-        selectedGroup = null;
+        selectedFolder = null;
         filter = filter.copyWith(category: 'Tất cả');
       }
     });
@@ -328,6 +408,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     Set<String> ids,
   ) async {
     if (selectionBusy || ids.isEmpty) return;
+    if (action == 'categories') {
+      await editSelectedMetadata(books, ids);
+      return;
+    }
+    if (action == 'unfolder') {
+      final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+      await perform(
+        context,
+        () => ref
+            .read(libraryFoldersProvider.notifier)
+            .assign(ids, null, expectedRevision: revision),
+      );
+      return;
+    }
     final repository = ref.read(libraryRepositoryProvider);
     final revision = repository.replacementRevision;
     final actions = LibraryBulkActions(repository);
@@ -413,12 +507,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final generation = preferences is CoordinatedPreferences
         ? preferences.mutationGeneration
         : 0;
-    final mode = grouping, groupKey = selectedGroup;
+    const mode = LibraryGrouping.collection;
+    var groupKey = selectedGroup;
     final collections =
-        books
-            .expand((b) => b.categories)
-            .where((c) => c.isNotEmpty)
-            .toSet()
+        ref
+            .read(libraryCategoriesProvider)
+            .all(books)
+            .map((category) => category.name)
             .toList()
           ..sort();
     showModalBottomSheet<void>(
@@ -427,41 +522,61 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       useSafeArea: true,
       showDragHandle: true,
       constraints: const BoxConstraints(maxWidth: 600),
-      builder: (_) => LibraryFilterSheet(
-        value: filter,
-        libraryColumns: ref.read(settingsProvider).libraryColumns,
-        onColumnsChanged: (columns) => perform(context, () async {
-          if (preferences is CoordinatedPreferences &&
-              preferences.mutationGeneration != generation) {
-            throw StateError('Thiết lập đã được khôi phục. Hãy mở lại bộ lọc.');
-          }
-          await ref
-              .read(settingsProvider.notifier)
-              .update(libraryColumns: columns);
-        }),
-        presetsBuilder: (filter, onApply) =>
-            LibraryFilterPresetsBar(filter: filter, onApply: onApply),
-        collections: collections,
-        sources: {
-          for (final book in books)
-            if (book.engine != 'local')
-              '${book.engine}:${book.sourceId}': librarySourceLabel(book),
-        },
-        onChanged: (value) {
-          if (mounted) {
-            perform(
-              context,
-              () => ref
-                  .read(libraryFilterProvider.notifier)
-                  .save(
-                    value,
-                    grouping: mode,
-                    groupKey: groupKey,
-                    expectedGeneration: generation,
-                  ),
-            );
-          }
-        },
+      builder: (_) => Consumer(
+        builder: (_, sheetRef, _) => LibraryFilterSheet(
+          value: filter,
+          libraryColumns: ref.read(settingsProvider).libraryColumns,
+          onColumnsChanged: (columns) => perform(context, () async {
+            if (preferences is CoordinatedPreferences &&
+                preferences.mutationGeneration != generation) {
+              throw StateError(
+                'Thiết lập đã được khôi phục. Hãy mở lại bộ lọc.',
+              );
+            }
+            await ref
+                .read(settingsProvider.notifier)
+                .update(libraryColumns: columns);
+          }),
+          presetsBuilder: (filter, onApply) =>
+              LibraryFilterPresetsBar(filter: filter, onApply: onApply),
+          collections: collections,
+          sources: {
+            for (final book in books)
+              if (book.engine != 'local')
+                '${book.engine}:${book.sourceId}': resolvedLibrarySourceLabel(
+                  sheetRef,
+                  book,
+                ),
+          },
+          onChanged: (value) async {
+            if (mounted) {
+              var next = value;
+              if (value.category != 'Tất cả' &&
+                  collections.contains(value.category)) {
+                groupKey = 'value:${value.category}';
+                next = value.copyWith(category: 'Tất cả');
+              }
+              final targetGroup = groupKey;
+              final saved = await perform(context, () async {
+                await ref
+                    .read(libraryFilterProvider.notifier)
+                    .save(
+                      next,
+                      grouping: mode,
+                      groupKey: targetGroup,
+                      expectedGeneration: generation,
+                    );
+                return true;
+              });
+              if (mounted && saved == true) {
+                setState(() {
+                  if (selectedGroup != targetGroup) selectedFolder = null;
+                  selectedGroup = targetGroup;
+                });
+              }
+            }
+          },
+        ),
       ),
     );
   }
@@ -471,7 +586,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final library = ref.watch(libraryProvider);
     final settings = ref.watch(settingsProvider);
     final grouping = ref.watch(libraryGroupingProvider);
-    filter = ref.watch(libraryFilterProvider).forGroup(grouping, selectedGroup);
     final books = library.value ?? <LibraryBook>[];
     final updateProgress = ref.watch(libraryUpdateProgressProvider);
     final revision = ref.read(libraryRepositoryProvider).replacementRevision;
@@ -482,12 +596,42 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     }
     final groupOrders = ref.watch(libraryGroupOrderProvider);
     final groups = orderLibraryGroups(
-      grouping == LibraryGrouping.collection
-          ? libraryCategoryGroups(books, ref.watch(libraryCategoriesProvider))
-          : libraryGroups(books, grouping),
-      groupOrders[grouping.name] ?? const [],
+      libraryCategoryGroups(books, ref.watch(libraryCategoriesProvider)),
+      groupOrders[LibraryGrouping.collection.name] ?? const [],
     );
-    final visible = visibleBooks(books, groups);
+    if (!groups.any((group) => group.key == selectedGroup)) {
+      selectedGroup = groups.firstOrNull?.key;
+      selectedFolder = null;
+    }
+    filter = ref
+        .watch(libraryFilterProvider)
+        .forGroup(LibraryGrouping.collection, selectedGroup);
+    // Category tabs already scope the contents. Legacy category filters remain
+    // stored for compatibility, but must not intersect two different categories.
+    if (groups.any((group) => group.key == 'value:${filter.category}')) {
+      filter = filter.copyWith(category: 'Tất cả');
+    }
+    final inCategory = visibleBooks(books, groups);
+    final folders = ref
+        .watch(libraryFoldersProvider)
+        .groups(inCategory, grouping);
+    final openFolder = folders
+        .where((folder) => folder.key == selectedFolder)
+        .firstOrNull;
+    if (openFolder == null) selectedFolder = null;
+    final visible = openFolder == null
+        ? inCategory
+        : inCategory
+              .where((book) => openFolder.bookIds.contains(book.id))
+              .toList();
+    final foldedIds = folders.expand((folder) => folder.bookIds).toSet();
+    final tiles = <Object>[
+      if (openFolder == null && !selecting) ...folders,
+      ...visible.where(
+        (book) =>
+            openFolder != null || selecting || !foldedIds.contains(book.id),
+      ),
+    ];
     final currentIds = selectedIds.intersection(
       books.map((book) => book.id).toSet(),
     );
@@ -581,6 +725,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
               enabled: currentIds.isNotEmpty && !selectionBusy,
               onSelected: (action) => bulkAction(action, books, currentIds),
               itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'categories',
+                  child: Text('Danh mục và thông tin truyện'),
+                ),
+                PopupMenuItem(
+                  value: 'unfolder',
+                  child: Text('Đưa truyện ra khỏi thư mục'),
+                ),
                 PopupMenuItem(value: 'read', child: Text('Đánh dấu đã đọc')),
                 PopupMenuItem(
                   value: 'unread',
@@ -718,8 +870,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     checked: grouping == mode,
                     child: Text(
                       mode == LibraryGrouping.collection
-                          ? 'Nhóm theo kệ'
-                          : 'Tự nhóm theo ${mode.label.toLowerCase()}',
+                          ? 'Chỉ dùng thư mục tự tạo'
+                          : 'Tự tạo thư mục theo ${mode.label.toLowerCase()}',
                     ),
                   ),
                 const PopupMenuDivider(),
@@ -759,19 +911,85 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     semanticsLabel:
                         'Đang kiểm tra chương mới: ${updateProgress.processedBooks}/${updateProgress.requestedBooks} truyện',
                   ),
-                if (books.isNotEmpty && filter.showCategoryTabs)
+                if (groups.isNotEmpty && filter.showCategoryTabs)
                   LibraryGroupTabs(
                     groups: groups,
                     selectedKey: selectedGroup,
                     total: books.length,
-                    grouping: grouping,
+                    grouping: LibraryGrouping.collection,
+                    onManage: () => openSettingsPage(
+                      context,
+                      const LibraryCategoriesScreen(),
+                    ),
                     onReorder: groups.length > 1
                         ? () => reorderGroups(groups)
                         : null,
                     onSelected: (key) => setState(() {
                       selectedGroup = key;
+                      selectedFolder = null;
                       filter = filter.copyWith(category: 'Tất cả');
                     }),
+                  ),
+                if (groups.isNotEmpty && !filter.showCategoryTabs)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButton<String>(
+                            key: const ValueKey('library-category-selector'),
+                            value: selectedGroup,
+                            isExpanded: true,
+                            items: [
+                              for (final group in groups)
+                                DropdownMenuItem(
+                                  value: group.key,
+                                  child: Text(
+                                    '${group.label} (${group.bookIds.length})',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
+                            onChanged: (key) => setState(() {
+                              selectedGroup = key;
+                              selectedFolder = null;
+                            }),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Quản lý danh mục',
+                          onPressed: () => openSettingsPage(
+                            context,
+                            const LibraryCategoriesScreen(),
+                          ),
+                          icon: const Icon(CupertinoIcons.add),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (openFolder != null)
+                  Row(
+                    children: [
+                      IconButton(
+                        tooltip: 'Về danh mục',
+                        onPressed: () => setState(() => selectedFolder = null),
+                        icon: const Icon(CupertinoIcons.chevron_left),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '${openFolder.label} · ${openFolder.bookIds.length} truyện',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (openFolder.key.startsWith('folder:'))
+                        IconButton(
+                          tooltip: 'Sửa thư mục',
+                          onPressed: () => manageFolder(openFolder),
+                          icon: const Icon(CupertinoIcons.ellipsis),
+                        ),
+                    ],
                   ),
                 const Divider(height: 1),
                 Expanded(
@@ -819,11 +1037,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                         )
                                       : selectedGroup != null
                                       ? FilledButton(
-                                          onPressed: () => setState(
-                                            () => selectedGroup = null,
-                                          ),
+                                          onPressed: () => setState(() {
+                                            selectedGroup =
+                                                groups.firstOrNull?.key;
+                                            selectedFolder = null;
+                                          }),
                                           child: const Text(
-                                            'Xem tất cả truyện',
+                                            'Về danh mục đầu tiên',
                                           ),
                                         )
                                       : null,
@@ -867,13 +1087,30 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                 onRefresh: () => refreshVisibleBooks(visible),
                                 child: ListView.builder(
                                   key: PageStorageKey(
-                                    'library-list:${grouping.name}:$selectedGroup',
+                                    'library-list:${grouping.name}:$selectedGroup:$selectedFolder',
                                   ),
                                   physics:
                                       const AlwaysScrollableScrollPhysics(),
-                                  itemCount: visible.length,
+                                  itemCount: tiles.length,
                                   itemBuilder: (context, index) {
-                                    final b = visible[index];
+                                    final item = tiles[index];
+                                    if (item is LibraryGroup) {
+                                      return LibraryFolderTile(
+                                        key: ValueKey(
+                                          'library-folder-${item.key}',
+                                        ),
+                                        folder: item,
+                                        list: true,
+                                        onTap: () => setState(
+                                          () => selectedFolder = item.key,
+                                        ),
+                                        onLongPress:
+                                            item.key.startsWith('folder:')
+                                            ? () => manageFolder(item)
+                                            : null,
+                                      );
+                                    }
+                                    final b = item as LibraryBook;
                                     return ListTile(
                                       key: ValueKey('library-book-${b.id}'),
                                       minTileHeight: 100,
@@ -905,6 +1142,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                           Text(b.categories.join(', ')),
                                           LibraryBookMetadata(
                                             book: b,
+                                            sourceLabel: filter.showSource
+                                                ? resolvedLibrarySourceLabel(
+                                                    ref,
+                                                    b,
+                                                  )
+                                                : null,
                                             filter: filter,
                                           ),
                                         ],
@@ -959,7 +1202,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                               onRefresh: () => refreshVisibleBooks(visible),
                               child: GridView.builder(
                                 key: PageStorageKey(
-                                  'library-grid:${grouping.name}:$selectedGroup',
+                                  'library-grid:${grouping.name}:$selectedGroup:$selectedFolder',
                                 ),
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 padding: EdgeInsets.fromLTRB(
@@ -968,27 +1211,55 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                   10,
                                   MediaQuery.viewPaddingOf(context).bottom + 16,
                                 ),
-                                itemCount: visible.length,
+                                itemCount: tiles.length,
                                 gridDelegate:
                                     SliverGridDelegateWithFixedCrossAxisCount(
                                       crossAxisCount: columns,
                                       crossAxisSpacing: 6,
                                       mainAxisSpacing: 6,
-                                      mainAxisExtent:
-                                          ((size.maxWidth -
-                                                      20 -
-                                                      (columns - 1) * 6) /
-                                                  columns) /
-                                              .74 +
-                                          LibraryBookTile.extraHeight(
-                                            context,
-                                            filter,
-                                          ),
+                                      mainAxisExtent: max(
+                                        ((size.maxWidth -
+                                                        20 -
+                                                        (columns - 1) * 6) /
+                                                    columns) /
+                                                .74 +
+                                            LibraryBookTile.extraHeight(
+                                              context,
+                                              filter,
+                                            ),
+                                        openFolder == null &&
+                                                folders.isNotEmpty &&
+                                                !selecting
+                                            ? 40 +
+                                                  MediaQuery.textScalerOf(
+                                                    context,
+                                                  ).scale(44)
+                                            : 0,
+                                      ),
                                     ),
                                 itemBuilder: (_, i) {
-                                  final b = visible[i];
+                                  final item = tiles[i];
+                                  if (item is LibraryGroup) {
+                                    return LibraryFolderTile(
+                                      key: ValueKey(
+                                        'library-folder-${item.key}',
+                                      ),
+                                      folder: item,
+                                      onTap: () => setState(
+                                        () => selectedFolder = item.key,
+                                      ),
+                                      onLongPress:
+                                          item.key.startsWith('folder:')
+                                          ? () => manageFolder(item)
+                                          : null,
+                                    );
+                                  }
+                                  final b = item as LibraryBook;
                                   return LibraryBookTile(
                                     book: b,
+                                    sourceLabel: filter.showSource
+                                        ? resolvedLibrarySourceLabel(ref, b)
+                                        : null,
                                     coverImage: libraryCoverImage(ref, b),
                                     filter: filter,
                                     selected: selecting

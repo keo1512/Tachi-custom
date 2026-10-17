@@ -341,15 +341,12 @@ void _expectSheetMangaFirst(WidgetTester tester, {bool first = true}) {
 }
 
 void _expectMangaFirst(WidgetTester tester, {bool first = true}) {
-  final all = tester
-      .getCenter(find.byKey(const ValueKey('library-group-all')))
-      .dx;
+  expect(find.byKey(const ValueKey('library-group-all')), findsNothing);
   final manga = tester
       .getCenter(find.byKey(const ValueKey('library-group-value:manga')))
       .dx;
   final other = tester
       .getCenter(find.byKey(const ValueKey('library-group-value:..')))
       .dx;
-  expect(all, lessThan(manga));
   expect(manga, first ? lessThan(other) : greaterThan(other));
 }

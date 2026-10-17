@@ -7,6 +7,7 @@ import '../data/native_vbook_repository.dart';
 import '../domain/catalogue.dart';
 import '../domain/native_source_engine.dart';
 import '../presentation/extension_catalogue_controller.dart';
+import '../../settings/settings_controller.dart';
 
 typedef NativeRuntimeFactory = NativeSourceEngine Function();
 
@@ -14,9 +15,16 @@ typedef NativeRuntimeFactory = NativeSourceEngine Function();
 final nativeRuntimeFactoriesProvider =
     Provider<Map<SourceEngine, NativeRuntimeFactory>>((ref) {
       if (!Platform.isIOS) return const {};
+      var coverCacheEpoch = 0;
+      ref.listen(
+        settingsProvider.select((s) => s.incognitoMode),
+        (_, _) => coverCacheEpoch++,
+      );
       return {
         SourceEngine.vbook: NativeVbookRepository.new,
         SourceEngine.tachimanga: () => NativeTachiRepository(
+          canCacheCover: () => !ref.read(settingsProvider).incognitoMode,
+          coverCacheEpoch: () => coverCacheEpoch,
           iconForPackage: (packageUrl) {
             final indexes = ref.read(extensionCatalogueProvider).value;
             for (final index in indexes ?? []) {

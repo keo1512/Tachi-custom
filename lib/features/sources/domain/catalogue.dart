@@ -42,6 +42,7 @@ class CatalogueBook {
     required this.sourceId,
     required this.kind,
     required this.engine,
+    this.knownChapterRefs = const [],
   });
 
   final String ref;
@@ -55,6 +56,10 @@ class CatalogueBook {
   final int status;
   final ContentKind kind;
   final SourceEngine engine;
+
+  /// Saved source chapter URLs are evidence for repairing old companion IDs.
+  /// Request context only; library identities and storage stay intact.
+  final List<String> knownChapterRefs;
 
   String get identity => '${engine.name}:$sourceId:$ref';
 }

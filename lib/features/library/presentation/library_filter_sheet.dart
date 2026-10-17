@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../domain/library_book.dart';
 import '../domain/library_reading.dart';
+import 'library_filter_picker.dart';
 
 enum LibraryOrder {
   recent,
@@ -348,346 +349,475 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
     widget.onChanged(value);
   }
 
-  Widget choice(String label, bool selected, VoidCallback onTap) => ListTile(
-    title: Text(label),
-    trailing: selected
-        ? Icon(CupertinoIcons.check_mark, color: Theme.of(context).primaryColor)
-        : null,
-    onTap: onTap,
-    selected: selected,
-  );
+  void reset() {
+    scanlatorController.clear();
+    change(
+      filter.copyWith(
+        kind: 'all',
+        category: 'Tất cả',
+        unread: LibraryTriState.any,
+        downloaded: LibraryTriState.any,
+        bookmarked: LibraryTriState.any,
+        favorite: LibraryTriState.any,
+        completed: LibraryTriState.any,
+        source: 'all',
+        excludeSource: false,
+        scanlator: '',
+      ),
+    );
+  }
 
   Widget section(String title) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 18, 16, 4),
-    child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+    padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+    child: Text(
+      title,
+      style: Theme.of(context).textTheme.labelLarge
+          ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+    ),
   );
+
+  Widget choice(String label, bool selected, VoidCallback onTap) => ListTile(
+    dense: true,
+    title: Text(label),
+    selected: selected,
+    trailing: selected
+        ? Icon(
+            CupertinoIcons.check_mark,
+            color: Theme.of(context).colorScheme.primary,
+          )
+        : null,
+    onTap: onTap,
+  );
+
+  Widget toggle(String label, bool value, ValueChanged<bool> onChanged) =>
+      SwitchListTile.adaptive(
+        dense: true,
+        title: Text(label),
+        value: value,
+        onChanged: onChanged,
+      );
+
+  String triLabel(LibraryTriState value) => switch (value) {
+    LibraryTriState.any => 'Tất cả',
+    LibraryTriState.include => 'Chỉ có',
+    LibraryTriState.exclude => 'Loại trừ',
+  };
 
   Widget triChoice(
     String label,
     LibraryTriState value,
     ValueChanged<LibraryTriState> onChanged,
   ) => ListTile(
+    dense: true,
     title: Text(label),
-    subtitle: Text(switch (value) {
-      LibraryTriState.any => 'Không áp dụng',
-      LibraryTriState.include => 'Chỉ hiện truyện có',
-      LibraryTriState.exclude => 'Loại trừ truyện có',
-    }),
-    trailing: Icon(
-      switch (value) {
-        LibraryTriState.any => CupertinoIcons.square,
-        LibraryTriState.include => CupertinoIcons.checkmark_square_fill,
-        LibraryTriState.exclude => CupertinoIcons.minus_square_fill,
-      },
-      color: value == LibraryTriState.any
-          ? null
-          : Theme.of(context).primaryColor,
-    ),
     onTap: () => onChanged(LibraryTriState.values[(value.index + 1) % 3]),
-  );
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    height: MediaQuery.sizeOf(context).height * .65,
-    child: DefaultTabController(
-      length: 3,
-      child: Column(
-        children: [
-          if (widget.presetsBuilder != null)
-            widget.presetsBuilder!(filter, (value) {
-              scanlatorController.text = value.scanlator;
-              change(value);
-            }),
-          Row(
-            children: [
-              const Expanded(
-                child: TabBar(
-                  tabs: [
-                    Tab(text: 'Lọc'),
-                    Tab(text: 'Sắp xếp'),
-                    Tab(text: 'Hiển thị'),
-                  ],
-                ),
+    trailing: PopupMenuButton<LibraryTriState>(
+      tooltip: 'Lọc $label',
+      initialValue: value,
+      onSelected: onChanged,
+      itemBuilder: (_) => [
+        for (final option in LibraryTriState.values)
+          PopupMenuItem(value: option, child: Text(triLabel(option))),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              triLabel(value),
+              style: TextStyle(
+                color: value == LibraryTriState.any
+                    ? Theme.of(context).colorScheme.onSurfaceVariant
+                    : Theme.of(context).colorScheme.primary,
               ),
-              IconButton(
-                tooltip: 'Đóng bộ lọc',
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(CupertinoIcons.xmark, size: 18),
-              ),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                ListView(
-                  children: [
-                    ListTile(
-                      leading: const Icon(CupertinoIcons.clear_circled),
-                      title: const Text('Đặt lại bộ lọc'),
-                      onTap: () {
-                        scanlatorController.clear();
-                        change(
-                          filter.copyWith(
-                            kind: 'all',
-                            category: 'Tất cả',
-                            unread: LibraryTriState.any,
-                            downloaded: LibraryTriState.any,
-                            bookmarked: LibraryTriState.any,
-                            favorite: LibraryTriState.any,
-                            completed: LibraryTriState.any,
-                            source: 'all',
-                            excludeSource: false,
-                            scanlator: '',
-                          ),
-                        );
-                      },
-                    ),
-                    section('Nội dung'),
-                    for (final item in const {
-                      'all': 'Tất cả nội dung',
-                      'manga': 'Truyện tranh',
-                      'novel': 'Truyện chữ & ebook',
-                    }.entries)
-                      choice(
-                        item.value,
-                        filter.kind == item.key,
-                        () => change(filter.copyWith(kind: item.key)),
-                      ),
-                    const Divider(height: 1),
-                    section('Bao gồm / loại trừ'),
-                    triChoice(
-                      'Có chương chưa đọc',
-                      filter.unread,
-                      (value) => change(filter.copyWith(unread: value)),
-                    ),
-                    triChoice(
-                      'Có chương đã tải',
-                      filter.downloaded,
-                      (value) => change(filter.copyWith(downloaded: value)),
-                    ),
-                    triChoice(
-                      'Có dấu trang',
-                      filter.bookmarked,
-                      (value) => change(filter.copyWith(bookmarked: value)),
-                    ),
-                    triChoice(
-                      'Yêu thích',
-                      filter.favorite,
-                      (value) => change(filter.copyWith(favorite: value)),
-                    ),
-                    triChoice(
-                      'Đã hoàn thành',
-                      filter.completed,
-                      (value) => change(filter.copyWith(completed: value)),
-                    ),
-                    if (widget.sources.isNotEmpty) ...[
-                      section('Nguồn'),
-                      SwitchListTile.adaptive(
-                        title: const Text('Loại trừ nguồn đã chọn'),
-                        value: filter.excludeSource,
-                        onChanged: (value) =>
-                            change(filter.copyWith(excludeSource: value)),
-                      ),
-                      choice(
-                        'Tất cả nguồn',
-                        filter.source == 'all',
-                        () => change(filter.copyWith(source: 'all')),
-                      ),
-                      for (final source in widget.sources.entries)
-                        choice(
-                          source.value,
-                          filter.source == source.key,
-                          () => change(filter.copyWith(source: source.key)),
-                        ),
-                    ],
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: TextFormField(
-                        controller: scanlatorController,
-                        key: const ValueKey('library-scanlator'),
-                        decoration: const InputDecoration(
-                          labelText: 'Nhóm dịch',
-                          helperText: 'Chỉ áp dụng khi nguồn cung cấp nhóm dịch cho chương.',
-                        ),
-                        onChanged: (value) =>
-                            change(filter.copyWith(scanlator: value.trim())),
-                      ),
-                    ),
-                    section('Thư viện'),
-                    for (final category in [
-                      'Tất cả',
-                      'Đang đọc',
-                      'Yêu thích',
-                      'Hoàn thành',
-                      ...widget.collections,
-                    ])
-                      choice(
-                        category,
-                        filter.category == category,
-                        () => change(filter.copyWith(category: category)),
-                      ),
-                  ],
-                ),
-                ListView(
-                  children: [
-                    for (final item in const {
-                      LibraryOrder.recent: 'Đọc gần đây',
-                      LibraryOrder.title: 'Tên',
-                      LibraryOrder.unread: 'Số chương chưa đọc',
-                      LibraryOrder.total: 'Tổng số chương',
-                      LibraryOrder.read: 'Số chương đã đọc',
-                      LibraryOrder.added: 'Ngày thêm vào thư viện',
-                      LibraryOrder.updated: 'Lần cập nhật gần nhất',
-                      LibraryOrder.latest: 'Ngày chương mới nhất',
-                      LibraryOrder.random: 'Ngẫu nhiên',
-                    }.entries)
-                      choice(
-                        item.value,
-                        filter.order == item.key,
-                        () => change(
-                          filter.copyWith(
-                            order: item.key,
-                            randomSeed: item.key == LibraryOrder.random
-                                ? DateTime.now().millisecondsSinceEpoch
-                                : null,
-                          ),
-                        ),
-                      ),
-                    const Divider(height: 1),
-                    SwitchListTile.adaptive(
-                      title: const Text('Đảo chiều'),
-                      value: filter.reverse,
-                      onChanged: (value) =>
-                          change(filter.copyWith(reverse: value)),
-                    ),
-                  ],
-                ),
-                ListView(
-                  children: [
-                    if (widget.onColumnsChanged != null) ...[
-                      ListTile(
-                        title: const Text('Số cột lưới'),
-                        trailing: Text('$columns'),
-                        subtitle: const Text(
-                          'Lưới nhỏ hiển thị thêm một cột, tối đa 8 cột.',
-                        ),
-                      ),
-                      Slider(
-                        key: const ValueKey('library-columns-slider'),
-                        value: columns.toDouble(),
-                        min: 2,
-                        max: 8,
-                        divisions: 6,
-                        label: '$columns cột',
-                        onChanged: (value) =>
-                            setState(() => columns = value.round()),
-                        onChangeEnd: (value) =>
-                            widget.onColumnsChanged!(value.round()),
-                      ),
-                    ],
-                    for (final item in const {
-                      LibraryDisplay.grid: 'Lưới có tên',
-                      LibraryDisplay.list: 'Danh sách',
-                      LibraryDisplay.coverOnly: 'Lưới chỉ bìa',
-                    }.entries)
-                      choice(
-                        item.value,
-                        filter.display == item.key,
-                        () => change(filter.copyWith(display: item.key)),
-                      ),
-                    SwitchListTile.adaptive(
-                      title: const Text('Lưới nhỏ'),
-                      subtitle: const Text('Hiển thị thêm bìa trên mỗi hàng'),
-                      value: filter.compact,
-                      onChanged: (value) =>
-                          change(filter.copyWith(compact: value)),
-                    ),
-                    SwitchListTile.adaptive(
-                      title: const Text('Hiện tab danh mục'),
-                      value: filter.showCategoryTabs,
-                      onChanged: (value) =>
-                          change(filter.copyWith(showCategoryTabs: value)),
-                    ),
-                    SwitchListTile.adaptive(
-                      title: const Text('Badge chương chưa đọc'),
-                      value: filter.showUnreadBadge,
-                      onChanged: (value) =>
-                          change(filter.copyWith(showUnreadBadge: value)),
-                    ),
-                    SwitchListTile.adaptive(
-                      title: const Text('Badge chương đã tải'),
-                      value: filter.showDownloadedBadge,
-                      onChanged: (value) =>
-                          change(filter.copyWith(showDownloadedBadge: value)),
-                    ),
-                    SwitchListTile.adaptive(
-                      title: const Text('Badge truyện local'),
-                      value: filter.showLocalBadge,
-                      onChanged: (value) =>
-                          change(filter.copyWith(showLocalBadge: value)),
-                    ),
-                    for (final option in <(String, bool, LibraryFilter)>[
-                      (
-                        'Tên nguồn',
-                        filter.showSource,
-                        filter.copyWith(showSource: !filter.showSource),
-                      ),
-                      (
-                        'Trạng thái đọc',
-                        filter.showReadingStatus,
-                        filter.copyWith(
-                          showReadingStatus: !filter.showReadingStatus,
-                        ),
-                      ),
-                      (
-                        'Số chương đã đọc',
-                        filter.showReadCount,
-                        filter.copyWith(showReadCount: !filter.showReadCount),
-                      ),
-                      (
-                        'Trạng thái yêu thích',
-                        filter.showFavoriteBadge,
-                        filter.copyWith(
-                          showFavoriteBadge: !filter.showFavoriteBadge,
-                        ),
-                      ),
-                      (
-                        'Lần cập nhật gần nhất',
-                        filter.showLastUpdated,
-                        filter.copyWith(
-                          showLastUpdated: !filter.showLastUpdated,
-                        ),
-                      ),
-                      (
-                        'Trạng thái phát hành',
-                        filter.showPublicationStatus,
-                        filter.copyWith(
-                          showPublicationStatus: !filter.showPublicationStatus,
-                        ),
-                      ),
-                      (
-                        'Nút tiếp tục đọc',
-                        filter.showResumeButton,
-                        filter.copyWith(
-                          showResumeButton: !filter.showResumeButton,
-                        ),
-                      ),
-                    ])
-                      SwitchListTile.adaptive(
-                        title: Text(option.$1),
-                        value: option.$2,
-                        onChanged: (_) => change(option.$3),
-                      ),
-                  ],
-                ),
-              ],
             ),
-          ),
-        ],
+            const SizedBox(width: 4),
+            const Icon(CupertinoIcons.chevron_down, size: 12),
+          ],
+        ),
       ),
     ),
   );
+
+  Widget picker(
+    String title,
+    String selected,
+    Map<String, String> options,
+    ValueChanged<String> onSelected,
+  ) => ListTile(
+    dense: true,
+    title: Text(title),
+    subtitle: Text(
+      options[selected] ?? 'Lựa chọn đã lưu',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    ),
+    trailing: const Icon(CupertinoIcons.chevron_right, size: 16),
+    onTap: () async {
+      final value = await showLibraryFilterPicker(
+        context,
+        title: title,
+        options: options,
+        selected: selected,
+      );
+      if (value != null && mounted) onSelected(value);
+    },
+  );
+
+  Widget group(String title, List<Widget> children, int enabled) =>
+      ExpansionTile(
+        title: Text(title),
+        subtitle: Text('$enabled mục đang bật'),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+        children: children,
+      );
+
+  Widget filters() {
+    final sources = widget.sources.entries.toList()
+      ..sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
+    final activeCount = [
+      filter.kind != 'all',
+      filter.category != 'Tất cả',
+      filter.source != 'all',
+      filter.scanlator.isNotEmpty,
+      filter.unread != LibraryTriState.any,
+      filter.downloaded != LibraryTriState.any,
+      filter.bookmarked != LibraryTriState.any,
+      filter.favorite != LibraryTriState.any,
+      filter.completed != LibraryTriState.any,
+    ].where((active) => active).length;
+    return ListView(
+      key: const ValueKey('library-filter-options'),
+      padding: const EdgeInsets.only(bottom: 16),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, right: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  activeCount == 0
+                      ? 'Tất cả truyện'
+                      : '$activeCount điều kiện đang dùng',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              Flexible(
+                child: TextButton(
+                  onPressed: filter.active ? reset : null,
+                  child: const Text(
+                    'Đặt lại bộ lọc',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        section('Phạm vi'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final item in const {
+                'all': 'Tất cả',
+                'manga': 'Truyện tranh',
+                'novel': 'Truyện chữ & ebook',
+              }.entries)
+                ChoiceChip(
+                  label: Text(item.value),
+                  selected: filter.kind == item.key,
+                  onSelected: (_) => change(filter.copyWith(kind: item.key)),
+                ),
+            ],
+          ),
+        ),
+        picker('Danh mục', filter.category, {
+          for (final category in {
+            'Tất cả',
+            'Đang đọc',
+            'Yêu thích',
+            'Hoàn thành',
+            ...widget.collections,
+          })
+            category: category,
+        }, (value) => change(filter.copyWith(category: value))),
+        if (sources.isNotEmpty)
+          picker('Nguồn truyện', filter.source, {
+            'all': 'Tất cả nguồn',
+            for (final source in sources) source.key: source.value,
+          }, (value) => change(filter.copyWith(source: value))),
+        if (sources.isNotEmpty &&
+            (filter.source != 'all' || filter.excludeSource))
+          toggle(
+            'Loại trừ nguồn đã chọn',
+            filter.excludeSource,
+            (value) => change(filter.copyWith(excludeSource: value)),
+          ),
+        const Divider(height: 16),
+        section('Trạng thái'),
+        triChoice(
+          'Chương chưa đọc',
+          filter.unread,
+          (value) => change(filter.copyWith(unread: value)),
+        ),
+        triChoice(
+          'Chương đã tải',
+          filter.downloaded,
+          (value) => change(filter.copyWith(downloaded: value)),
+        ),
+        triChoice(
+          'Dấu trang',
+          filter.bookmarked,
+          (value) => change(filter.copyWith(bookmarked: value)),
+        ),
+        triChoice(
+          'Yêu thích',
+          filter.favorite,
+          (value) => change(filter.copyWith(favorite: value)),
+        ),
+        triChoice(
+          'Hoàn thành',
+          filter.completed,
+          (value) => change(filter.copyWith(completed: value)),
+        ),
+        const Divider(height: 16),
+        ExpansionTile(
+          title: const Text('Nhóm dịch'),
+          subtitle: Text(
+            filter.scanlator.isEmpty ? 'Không giới hạn' : filter.scanlator,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          initiallyExpanded: filter.scanlator.isNotEmpty,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: TextFormField(
+                controller: scanlatorController,
+                key: const ValueKey('library-scanlator'),
+                decoration: const InputDecoration(hintText: 'Tên nhóm dịch'),
+                onChanged: (value) =>
+                    change(filter.copyWith(scanlator: value.trim())),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget sorting() => ListView(
+    padding: const EdgeInsets.only(bottom: 16),
+    children: [
+      toggle(
+        'Đảo chiều',
+        filter.reverse,
+        (value) => change(filter.copyWith(reverse: value)),
+      ),
+      const Divider(height: 1),
+      for (final item in const {
+        LibraryOrder.recent: 'Đọc gần đây',
+        LibraryOrder.title: 'Tên',
+        LibraryOrder.added: 'Ngày thêm vào thư viện',
+        LibraryOrder.updated: 'Lần cập nhật gần nhất',
+        LibraryOrder.latest: 'Ngày chương mới nhất',
+        LibraryOrder.unread: 'Số chương chưa đọc',
+        LibraryOrder.total: 'Tổng số chương',
+        LibraryOrder.read: 'Số chương đã đọc',
+        LibraryOrder.random: 'Ngẫu nhiên',
+      }.entries)
+        choice(
+          item.value,
+          filter.order == item.key,
+          () => change(
+            filter.copyWith(
+              order: item.key,
+              randomSeed: item.key == LibraryOrder.random
+                  ? DateTime.now().millisecondsSinceEpoch
+                  : null,
+            ),
+          ),
+        ),
+    ],
+  );
+
+  Widget display() {
+    final information = <(String, bool, LibraryFilter)>[
+      (
+        'Tên nguồn',
+        filter.showSource,
+        filter.copyWith(showSource: !filter.showSource),
+      ),
+      (
+        'Trạng thái đọc',
+        filter.showReadingStatus,
+        filter.copyWith(showReadingStatus: !filter.showReadingStatus),
+      ),
+      (
+        'Số chương đã đọc',
+        filter.showReadCount,
+        filter.copyWith(showReadCount: !filter.showReadCount),
+      ),
+      (
+        'Trạng thái yêu thích',
+        filter.showFavoriteBadge,
+        filter.copyWith(showFavoriteBadge: !filter.showFavoriteBadge),
+      ),
+      (
+        'Lần cập nhật gần nhất',
+        filter.showLastUpdated,
+        filter.copyWith(showLastUpdated: !filter.showLastUpdated),
+      ),
+      (
+        'Trạng thái phát hành',
+        filter.showPublicationStatus,
+        filter.copyWith(showPublicationStatus: !filter.showPublicationStatus),
+      ),
+      (
+        'Nút tiếp tục đọc',
+        filter.showResumeButton,
+        filter.copyWith(showResumeButton: !filter.showResumeButton),
+      ),
+    ];
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 16),
+      children: [
+        section('Bố cục'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final item in const {
+                LibraryDisplay.grid: 'Lưới có tên',
+                LibraryDisplay.list: 'Danh sách',
+                LibraryDisplay.coverOnly: 'Lưới chỉ bìa',
+              }.entries)
+                ChoiceChip(
+                  label: Text(item.value),
+                  selected: filter.display == item.key,
+                  onSelected: (_) => change(filter.copyWith(display: item.key)),
+                ),
+            ],
+          ),
+        ),
+        if (filter.display != LibraryDisplay.list) ...[
+          if (widget.onColumnsChanged != null) ...[
+            ListTile(
+              dense: true,
+              title: const Text('Số cột lưới'),
+              trailing: Text('$columns'),
+            ),
+            Slider(
+              key: const ValueKey('library-columns-slider'),
+              value: columns.toDouble(),
+              min: 2,
+              max: 8,
+              divisions: 6,
+              label: '$columns cột',
+              onChanged: (value) => setState(() => columns = value.round()),
+              onChangeEnd: (value) => widget.onColumnsChanged!(value.round()),
+            ),
+          ],
+          toggle(
+            'Lưới nhỏ',
+            filter.compact,
+            (value) => change(filter.copyWith(compact: value)),
+          ),
+        ],
+        toggle(
+          'Hiện tab danh mục',
+          filter.showCategoryTabs,
+          (value) => change(filter.copyWith(showCategoryTabs: value)),
+        ),
+        const Divider(height: 16),
+        group(
+          'Dấu hiệu trên bìa',
+          [
+            toggle(
+              'Chương chưa đọc',
+              filter.showUnreadBadge,
+              (value) => change(filter.copyWith(showUnreadBadge: value)),
+            ),
+            toggle(
+              'Chương đã tải',
+              filter.showDownloadedBadge,
+              (value) => change(filter.copyWith(showDownloadedBadge: value)),
+            ),
+            toggle(
+              'Truyện trong máy',
+              filter.showLocalBadge,
+              (value) => change(filter.copyWith(showLocalBadge: value)),
+            ),
+          ],
+          [
+            filter.showUnreadBadge,
+            filter.showDownloadedBadge,
+            filter.showLocalBadge,
+          ].where((value) => value).length,
+        ),
+        group('Thông tin và nút đọc', [
+          for (final option in information)
+            toggle(option.$1, option.$2, (_) => change(option.$3)),
+        ], information.where((option) => option.$2).length),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final close = IconButton(
+      tooltip: 'Đóng bộ lọc',
+      onPressed: () => Navigator.pop(context),
+      icon: const Icon(CupertinoIcons.xmark, size: 18),
+    );
+    return Padding(
+      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+      child: SizedBox(
+        height: (media.size.height - media.viewInsets.bottom) * .65,
+        child: DefaultTabController(
+          length: 3,
+          child: Column(
+            children: [
+              if (widget.presetsBuilder != null)
+                Row(
+                  children: [
+                    Expanded(
+                      child: widget.presetsBuilder!(filter, (value) {
+                        scanlatorController.text = value.scanlator;
+                        change(value);
+                      }),
+                    ),
+                    close,
+                  ],
+                ),
+              Row(
+                children: [
+                  const Expanded(
+                    child: TabBar(
+                      tabs: [
+                        Tab(text: 'Lọc'),
+                        Tab(text: 'Sắp xếp'),
+                        Tab(text: 'Hiển thị'),
+                      ],
+                    ),
+                  ),
+                  if (widget.presetsBuilder == null) close,
+                ],
+              ),
+              Expanded(
+                child: TabBarView(children: [filters(), sorting(), display()]),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

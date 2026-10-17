@@ -39,6 +39,7 @@ class ExternalTitle {
     required this.url,
     required this.title,
     this.author = '',
+    this.sourceName = '',
     this.artist = '',
     this.genres = const [],
     this.notes = '',
@@ -53,6 +54,7 @@ class ExternalTitle {
     this.createdAt = 0,
   });
   final String source,
+      sourceName,
       url,
       title,
       author,
@@ -165,6 +167,7 @@ ConvertedBackup convertExternalLibrary(
           kind: 'manga',
           engine: 'tachimanga',
           sourceId: title.source,
+          sourceName: title.sourceName,
           sourceRef: title.url,
           status: title.status,
           createdAt: _date(title.createdAt),

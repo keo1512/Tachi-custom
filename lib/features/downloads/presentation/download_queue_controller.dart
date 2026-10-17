@@ -9,6 +9,7 @@ import '../../library/data/library_mutation.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../../settings/settings_controller.dart';
 import '../../tasks/application/task_notifications.dart';
+import '../../tasks/data/task_platform.dart';
 import '../data/download_queue_repository.dart';
 import '../domain/download_job.dart';
 
@@ -63,6 +64,17 @@ final guardedDownloadJobExecutorProvider = Provider<GuardedDownloadJobExecutor>(
             download: true,
             expectedRevision: execution.revision,
             isCancelled: () => execution.isCancelled || !ref.mounted,
+            onPageProgress: (completed, total) {
+              if (!ref.mounted || execution.isCancelled) return;
+              final platform = ref.read(taskPlatformProvider);
+              if (platform is ContinuedTaskPlatform) {
+                unawaited(
+                  (platform as ContinuedTaskPlatform)
+                      .downloadPageProgress(completed, total)
+                      .catchError((Object _) {}),
+                );
+              }
+            },
           );
     };
   },
@@ -466,8 +478,11 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
   /// End a finite iOS execution window without deleting queued work or cache.
   /// In-flight requests observe cancellation; persisted active jobs also reload
   /// as pending if iOS suspends before this write completes.
-  Future<void> suspendForBackground() async {
-    pause(reason: 'iOS đã hết thời gian chạy nền. Bấm Tiếp tục để tải tiếp.');
+  Future<void> suspendForBackground({String? reason}) async {
+    pause(
+      reason:
+          reason ?? 'iOS đã hết thời gian chạy nền. Bấm Tiếp tục để tải tiếp.',
+    );
     for (final execution in _active.values) {
       execution._cancelled = true;
     }

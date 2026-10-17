@@ -344,26 +344,52 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     String id, {
     int? expectedRevision,
     bool refreshChapters = true,
+    bool preserveTitle = false,
   }) async {
     final revision = expectedRevision ?? repository.replacementRevision;
     checkLibraryRevision(repository.replacementRevision, revision);
     final book = await repository.find(id);
     if (book == null || book.engine == 'local') return;
-    final detail = await ref
-        .read(sourceRepositoryProvider)
-        .detail(catalogue(book));
+    final sources = ref.read(sourceRepositoryProvider);
+    final detail = await sources.detail(catalogue(book));
+    String? sourceName;
+    try {
+      sourceName = (await sources.listSources(detail.engine))
+          .where(
+            (source) =>
+                source.id == book.sourceId && source.engine == detail.engine,
+          )
+          .firstOrNull
+          ?.name;
+    } catch (_) {
+      // A successful metadata fetch remains usable if the source list fails.
+    }
     checkLibraryRevision(repository.replacementRevision, revision);
     await _mutateBook(id, (latest) {
       if (bookSourceIdentity(latest) != bookSourceIdentity(book)) {
         throw StateError('Nguồn truyện đã thay đổi.');
       }
       return latest.copyWith(
-        title: detail.title,
-        author: detail.author,
-        artist: detail.artist,
-        description: detail.description,
-        genres: detail.genres,
-        status: detail.status,
+        sourceName: sourceName?.isNotEmpty == true ? sourceName : null,
+        title: preserveTitle ? latest.title : detail.title,
+        author:
+            preserveTitle &&
+                latest.author.isNotEmpty &&
+                latest.author.trim() != sourceName?.trim()
+            ? latest.author
+            : detail.author,
+        artist: preserveTitle && latest.artist.isNotEmpty
+            ? latest.artist
+            : detail.artist,
+        description: preserveTitle && latest.description.isNotEmpty
+            ? latest.description
+            : detail.description,
+        genres: preserveTitle && latest.genres.isNotEmpty
+            ? latest.genres
+            : detail.genres,
+        status: preserveTitle && latest.status != 0
+            ? latest.status
+            : detail.status,
         cover: latest.customCover || detail.coverUrl.isEmpty
             ? latest.cover
             : detail.coverUrl,
@@ -672,6 +698,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     description: book.description,
     coverUrl: book.cover,
     sourceId: book.sourceId,
+    knownChapterRefs: [for (final chapter in book.chapters) chapter.id],
     kind: book.kind == 'manga' ? ContentKind.manga : ContentKind.novel,
     engine: book.engine == 'vbook'
         ? SourceEngine.vbook
@@ -684,6 +711,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     bool download = false,
     int? expectedRevision,
     bool Function()? isCancelled,
+    void Function(int completed, int total)? onPageProgress,
   }) async {
     final revision = expectedRevision ?? repository.replacementRevision;
     void continueRequest() {
@@ -750,6 +778,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     if (download) {
       content = await _downloadContent(
         content,
+        onPageProgress: onPageProgress,
         book: catalogue(latest),
         chapter: CatalogueChapter(
           ref: latest.chapters[read.index].id,
@@ -791,6 +820,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     required CatalogueChapter chapter,
     required Future<void> Function(ReaderContent) onPartial,
     required void Function() continueRequest,
+    void Function(int completed, int total)? onPageProgress,
   }) async {
     final client = ref.read(chapterHttpClientProvider);
     final source = ref.read(sourceRepositoryProvider);
@@ -864,6 +894,8 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     try {
       for (var page = 0; page < content.images.length; page++) {
         images.add(await downloadImage(content.images[page], page: page));
+        continueRequest();
+        onPageProgress?.call(page + 1, content.images.length);
       }
       for (final image in document.querySelectorAll('img')) {
         image.attributes['src'] = await downloadImage(

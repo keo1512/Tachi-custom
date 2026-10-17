@@ -18,6 +18,7 @@ import '../presentation/library_category_controller.dart';
 import '../presentation/library_filter_controller.dart';
 import '../presentation/library_group_order_controller.dart';
 import '../presentation/library_grouping_controller.dart';
+import '../presentation/library_folders_controller.dart';
 import '../presentation/library_view_model.dart';
 import 'automatic_backup_controller.dart';
 import 'library_update_policy.dart';
@@ -88,6 +89,7 @@ final backupServiceProvider = Provider<BackupService>((ref) {
       ref.invalidate(libraryFilterProvider);
       ref.invalidate(libraryGroupOrderProvider);
       ref.invalidate(libraryGroupingProvider);
+      ref.invalidate(libraryFoldersProvider);
       ref.invalidate(extensionCatalogueProvider);
       ref.invalidate(sourceFilterPresetsProvider);
       ref.invalidate(sourceLanguagesProvider);

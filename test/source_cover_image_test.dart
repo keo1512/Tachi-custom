@@ -124,6 +124,34 @@ void main() {
     expect(image.toString(), isNot(contains('images.example')));
   });
 
+  testWidgets(
+    'clearing cover cache reloads a mounted image without replacing the runtime repository',
+    (tester) async {
+      final repository = _Covers();
+      addTearDown(repository.dispose);
+      await mount(
+        tester,
+        repository,
+        (ref) => Column(
+          children: [
+            Image(image: sourceCoverImage(ref, _book())!),
+            TextButton(
+              onPressed: () =>
+                  ref.read(coverRefreshRevisionProvider.notifier).invalidate(),
+              child: const Text('Reload covers'),
+            ),
+          ],
+        ),
+      );
+      await waitForDecodedImages(tester);
+      expect(repository.calls, 1);
+      await tester.tap(find.text('Reload covers'));
+      await tester.pump();
+      await waitForDecodedImages(tester);
+      expect(repository.calls, 2);
+    },
+  );
+
   testWidgets('catalogue and backdrop share one native fetch and decode', (
     tester,
   ) async {

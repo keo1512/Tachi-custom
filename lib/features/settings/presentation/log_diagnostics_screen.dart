@@ -278,7 +278,12 @@ class _LogDiagnosticsState extends ConsumerState<LogDiagnosticsScreen> {
               ? 'Chưa đọc trạng thái đăng ký và thời gian chạy được iOS cấp'
               : !backgroundStatus!.containsKey('backgroundRunning')
               ? 'Thiết bị chưa cung cấp trạng thái nền'
-              : 'Đã yêu cầu: ${backgroundStatus!['backgroundRequested'] == 1 ? 'có' : 'chưa'} · đang được cấp thời gian: ${backgroundStatus!['backgroundRunning'] == 1 ? 'có' : 'không'}',
+              : 'Đã yêu cầu: ${backgroundStatus!['backgroundRequested'] == 1 ? 'có' : 'chưa'} · đang được cấp thời gian: ${backgroundStatus!['backgroundRunning'] == 1 ? 'có' : 'không'}'
+                    '${backgroundStatus!['continuedProcessingSubmitFailed'] == 1
+                        ? '\n iOS chưa cấp phiên tải dài; app dùng thời gian nền ngắn và lịch chạy nền.'
+                        : backgroundStatus!.containsKey('continuedProcessingRunning')
+                        ? '\nTải nền dài: ${backgroundStatus!['continuedProcessingRunning'] == 1 ? 'đang chạy' : 'chưa chạy'}'
+                        : ''}',
           onTap: busy || private ? null : checkBackground,
         ),
         const Divider(),

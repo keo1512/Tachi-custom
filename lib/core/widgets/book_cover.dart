@@ -77,7 +77,7 @@ class BookCover extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (image == null)
+              if (image == null && showTitle)
                 LayoutBuilder(
                   builder: (_, constraints) => Padding(
                     padding: EdgeInsets.all(constraints.maxWidth * .12),

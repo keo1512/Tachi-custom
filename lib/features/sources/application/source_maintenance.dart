@@ -15,6 +15,15 @@ class SourceMaintenance {
   SourceMaintenance(this.runtimes, this.device);
   final List<NativeSourceEngine> runtimes;
   final DeviceTools device;
+  Future<void> clearImageCaches() async {
+    for (final engine in runtimes) {
+      if (engine is NativeCoverCacheEngine) {
+        await (engine as NativeCoverCacheEngine).clearCoverCache();
+      }
+    }
+    await device.clearHttpCache();
+  }
+
   Future<void> clearCaches() async {
     for (final engine in runtimes) {
       if (engine is NativeSourceMaintenanceEngine) {

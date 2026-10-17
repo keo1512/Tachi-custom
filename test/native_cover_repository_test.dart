@@ -5,7 +5,9 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
+import 'package:http/http.dart' as http;
 import 'package:tachi_books/features/sources/data/native_tachi_repository.dart';
+import 'package:tachi_books/features/sources/data/source_cover_cache.dart';
 import 'package:tachi_books/features/sources/data/on_device_source_repository.dart';
 import 'package:tachi_books/features/sources/data/source_repository.dart';
 import 'package:tachi_books/features/sources/domain/catalogue.dart';
@@ -51,11 +53,18 @@ void main() {
 
   NativeTachiRepository native(
     FutureOr<Object?> Function(String method, Map<String, dynamic> args)
-    handler,
-  ) {
+    handler, {
+    bool Function()? canCacheCover,
+    int Function()? coverCacheEpoch,
+    http.Client? client,
+  }) {
     final repository = NativeTachiRepository(
       storageDirectory: directory,
-      client: MockClient((_) => throw StateError('No raw Dart cover HTTP')),
+      client:
+          client ??
+          MockClient((_) => throw StateError('No raw Dart cover HTTP')),
+      canCacheCover: canCacheCover,
+      coverCacheEpoch: coverCacheEpoch,
       executor: (raw) async {
         final request = jsonDecode(raw) as Map<String, dynamic>;
         final method = request['method'] as String;
@@ -68,6 +77,118 @@ void main() {
     addTearDown(repository.dispose);
     return repository;
   }
+
+  test('cover disk cache survives runtime restart, distinguishes sources and invalidates one cover', () async {
+    var calls = 0;
+    Object image(String method, Map<String, dynamic> args) {
+      expect(method, 'cover');
+      calls++;
+      return {
+        'base64': base64Encode([255, 216, 255, 1]),
+        'mimeType': 'image/jpeg',
+      };
+    }
+
+    final first = native(image);
+    final book = _book('https://cdn.example/same.jpg');
+    await Future.wait([first.fetchCover(book), first.fetchCover(book)]);
+    expect(calls, 1);
+    first.dispose();
+    final reopened = native(image);
+    await reopened.fetchCover(book);
+    expect(calls, 1); // No initialize/source/network call after reopening.
+    await reopened.fetchCover(_book(book.coverUrl, sourceId: '123'));
+    expect(calls, 2);
+    await reopened.invalidateCover(book);
+    await reopened.fetchCover(book);
+    expect(calls, 3);
+  });
+
+  test(
+    'covers started before an incognito transition cannot populate disk cache',
+    () async {
+      var private = false, epoch = 0, calls = 0;
+      final gate = Completer<void>(), started = Completer<void>();
+      final repository = native(
+        (method, args) async {
+          calls++;
+          if (calls == 1) {
+            started.complete();
+            await gate.future;
+          }
+          return {
+            'base64': base64Encode([255, 216, 255, 1]),
+            'mimeType': 'image/jpeg',
+          };
+        },
+        canCacheCover: () => !private,
+        coverCacheEpoch: () => epoch,
+      );
+      final book = _book('/private.jpg');
+      final pending = repository.fetchCover(book);
+      await started.future;
+      private = true;
+      epoch++;
+      private = false;
+      epoch++;
+      gate.complete();
+      await pending;
+      await repository.fetchCover(book);
+      expect(calls, 2);
+      await repository.fetchCover(book);
+      expect(calls, 2);
+    },
+  );
+
+  test('an uninstalled source may load a public thumbnail but loaded-source failures never bypass its client', () async {
+    var publicCalls = 0;
+    final client = MockClient((request) async {
+      publicCalls++;
+      expect(request.headers, isEmpty);
+      return http.Response.bytes([255, 216, 255, 1], 200);
+    });
+    final missing = native(
+      (_, _) =>
+          throw const ApiException('Missing', code: 'source_not_installed'),
+      client: client,
+    );
+    expect(
+      (await missing.fetchCover(_book('https://cdn.example/public.jpg')))
+          .mimeType,
+      'image/jpeg',
+    );
+    expect(publicCalls, 1);
+    final blocked = native(
+      (_, _) => throw const ApiException(
+        'Challenge',
+        code: 'source_requires_browser',
+      ),
+      client: client,
+    );
+    await expectLater(
+      blocked.fetchCover(_book('https://cdn.example/blocked.jpg')),
+      throwsA(isA<ApiException>()),
+    );
+    expect(publicCalls, 1);
+  });
+
+  test('cache expiry refetches and clearing preserves unrelated files and rejects old writes', () async {
+    final cache = SourceCoverCache(Directory('${directory.path}/cache'));
+    final key = 'a' * 64;
+    await cache.write(key, {'base64': 'test'}, cache.generation);
+    final file = File('${cache.directory.path}/$key.json');
+    await file.setLastModified(
+      DateTime.now().subtract(const Duration(days: 8)),
+    );
+    expect(await cache.read(key), isNull);
+    final unrelated = File('${cache.directory.path}/chapter.json');
+    await unrelated.writeAsString('offline chapter must survive');
+    final previousGeneration = cache.generation;
+    await cache.clear();
+    await cache.write(key, {'base64': 'late'}, previousGeneration);
+    expect(await file.exists(), isFalse);
+    expect(await unrelated.readAsString(), 'offline chapter must survive');
+  });
 
   test(
     'optional native cover capability preserves companion and old runtimes',
@@ -177,16 +298,20 @@ void main() {
   test(
     'a failed cover does not poison queued cover or chapter image requests',
     () async {
-      final first = Completer<void>();
-      final firstStarted = Completer<void>();
+      final first = Completer<void>(), second = Completer<void>();
+      final firstStarted = Completer<void>(), secondStarted = Completer<void>();
       final started = <String>[];
-      var covers = 0;
       final repository = native((method, args) async {
-        started.add(method);
-        if (method == 'cover' && covers++ == 0) {
+        final label = method == 'cover' ? args['url'] as String : method;
+        started.add(label);
+        if (label == '/first.jpg') {
           firstStarted.complete();
           await first.future;
           throw const ApiException('Retry cover');
+        }
+        if (label == '/second.jpg') {
+          secondStarted.complete();
+          await second.future;
         }
         return {
           'base64': base64Encode([255, 216, 255, 1]),
@@ -195,7 +320,9 @@ void main() {
       });
       final failed = repository.fetchCover(_book('/first.jpg'));
       final assertion = expectLater(failed, throwsA(isA<ApiException>()));
+      await firstStarted.future;
       final cover = repository.fetchCover(_book('/second.jpg'));
+      await secondStarted.future;
       final page = repository.fetchImage(
         const CatalogueBook(
           ref: '/series/one',
@@ -208,13 +335,15 @@ void main() {
         0,
         'https://cdn.example/page.jpg',
       );
-      await firstStarted.future;
-      expect(started, ['cover']);
+      final laterCover = repository.fetchCover(_book('/third.jpg'));
       first.complete();
       await assertion;
-      expect((await cover).mimeType, 'image/jpeg');
-      expect((await page).mimeType, 'image/jpeg');
-      expect(started, ['cover', 'cover', 'image']);
+      expect(started, ['/first.jpg', '/second.jpg']);
+      second.complete();
+      await cover;
+      await page;
+      await laterCover;
+      expect(started, ['/first.jpg', '/second.jpg', 'image', '/third.jpg']);
     },
   );
 }

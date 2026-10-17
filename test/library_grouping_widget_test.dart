@@ -25,7 +25,7 @@ void main() {
       await tester.tap(find.byTooltip('Gom nhóm sách đã chọn'));
       await tester.pumpAndSettle();
       await tester.enterText(
-        find.byKey(const ValueKey('group-name')),
+        find.byKey(const ValueKey('folder-name')),
         'Stale shelf',
       );
       final replacement = LibraryBook(
@@ -40,7 +40,7 @@ void main() {
       );
       await container.read(libraryProvider.notifier).refresh();
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Áp dụng'));
+      await tester.tap(find.text('Lưu'));
       await tester.pumpAndSettle();
       expect((await repo.find('1'))!.toJson(), replacement.toJson());
       expect(
@@ -70,7 +70,7 @@ void main() {
           LibraryBook(
             id: '2',
             title: 'Second',
-            collection: 'Manual 2',
+            collection: 'Manual 1',
             author: 'Shared author',
           ),
         );
@@ -81,7 +81,7 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('library-book-2')));
         await tester.pumpAndSettle();
         expect(find.text('Đã chọn 2'), findsOneWidget);
-        await tester.tap(find.byTooltip('Gom nhóm sách đã chọn'));
+        await openMetadata(tester);
         await tester.pumpAndSettle();
         await tester.tap(
           find.byWidgetPredicate((widget) => widget is DropdownButtonFormField),
@@ -106,10 +106,15 @@ void main() {
         expect((await repo.find('2'))!.series, 'Series đã gán');
         expect((await repo.find('3'))!.series, '');
         expect((await repo.find('1'))!.collection, 'Manual 1');
-        expect((await repo.find('2'))!.collection, 'Manual 2');
-        expect(find.text('Nhóm theo bộ truyện'), findsOneWidget);
+        expect((await repo.find('2'))!.collection, 'Manual 1');
+        await tester.tap(find.byTooltip('Thao tác thư viện'));
+        await tester.pumpAndSettle();
         await tester.tap(
-          find.byKey(const ValueKey('library-group-value:series đã gán')),
+          find.byKey(const ValueKey('library-group-mode-series')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('library-folder-value:series đã gán')),
         );
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('library-book-1')), findsOneWidget);
@@ -148,7 +153,7 @@ void main() {
       expect(find.text('Đã chọn 0'), findsOneWidget);
       await tester.tap(find.byTooltip('Chọn tất cả sách hiển thị'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Gom nhóm sách đã chọn'));
+      await openMetadata(tester);
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey('group-name')),
@@ -187,7 +192,7 @@ void main() {
           id: '2',
           title: 'Second',
           author: ' shared   author ',
-          collection: 'Keep 2',
+          collection: 'Keep 1',
         ),
       );
       await repo.save(LibraryBook(id: '3', title: 'Third'));
@@ -198,7 +203,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('library-group-mode-author')));
       await tester.pumpAndSettle();
       await tester.tap(
-        find.byKey(const ValueKey('library-group-value:shared author')),
+        find.byKey(const ValueKey('library-folder-value:shared author')),
       );
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('library-book-3')), findsNothing);
@@ -210,7 +215,7 @@ void main() {
       await tester.tap(find.byTooltip('Gom nhóm sách đã chọn'));
       await tester.pumpAndSettle();
       await tester.enterText(
-        find.byKey(const ValueKey('group-name')),
+        find.byKey(const ValueKey('folder-name')),
         'Changed author',
       );
       await tester.tap(find.text('Hủy'));
@@ -221,14 +226,19 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
       await mountLibrary(tester, repo, const Size(320, 568));
-      expect(find.text('Nhóm theo tác giả'), findsOneWidget);
+      expect(find.byKey(const ValueKey('library-group-all')), findsNothing);
       expect(
-        find.byKey(const ValueKey('library-group-value:shared author')),
+        find.byKey(const ValueKey('library-folder-value:shared author')),
         findsOneWidget,
       );
       // Newly imported explicit metadata joins the active derived group.
       await repo.save(
-        LibraryBook(id: '4', title: 'New book', author: 'Shared author'),
+        LibraryBook(
+          id: '4',
+          title: 'New book',
+          author: 'Shared author',
+          collection: 'Keep 1',
+        ),
       );
       final container = ProviderScope.containerOf(
         tester.element(find.byType(LibraryScreen)),
@@ -236,7 +246,7 @@ void main() {
       await container.read(libraryProvider.notifier).refresh();
       await tester.pumpAndSettle();
       await tester.tap(
-        find.byKey(const ValueKey('library-group-value:shared author')),
+        find.byKey(const ValueKey('library-folder-value:shared author')),
       );
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('library-book-4')), findsOneWidget);
@@ -267,4 +277,10 @@ Future<void> mountLibrary(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+Future<void> openMetadata(WidgetTester tester) async {
+  await tester.tap(find.byTooltip('Thao tác với sách đã chọn'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Danh mục và thông tin truyện'));
 }

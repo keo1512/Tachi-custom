@@ -4,6 +4,100 @@ import UserNotifications
 import BackgroundTasks
 import CryptoKit
 
+/// Foreground download work may continue on iOS 26+. This wraps the same Dart
+/// queue, never a second executor or a raw-HTTP replacement for extension pages.
+@MainActor
+final class TaskContinuedDownloads {
+  static let shared = TaskContinuedDownloads()
+  static let identifier = "dev.tachibooks.tachiBooks.downloads.continued"
+  private var task: BGTask?
+  private var registered = false, submitted = false, requested = false
+  private var submissionFailed = false
+  private var remaining = 0, completed: Int64 = 0, total: Int64 = 0
+  private var pageFraction: Int64 = 0
+  var onExpired: () -> Void = {}
+  var running: Bool { task != nil }
+  var diagnosticState: [String: Int] {
+    ["continuedProcessingRegistered": registered ? 1 : 0,
+     "continuedProcessingRequested": requested ? 1 : 0,
+     "continuedProcessingRunning": running ? 1 : 0,
+     "continuedProcessingSubmitFailed": submissionFailed ? 1 : 0]
+  }
+
+  func register() {
+    guard #available(iOS 26.0, *), !registered else { return }
+    registered = BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.identifier, using: .main) { [weak self] value in
+      guard let self = self, let continued = value as? BGContinuedProcessingTask,
+        self.submitted, self.requested else {
+        value.setTaskCompleted(success: false)
+        return
+      }
+      self.task = continued
+      continued.expirationHandler = { [weak self] in
+        DispatchQueue.main.async {
+          guard let self = self, self.task === continued else { return }
+          self.finish(success: false)
+          self.onExpired()
+        }
+      }
+      self.reportProgress()
+    }
+  }
+
+  func update(pending: Int, failed: Int, requested: Bool) {
+    guard #available(iOS 26.0, *) else { return }
+    self.requested = requested && pending > 0
+    if !self.requested {
+      finish(success: pending == 0 && failed == 0)
+      return
+    }
+    if submitted {
+      if pending < remaining { completed += Int64(remaining - pending); pageFraction = 0 }
+      if pending > remaining { total += Int64(pending - remaining) }
+      remaining = pending
+      reportProgress()
+      return
+    }
+    // Continued tasks must start during foreground work initiated by a person.
+    guard registered, UIApplication.shared.applicationState == .active else { return }
+    remaining = pending
+    completed = 0
+    pageFraction = 0
+    total = Int64(pending)
+    let request = BGContinuedProcessingTaskRequest(identifier: Self.identifier,
+      title: "Tải truyện", subtitle: "Còn \(pending) chương")
+    request.strategy = .fail
+    submitted = true
+    do { try BGTaskScheduler.shared.submit(request); submissionFailed = false }
+    catch { submitted = false; submissionFailed = true } // Existing finite lease/deferred job is fallback.
+  }
+
+  private func reportProgress() {
+    guard #available(iOS 26.0, *), let continued = task as? BGContinuedProcessingTask else { return }
+    continued.progress.totalUnitCount = max(1, total * 1000)
+    continued.progress.completedUnitCount = min(completed * 1000 + pageFraction, max(0, total * 1000 - 1))
+    continued.updateTitle("Tải truyện", subtitle: "Còn \(remaining) chương")
+  }
+
+  func pageProgress(completed: Int, total: Int) {
+    guard completed >= 0, total > 0, completed <= total, total <= 10000 else { return }
+    pageFraction = max(pageFraction, min(999, Int64(completed) * 1000 / Int64(total)))
+    reportProgress()
+  }
+
+  private func finish(success: Bool) {
+    if submitted { BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.identifier) }
+    let old = task
+    old?.expirationHandler = nil
+    task = nil
+    submitted = false
+    if success, #available(iOS 26.0, *), let continued = old as? BGContinuedProcessingTask {
+      continued.progress.completedUnitCount = continued.progress.totalUnitCount
+    }
+    old?.setTaskCompleted(success: success)
+  }
+}
+
 /// One finite UIApplication lease; no BGTask scheduling or persistent service.
 @MainActor
 final class TaskBackgroundLease {
@@ -128,10 +222,12 @@ final class TaskBackgroundScheduler {
   private static let snapshotKey = "dev.tachibooks.downloads.backgroundSnapshotV1"
   let snapshot = TaskPauseSnapshot()
   var diagnosticState: [String: Int] {
-    ["backgroundRequested": snapshot.eligible ? 1 : 0,
-     "backgroundRunning": active != nil ? 1 : 0,
+    var result = ["backgroundRequested": snapshot.eligible ? 1 : 0,
+     "backgroundRunning": active != nil || TaskContinuedDownloads.shared.running ? 1 : 0,
      "backgroundPendingChapters": snapshot.pending,
      "backgroundRemainingBooks": snapshot.updateRemaining]
+    result.merge(TaskContinuedDownloads.shared.diagnosticState) { _, new in new }
+    return result
   }
   private var registered = false, registrationAttempted = false, submitted = false
   private var ready = false, delivered = false
@@ -382,6 +478,7 @@ final class TaskPlatformBridge {
   private let notifications: UNUserNotificationCenter
   private let lease: TaskBackgroundLease
   private let scheduler = TaskBackgroundScheduler.shared
+  private let continued = TaskContinuedDownloads.shared
   private var notificationGeneration = 0
 
   init(messenger: FlutterBinaryMessenger) {
@@ -390,7 +487,14 @@ final class TaskPlatformBridge {
     lease = TaskBackgroundLease(start: { expiration in
       UIApplication.shared.beginBackgroundTask(withName: "TachiBooks downloads", expirationHandler: expiration)
     }, finish: { UIApplication.shared.endBackgroundTask($0) })
-    lease.onExpired = { [weak self] in self?.expired() }
+    lease.onExpired = { [weak self] in
+      guard let self = self, !self.continued.running else { return }
+      self.expired()
+    }
+    continued.onExpired = { [weak self] in
+      self?.lease.end()
+      self?.channel.invokeMethod("continuedProcessingExpired", arguments: nil)
+    }
     scheduler.attach(onStart: { [weak self] token in
       self?.channel.invokeMethod("scheduledBackground", arguments: token)
     }, onExpired: { [weak self] in self?.expired() })
@@ -406,7 +510,16 @@ final class TaskPlatformBridge {
   }
   private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
+    case "downloadPageProgress":
+      guard let args = call.arguments as? [String: Int], Set(args.keys) == ["completed", "total"],
+        let completed = args["completed"], let total = args["total"],
+        completed >= 0, total > 0, completed <= total, total <= 10000 else {
+        result(FlutterError(code: "invalid_progress", message: "Tiến độ tải không hợp lệ.", details: nil)); return
+      }
+      continued.pageProgress(completed: completed, total: total)
+      result(nil)
     case "beginBackground":
+      if continued.running { result(true); return }
       if lease.identifier == .invalid { scheduler.snapshot.arm() }
       let granted = lease.begin()
       if !granted { expired() }
@@ -434,6 +547,7 @@ final class TaskPlatformBridge {
           notifyUpdatePause: args["notifyUpdatePause"] as? Bool ?? false) else {
         result(FlutterError(code: "invalid_summary", message: "Tóm tắt cập nhật nền không hợp lệ.", details: nil)); return
       }
+      continued.update(pending: pending, failed: failed, requested: resume)
       result(nil)
     case "completeScheduledBackground":
       guard let args = call.arguments as? [String: Any], Set(args.keys) == ["token", "success"],

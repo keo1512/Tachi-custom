@@ -28,6 +28,8 @@ import 'chapter_options_sheet.dart';
 import 'chapter_range_dialog.dart';
 import 'library_view_model.dart';
 import 'library_locations.dart';
+import 'library_source_label.dart';
+import '../../../core/diagnostics/diagnostic_log.dart';
 
 class BookDetailScreen extends ConsumerStatefulWidget {
   const BookDetailScreen({super.key, required this.id, this.expectedRevision});
@@ -46,6 +48,7 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
   int? optionsRevision;
   final selectedIds = <String>{};
   int? selectionRevision;
+  String? metadataRequest;
 
   @override
   void dispose() {
@@ -827,6 +830,31 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
             .read(libraryProvider.notifier)
             .catalogue(book);
         final sources = ref.read(sourceRepositoryProvider);
+        final metadataKey =
+            '$revision:${book.id}:${book.sourceId}:${book.sourceRef}';
+        if (book.engine != 'local' &&
+            !sources.requiresExternalConnection(catalogueBook.engine) &&
+            (book.status == 0 ||
+                book.description.isEmpty ||
+                book.author.isEmpty) &&
+            metadataRequest != metadataKey) {
+          metadataRequest = metadataKey;
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (!mounted) return;
+            try {
+              await ref
+                  .read(libraryProvider.notifier)
+                  .refreshBookDetail(
+                    book.id,
+                    expectedRevision: revision,
+                    refreshChapters: false,
+                    preserveTitle: true,
+                  );
+            } catch (error) {
+              DiagnosticLogs.error('source', error);
+            }
+          });
+        }
         final sourceUri = Uri.tryParse(book.sourceRef);
         final sourceUrl =
             sourceUri != null &&
@@ -983,6 +1011,7 @@ class _BookDetailState extends ConsumerState<BookDetailScreen> {
                 if (row == 0) {
                   return BookDetailHeader(
                     book: book,
+                    sourceLabel: resolvedLibrarySourceLabel(ref, book),
                     coverImage: libraryCoverImage(ref, book),
                     descriptionExpanded: descriptionExpanded,
                     onToggleDescription: () => setState(

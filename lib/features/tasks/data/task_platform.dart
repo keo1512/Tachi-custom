@@ -22,6 +22,11 @@ abstract interface class PausedTaskPlatform {
   Future<bool> notifyPausedDownloads(int pending, int failed);
 }
 
+abstract interface class ContinuedTaskPlatform {
+  Stream<void> get continuedProcessingExpired;
+  Future<void> downloadPageProgress(int completed, int total);
+}
+
 /// A local book identity is sufficient to navigate after app-lock and revision
 /// checks. Notification text never includes a title, account or source URL.
 abstract interface class LibraryUpdateNotificationPlatform {
@@ -71,6 +76,7 @@ final taskPlatformProvider = Provider<TaskPlatform>((ref) {
 class NativeTaskPlatform
     implements
         TaskPlatform,
+        ContinuedTaskPlatform,
         PausedTaskPlatform,
         LibraryUpdateNotificationPlatform,
         BackgroundTaskPlatform,
@@ -80,6 +86,8 @@ class NativeTaskPlatform
       _channel.setMethodCallHandler((call) async {
         if (call.method == 'backgroundExpired' && !_disposed) {
           _expired.add(null);
+        } else if (call.method == 'continuedProcessingExpired' && !_disposed) {
+          _continuedExpired.add(null);
         } else if (call.method == 'scheduledBackground' && !_disposed) {
           final token = call.arguments;
           if (token is int && token > 0 && token <= 0x7fffffff) {
@@ -91,6 +99,22 @@ class NativeTaskPlatform
   }
   static const _channel = MethodChannel('dev.tachibooks/tasks');
   final _expired = StreamController<void>.broadcast(sync: true);
+  final _continuedExpired = StreamController<void>.broadcast(sync: true);
+  @override
+  Stream<void> get continuedProcessingExpired => _continuedExpired.stream;
+  @override
+  Future<void> downloadPageProgress(int completed, int total) async {
+    if (completed < 0 || total <= 0 || completed > total || total > 10000) {
+      throw ArgumentError('Tiến độ tải không hợp lệ.');
+    }
+    if (_available) {
+      await _channel.invokeMethod<void>('downloadPageProgress', {
+        'completed': completed,
+        'total': total,
+      });
+    }
+  }
+
   final _scheduled = StreamController<int>.broadcast(sync: true);
   bool _disposed = false;
   bool get _available => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -287,6 +311,7 @@ class NativeTaskPlatform
       unawaited(endBackground().catchError((Object _) {}));
     }
     unawaited(_expired.close());
+    unawaited(_continuedExpired.close());
     unawaited(_scheduled.close());
   }
 }

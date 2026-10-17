@@ -6,11 +6,13 @@ class LibraryViewSession {
   String query = '';
   bool searching = false;
   String? selectedGroup;
+  String? selectedFolder;
   int? revision;
   void reset(int nextRevision) {
     query = '';
     searching = false;
     selectedGroup = null;
+    selectedFolder = null;
     revision = nextRevision;
   }
 }

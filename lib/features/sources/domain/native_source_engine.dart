@@ -43,6 +43,11 @@ abstract interface class NativeCoverImageEngine {
   Future<SourceImageData> fetchCover(CatalogueBook book);
 }
 
+abstract interface class NativeCoverCacheEngine {
+  Future<void> invalidateCover(CatalogueBook book);
+  Future<void> clearCoverCache();
+}
+
 abstract interface class NativeSourceBrowserEngine {
   Future<void> openWebsite(CatalogueBook book);
 }

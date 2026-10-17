@@ -14,11 +14,13 @@ class LibraryBookMetadata extends StatelessWidget {
     required this.book,
     required this.filter,
     this.compact = false,
+    this.sourceLabel,
   });
 
   final LibraryBook book;
   final LibraryFilter filter;
   final bool compact;
+  final String? sourceLabel;
 
   static int gridRows(LibraryFilter filter) => [
     filter.showSource,
@@ -31,7 +33,7 @@ class LibraryBookMetadata extends StatelessWidget {
 
   List<({String key, String text, IconData icon})> get entries {
     final read = readChapterCount(book);
-    final source = librarySourceLabel(book);
+    final source = sourceLabel ?? librarySourceLabel(book);
     final update = book.lastUpdated?.toLocal();
     return [
       if (filter.showSource)

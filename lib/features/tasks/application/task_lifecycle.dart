@@ -28,6 +28,7 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
   late TaskPlatform platform;
   late LibraryUpdateExecutionGate updateGate;
   StreamSubscription<void>? expiration;
+  StreamSubscription<void>? continuedExpiration;
   StreamSubscription<int>? scheduled;
   StreamSubscription<void>? updateExecutions;
   bool background = false, leased = false, expired = false, disposed = false;
@@ -58,6 +59,14 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
       reconcile();
     });
     WidgetsBinding.instance.addObserver(this);
+    if (platform case final ContinuedTaskPlatform native) {
+      continuedExpiration = native.continuedProcessingExpired.listen((_) {
+        if (!mounted) return;
+        expired = true;
+        leased = false;
+        unawaited(_suspend(continued: true));
+      });
+    }
     expiration = platform.backgroundExpired.listen((_) {
       // A native callback already queued before resume must not pause a new
       // foreground execution after its lease has been ended.
@@ -172,9 +181,9 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
     }
   }
 
-  Future<void> _suspend() async {
+  Future<void> _suspend({bool continued = false}) async {
     if (!mounted || suspending) return;
-    updateGate.expire();
+    if (!continued) updateGate.expire();
     final before = ref.read(downloadQueueProvider);
     if (!before.running &&
         !before.tasks.any((task) => task.status == DownloadJobStatus.active)) {
@@ -183,7 +192,13 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
     }
     suspending = true;
     try {
-      await ref.read(downloadQueueProvider.notifier).suspendForBackground();
+      await ref
+          .read(downloadQueueProvider.notifier)
+          .suspendForBackground(
+            reason: continued
+                ? 'Tác vụ tải nền đã dừng. Bấm Tiếp tục để tải tiếp.'
+                : null,
+          );
     } catch (_) {
       // The queue retains its durable entries and exposes its storage error.
     } finally {
@@ -406,6 +421,7 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
     updateGate.expire();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(expiration?.cancel());
+    unawaited(continuedExpiration?.cancel());
     unawaited(scheduled?.cancel());
     unawaited(updateExecutions?.cancel());
     unawaited(_finishScheduled(success: false).catchError((Object _) {}));

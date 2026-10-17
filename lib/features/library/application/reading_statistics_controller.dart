@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/library_mutation.dart';
 import '../data/library_repository.dart';
 import '../domain/reading_statistics.dart';
+import '../domain/book_reading_times.dart';
+import '../../settings/settings_controller.dart';
+import 'backup_service_provider.dart';
 import '../presentation/library_view_model.dart';
 
 final readingStatisticsClockProvider = Provider<DateTime Function()>(
@@ -15,6 +18,7 @@ final readingStatisticsProvider = FutureProvider.autoDispose<ReadingStatistics>(
   // Library refreshes invalidate this view, including download, restore and
   // reading changes. One consistent snapshot supplies both metadata and cache.
   ref.watch(libraryProvider);
+  ref.watch(configurationChangesProvider);
   final snapshot = await ref.read(libraryRepositoryProvider).snapshot();
   final cached = <String, Set<int>>{};
   for (final entry in snapshot.entries) {
@@ -35,6 +39,9 @@ final readingStatisticsProvider = FutureProvider.autoDispose<ReadingStatistics>(
   return ReadingStatistics(
     snapshot.entries.map((entry) => entry.book),
     cachedChapters: cached,
+    readingTimes: BookReadingTimes.decode(
+      ref.read(preferencesProvider).getString(BookReadingTimes.preferenceKey),
+    ),
   );
 });
 

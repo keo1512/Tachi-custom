@@ -166,6 +166,29 @@ ConvertedBackup _readLibrary(Database db) {
     latest.putIfAbsent(_integer(row['manga_id']), () => row);
   }
   final tracking = _tracking(db);
+  // Older backups may omit this optional table. Never substitute the author
+  // or extension package name for the source's own display name.
+  final sourceNames = <String, String>{};
+  if (db
+      .select(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='Source'",
+      )
+      .isNotEmpty) {
+    final columns = db
+        .select('PRAGMA table_info("Source")')
+        .map((r) => r['name'])
+        .toSet();
+    if (columns.containsAll(['id', 'name'])) {
+      for (final source in db.select(
+        'SELECT id,name FROM Source LIMIT 10001',
+      )) {
+        sourceNames[_integer(source['id']).toString()] = _string(
+          source['name'],
+          optional: true,
+        );
+      }
+    }
+  }
   final titles = <ExternalTitle>[];
   for (final row in manga) {
     final id = _integer(row['id']);
@@ -190,6 +213,7 @@ ConvertedBackup _readLibrary(Database db) {
     titles.add(
       ExternalTitle(
         source: _integer(row['source']).toString(),
+        sourceName: sourceNames[_integer(row['source']).toString()] ?? '',
         status: mangaColumns.contains('status') ? _integer(row['status']) : 0,
         url: _string(row['url']),
         title: _string(row['title']),

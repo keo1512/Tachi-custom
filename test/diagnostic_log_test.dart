@@ -19,6 +19,32 @@ void main() {
   }
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  test('safe operation stages distinguish cover, page and metadata failures without payloads', () async {
+    final store = await open();
+    for (final operation in [
+      'cover',
+      'image',
+      'detail',
+      'https://private.example/token',
+    ]) {
+      await store.record(
+        DiagnosticEvent.error(
+          'source',
+          const ApiException('secret', code: 'extension_failed'),
+          operation: operation,
+        ),
+      );
+    }
+    final exported = utf8.decode(store.export());
+    expect(store.read().map((e) => e.operation), [
+      'cover',
+      'image',
+      'detail',
+      null,
+    ]);
+    expect(exported, isNot(contains('private.example')));
+    expect(exported, isNot(contains('secret')));
+  });
   test('native diagnostic types survive storage and different failures do not coalesce', () async {
     final store = await open();
     for (final type in [
@@ -43,7 +69,7 @@ void main() {
     ]);
     final data = jsonDecode(utf8.decode(store.export())) as Map;
     expect(data['version'], 1);
-    expect(data['appVersion'], '1.0.0+10');
+    expect(data['appVersion'], '1.0.0+11');
     expect((data['entries'] as List).map((entry) => entry['type']), [
       'NoSuchMethodError',
       'NoClassDefFoundError',

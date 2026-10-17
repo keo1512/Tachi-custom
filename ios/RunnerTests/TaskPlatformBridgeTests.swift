@@ -3,6 +3,15 @@ import XCTest
 @testable import Runner
 
 final class TaskPlatformBridgeTests: XCTestCase {
+  func testContinuedDownloadIdentifierIsPermittedAndUsesApplicationBundlePrefix() async {
+    await MainActor.run {
+      let identifier = TaskContinuedDownloads.identifier
+      XCTAssertTrue(identifier.hasPrefix((Bundle.main.bundleIdentifier ?? "missing") + "."))
+      let permitted = Bundle.main.object(forInfoDictionaryKey: "BGTaskSchedulerPermittedIdentifiers") as? [String]
+      XCTAssertTrue(permitted?.contains(identifier) == true)
+      XCTAssertNotEqual(identifier, TaskBackgroundScheduler.identifier)
+    }
+  }
   func testUniqueNotificationDeliveriesRetainLegacyTapCompatibilityAndIsolateLateCleanup() {
     for base in TaskNotificationSummary.identifiers {
       let old = TaskNotificationSummary.requestIdentifier(base), next = TaskNotificationSummary.requestIdentifier(base)

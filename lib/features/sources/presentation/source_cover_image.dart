@@ -11,6 +11,15 @@ import '../../library/presentation/library_view_model.dart';
 import '../data/source_repository.dart';
 import '../domain/catalogue.dart';
 
+final coverRefreshRevisionProvider =
+    NotifierProvider<CoverRefreshRevision, int>(CoverRefreshRevision.new);
+
+class CoverRefreshRevision extends Notifier<int> {
+  @override
+  int build() => 0;
+  void invalidate() => state++;
+}
+
 /// Select the source's own image loader without downloading in a widget build.
 /// Local/custom covers never initialize an extension runtime.
 ImageProvider<Object>? sourceCoverImage(WidgetRef ref, CatalogueBook book) {
@@ -26,7 +35,11 @@ ImageProvider<Object>? sourceCoverImage(WidgetRef ref, CatalogueBook book) {
   }
   final repository = ref.watch(sourceRepositoryProvider);
   if (repository.usesNativeCoverLoader(book)) {
-    return SourceCoverImage(repository: repository, book: book);
+    return SourceCoverImage(
+      repository: repository,
+      book: book,
+      revision: ref.watch(coverRefreshRevisionProvider),
+    );
   }
   return uri.hasAuthority && uri.hasScheme ? NetworkImage(cover) : null;
 }
@@ -103,10 +116,15 @@ class _LocalCoverImage extends ImageProvider<_LocalCoverImage> {
 /// the same source and repository. Headers and cookies stay inside the runtime.
 @immutable
 class SourceCoverImage extends ImageProvider<SourceCoverImage> {
-  const SourceCoverImage({required this.repository, required this.book});
+  const SourceCoverImage({
+    required this.repository,
+    required this.book,
+    this.revision = 0,
+  });
 
   final SourceRepository repository;
   final CatalogueBook book;
+  final int revision;
 
   @override
   Future<SourceCoverImage> obtainKey(ImageConfiguration configuration) =>
@@ -136,6 +154,7 @@ class SourceCoverImage extends ImageProvider<SourceCoverImage> {
       // A failed first load must not poison the cache after a source is
       // installed, a browser challenge is completed, or the network recovers.
       scheduleMicrotask(() => PaintingBinding.instance.imageCache.evict(this));
+      await repository.invalidateCover(book).catchError((Object _) {});
       DiagnosticLogs.error('source', error);
       rethrow;
     }
@@ -145,6 +164,7 @@ class SourceCoverImage extends ImageProvider<SourceCoverImage> {
   bool operator ==(Object other) =>
       other is SourceCoverImage &&
       identical(repository, other.repository) &&
+      revision == other.revision &&
       book.engine == other.book.engine &&
       book.sourceId == other.book.sourceId &&
       book.ref == other.book.ref &&
@@ -153,6 +173,7 @@ class SourceCoverImage extends ImageProvider<SourceCoverImage> {
   @override
   int get hashCode => Object.hash(
     identityHashCode(repository),
+    revision,
     book.engine,
     book.sourceId,
     book.ref,

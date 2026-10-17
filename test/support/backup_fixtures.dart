@@ -22,12 +22,20 @@ Uint8List tmbFixture({
   bool badChecksum = false,
   bool chapterMetadata = false,
   bool trackerMetadata = false,
+  bool sourceMetadata = false,
 }) {
   final directory = Directory.systemTemp.createTempSync('tachi-tmb-fixture-');
   Database? db;
   try {
     final path = '${directory.path}/tachimanga.db';
     db = sqlite3.open(path);
+    if (sourceMetadata) {
+      db.execute('CREATE TABLE Source (id BIGINT, name TEXT)');
+      db.execute('INSERT INTO Source VALUES (?, ?)', [
+        int.parse(fixtureSource),
+        'Nguồn mẫu',
+      ]);
+    }
     db.execute(
       'CREATE TABLE Manga (id INTEGER PRIMARY KEY, url TEXT, title TEXT, '
       'author TEXT, description TEXT, thumbnail_url TEXT, source BIGINT, in_library INTEGER)',

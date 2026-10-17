@@ -29,6 +29,10 @@ void main() {
       });
       addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
       final platform = NativeTaskPlatform();
+      var continuedExpired = 0;
+      final continuedSubscription = platform.continuedProcessingExpired.listen(
+        (_) => continuedExpired++,
+      );
       var expired = 0;
       final subscription = platform.backgroundExpired.listen((_) => expired++);
       expect(await platform.beginBackground(), true);
@@ -68,6 +72,23 @@ void main() {
       );
       await response.future;
       expect(expired, 1);
+      final continuedResponse = Completer<void>();
+      messenger.handlePlatformMessage(
+        channel.name,
+        const StandardMethodCodec().encodeMethodCall(
+          const MethodCall('continuedProcessingExpired'),
+        ),
+        (_) => continuedResponse.complete(),
+      );
+      await continuedResponse.future;
+      expect(continuedExpired, 1);
+      expect(expired, 1);
+      await platform.downloadPageProgress(7, 62);
+      expect(calls.removeLast().arguments, {'completed': 7, 'total': 62});
+      await expectLater(
+        platform.downloadPageProgress(63, 62),
+        throwsArgumentError,
+      );
       await platform.clearNotifications();
       await platform.endBackground();
       expect(calls.map((call) => call.method), [
@@ -79,6 +100,7 @@ void main() {
         'endBackground',
       ]);
       await subscription.cancel();
+      await continuedSubscription.cancel();
       platform.dispose();
       await Future<void>.delayed(Duration.zero);
     },

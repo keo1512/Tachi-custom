@@ -191,6 +191,8 @@ String _settingLabel(String key) =>
       'taskNotificationsEnabledV1': 'Thông báo tác vụ',
       'extensionRepositoriesV1': 'Kho tiện ích mở rộng',
       'libraryCategoriesV1': 'Danh mục truyện',
+      'libraryFoldersV1': 'Thư mục truyện',
+      'bookReadingTimesV1': 'Thời lượng đọc từng truyện',
       'libraryGroupOrderV1': 'Thứ tự nhóm truyện',
       'libraryFilterV1': 'Bộ lọc thư viện',
       'readerOptionsV1': 'Tùy chọn trình đọc',

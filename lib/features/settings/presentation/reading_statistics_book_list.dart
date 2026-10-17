@@ -8,6 +8,7 @@ import '../../library/application/reading_statistics_controller.dart';
 import '../../library/domain/library_book.dart';
 import '../../library/domain/library_reading.dart';
 import '../../library/domain/reading_statistics.dart';
+import '../../library/domain/book_reading_times.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../../privacy/application/app_lock_controller.dart';
 import 'settings_widgets.dart';
@@ -25,6 +26,7 @@ class _BookStatisticsState extends ConsumerState<ReadingStatisticsBookList> {
   String query = '';
   String? selectedBookId;
   bool saving = false;
+  ReadingStatisticsOrder order = ReadingStatisticsOrder.duration;
 
   @override
   void initState() {
@@ -179,6 +181,22 @@ class _BookStatisticsState extends ConsumerState<ReadingStatisticsBookList> {
                 onPressed: () => setState(() => selectedBookId = null),
                 child: const Text('Hiện tất cả truyện'),
               ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: DropdownButtonFormField<ReadingStatisticsOrder>(
+                key: const ValueKey('statistics-sort'),
+                initialValue: order,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Sắp xếp'),
+                items: [
+                  for (final value in ReadingStatisticsOrder.values)
+                    DropdownMenuItem(value: value, child: Text(value.label)),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => order = value);
+                },
+              ),
+            ),
             Expanded(
               child: statistics.when(
                 loading: () =>
@@ -197,18 +215,15 @@ class _BookStatisticsState extends ConsumerState<ReadingStatisticsBookList> {
                   ],
                 ),
                 data: (stats) {
-                  final books =
-                      stats.books
-                          .where(
-                            (book) =>
-                                (selectedBookId == null ||
-                                    book.id == selectedBookId) &&
-                                book.title.toLowerCase().contains(query),
-                          )
-                          .toList()
-                        ..sort(
-                          (left, right) => left.title.compareTo(right.title),
-                        );
+                  final books = stats
+                      .sortedBooks(order)
+                      .where(
+                        (book) =>
+                            (selectedBookId == null ||
+                                book.id == selectedBookId) &&
+                            book.title.toLowerCase().contains(query),
+                      )
+                      .toList();
                   if (books.isEmpty) {
                     return ListView(
                       children: [
@@ -252,6 +267,9 @@ class _BookStatisticsState extends ConsumerState<ReadingStatisticsBookList> {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: 5),
+                            Text(
+                              'Thời lượng đọc: ${readingDurationLabel(stats.readingSecondsOf(book))}',
+                            ),
                             Text(
                               '${readChapterCount(book)}/${book.chapters.length} chương đã đọc '
                               '· ${stats.downloadedChapterCount(book)} chương offline',

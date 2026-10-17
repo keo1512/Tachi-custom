@@ -117,6 +117,7 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>dev.tachibooks.downloads.processing</string>
+		<string>dev.tachibooks.tachiBooks.downloads.continued</string>
 	</array>
 </dict>
 </plist>

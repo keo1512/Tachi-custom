@@ -18,6 +18,7 @@ import '../../library/presentation/library_view_model.dart';
 import '../../privacy/application/app_lock_controller.dart';
 import '../../sources/application/source_maintenance.dart';
 import '../../sources/presentation/local_source_screen.dart';
+import '../../sources/presentation/source_cover_image.dart';
 import '../settings_controller.dart';
 import 'settings_widgets.dart';
 import 'automatic_backup_screen.dart';
@@ -238,6 +239,9 @@ class _StorageMaintenanceState extends ConsumerState<StorageMaintenanceScreen> {
           );
       await ref.read(libraryProvider.notifier).refresh();
       if (mounted) {
+        if (result.updated > 0) {
+          ref.read(coverRefreshRevisionProvider.notifier).invalidate();
+        }
         message(
           context,
           'Đã làm mới ${result.updated} truyện, ${result.failed} lỗi, ${result.skipped} bỏ qua.',
@@ -313,9 +317,14 @@ class _StorageMaintenanceState extends ConsumerState<StorageMaintenanceScreen> {
           onTap: busy
               ? null
               : () => _deviceAction('Xóa cache ảnh?', 'Ảnh đã lưu offline và bìa tự chọn được giữ. Ảnh tạm có thể tải lại từ nguồn.', () async {
-                  await ref.read(deviceToolsProvider).clearHttpCache();
+                  await ref.read(sourceMaintenanceProvider).clearImageCaches();
                   PaintingBinding.instance.imageCache.clear();
                   PaintingBinding.instance.imageCache.clearLiveImages();
+                  if (mounted) {
+                    ref
+                        .read(coverRefreshRevisionProvider.notifier)
+                        .invalidate();
+                  }
                 }),
         ),
         SettingsRow(

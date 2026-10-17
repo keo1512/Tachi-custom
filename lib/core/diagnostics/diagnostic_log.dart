@@ -21,15 +21,28 @@ class DiagnosticEvent {
     this.message,
     this.at, {
     this.type,
+    this.operation,
   });
   final String category, code, message;
   final String? type;
+  final String? operation;
+  static const operations = {
+    'initialize',
+    'sources',
+    'detail',
+    'chapters',
+    'chapter',
+    'cover',
+    'image',
+    'install',
+  };
   final DateTime at;
   Map<String, String> toJson() => {
     'category': category,
     'code': code,
     'message': message,
     'at': at.toUtc().toIso8601String(),
+    if (operations.contains(operation)) 'operation': operation!,
     if (canonicalDiagnosticType(type) case final String safeType)
       'type': safeType,
   };
@@ -92,7 +105,11 @@ class DiagnosticEvent {
         'sync_network_unavailable',
       }.contains(code) ||
       RegExp(r'^http_([1-5][0-9]{2})$').hasMatch(code);
-  factory DiagnosticEvent.error(String category, Object error) {
+  factory DiagnosticEvent.error(
+    String category,
+    Object error, {
+    String? operation,
+  }) {
     if (!categories.contains(category)) {
       throw ArgumentError('Loại nhật ký không hợp lệ.');
     }
@@ -150,17 +167,25 @@ class DiagnosticEvent {
       MissingPluginException() => 'MissingPluginException',
       _ => null,
     };
-    return DiagnosticEvent(category, code, message, DateTime.now(), type: type);
+    return DiagnosticEvent(
+      category,
+      code,
+      message,
+      DateTime.now(),
+      type: type,
+      operation: operation,
+    );
   }
 }
 
 class DiagnosticLogs {
   static Future<void> Function(DiagnosticEvent)? writer;
-  static void error(String category, Object error) {
+  static void error(String category, Object error, {String? operation}) {
     final sink = writer;
     if (sink != null) {
       unawaited(
-        sink(DiagnosticEvent.error(category, error)).catchError((Object _) {}),
+        sink(DiagnosticEvent.error(category, error, operation: operation))
+            .catchError((Object _) {}),
       );
     }
   }
@@ -171,7 +196,7 @@ class DiagnosticLogStore {
   final SharedPreferences preferences;
   final bool Function()? canRecord;
   static const key = 'deviceDiagnosticLogV1';
-  static const appVersion = '1.0.0+10';
+  static const appVersion = '1.0.0+11';
   static const maxEntries = 100, maxBytes = 128 * 1024;
   Future<void> _pending = Future<void>.value();
   final _changes = StreamController<void>.broadcast();
@@ -212,6 +237,9 @@ class DiagnosticLogStore {
       DiagnosticEvent.safeMessage(item['code'] as String),
       DateTime.parse(item['at'] as String),
       type: canonicalDiagnosticType(item['type']),
+      operation: DiagnosticEvent.operations.contains(item['operation'])
+          ? item['operation'] as String
+          : null,
     );
   }
 
@@ -227,11 +255,15 @@ class DiagnosticLogStore {
       }
       final entries = [...read()];
       final type = canonicalDiagnosticType(event.type);
+      final operation = DiagnosticEvent.operations.contains(event.operation)
+          ? event.operation
+          : null;
       if (entries.any(
         (previous) =>
             previous.category == event.category &&
             previous.code == event.code &&
             previous.type == type &&
+            previous.operation == operation &&
             event.at.difference(previous.at).inSeconds >= 0 &&
             event.at.difference(previous.at).inSeconds < 60,
       )) {
@@ -244,6 +276,7 @@ class DiagnosticLogStore {
           DiagnosticEvent.safeMessage(event.code),
           event.at,
           type: type,
+          operation: operation,
         ),
       );
       if (entries.length > maxEntries) {

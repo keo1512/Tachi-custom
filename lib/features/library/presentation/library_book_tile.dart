@@ -13,6 +13,7 @@ class LibraryBookTile extends StatelessWidget {
     required this.book,
     required this.filter,
     this.coverImage,
+    this.sourceLabel,
     this.selected,
     this.onTap,
     this.onLongPress,
@@ -20,6 +21,7 @@ class LibraryBookTile extends StatelessWidget {
   });
 
   final LibraryBook book;
+  final String? sourceLabel;
   final LibraryFilter filter;
   final ImageProvider<Object>? coverImage;
   final bool? selected;
@@ -97,7 +99,12 @@ class LibraryBookTile extends StatelessWidget {
             ),
           ),
         ),
-        LibraryBookMetadata(book: book, filter: filter, compact: true),
+        LibraryBookMetadata(
+          book: book,
+          filter: filter,
+          compact: true,
+          sourceLabel: sourceLabel,
+        ),
         if (filter.showResumeButton)
           SizedBox(
             height: 36,

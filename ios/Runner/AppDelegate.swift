@@ -27,6 +27,7 @@ import UserNotifications
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     TaskBackgroundScheduler.shared.register()
+    TaskContinuedDownloads.shared.register()
     UNUserNotificationCenter.current().delegate = self
     if let url = launchOptions?[.url] as? URL {
       TachiDeepLinkInbox.shared.accept(url)

@@ -18,6 +18,7 @@ class BookDetailHeader extends StatelessWidget {
     required this.onEditNotes,
     required this.onResume,
     this.coverImage,
+    this.sourceLabel,
     this.onCopySource,
     this.onOpenWebsite,
     this.onSearchTitle,
@@ -26,6 +27,7 @@ class BookDetailHeader extends StatelessWidget {
   });
 
   final LibraryBook book;
+  final String? sourceLabel;
   final ImageProvider<Object>? coverImage;
   final bool descriptionExpanded;
   final VoidCallback onToggleDescription, onFavorite, onEditNotes;
@@ -175,7 +177,7 @@ class BookDetailHeader extends StatelessWidget {
                             ],
                             const SizedBox(height: 7),
                             Text(
-                              librarySourceLabel(book),
+                              sourceLabel ?? librarySourceLabel(book),
                               style: TextStyle(color: secondary, fontSize: 12),
                             ),
                             const SizedBox(height: 6),

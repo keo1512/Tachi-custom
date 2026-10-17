@@ -119,6 +119,19 @@ class FakeBackgroundTasks extends FakeTasks implements BackgroundTaskPlatform {
   }
 }
 
+class FakeContinuedTasks extends FakeTasks implements ContinuedTaskPlatform {
+  final continued = StreamController<void>.broadcast(sync: true);
+  @override
+  Stream<void> get continuedProcessingExpired => continued.stream;
+  @override
+  Future<void> downloadPageProgress(int completed, int total) async {}
+  @override
+  void dispose() {
+    unawaited(continued.close());
+    super.dispose();
+  }
+}
+
 class ReadyAppLock extends AppLockController {
   ReadyAppLock({this.locked = false});
   final bool locked;
@@ -199,6 +212,62 @@ LibraryBook book() => LibraryBook(
 );
 
 void main() {
+  testWidgets(
+    'continued task cancellation in foreground stops guarded work and retains the durable queue',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final platform = FakeContinuedTasks();
+      final repo = MemoryLibraryRepository();
+      await repo.save(book());
+      final gate = Completer<void>();
+      DownloadExecution? execution;
+      final container = ProviderContainer(
+        overrides: [
+          preferencesProvider.overrideWithValue(prefs),
+          taskPlatformProvider.overrideWithValue(platform),
+          libraryRepositoryProvider.overrideWithValue(repo),
+          guardedDownloadJobExecutorProvider.overrideWithValue((_, _, active) {
+            execution = active;
+            return gate.future;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      addTearDown(platform.dispose);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const TaskLifecycle(child: SizedBox()),
+        ),
+      );
+      final queue = container.read(downloadQueueProvider.notifier);
+      await queue.enqueue('b', ['a', 'b']);
+      await queue.start();
+      for (var i = 0; i < 10 && execution == null; i++) {
+        await tester.pump();
+      }
+      expect(execution, isNotNull);
+      platform.continued.add(null);
+      for (var i = 0; i < 8; i++) {
+        await tester.pump();
+      }
+      expect(execution!.isCancelled, isTrue);
+      expect(container.read(downloadQueueProvider).running, isFalse);
+      expect(
+        container.read(downloadQueueProvider).pauseReason,
+        contains('Tác vụ tải nền đã dừng'),
+      );
+      expect(DownloadQueueRepository(prefs).load().length, 2);
+      gate.complete();
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+      expect(container.read(downloadQueueProvider).tasks.length, 2);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
 

@@ -21,6 +21,10 @@ import '../../library/data/library_repository.dart';
 import '../../library/data/library_mutation.dart';
 import '../../library/domain/library_book.dart';
 import '../../library/domain/library_reading.dart';
+import '../../library/domain/book_reading_times.dart';
+import '../../library/application/reading_statistics_controller.dart';
+import '../../library/data/coordinated_preferences.dart';
+import '../../library/presentation/library_preference_writes.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../../settings/settings_controller.dart';
 import '../../settings/presentation/log_diagnostics_screen.dart';
@@ -108,6 +112,9 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   String? error;
   Timer? debounce;
   DateTime? started;
+  late final DateTime Function() readingClock;
+  String? timedBookId;
+  int? timedRevision, timedPreferenceGeneration;
   Future<void> timeWrites = Future<void>.value();
   bool downloading = false, orientationChanged = false;
   AppLifecycleState lifecycle = AppLifecycleState.resumed;
@@ -122,6 +129,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   @override
   void initState() {
     super.initState();
+    readingClock = ref.read(readingStatisticsClockProvider);
     autoScroll = ReaderAutoScroll(
       scroll,
       canScroll: () =>
@@ -219,37 +227,80 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         error == null &&
         content != null &&
         lifecycle == AppLifecycleState.resumed) {
-      started ??= DateTime.now();
+      if (started == null && book != null) {
+        started = readingClock();
+        timedBookId = book!.id;
+        timedRevision = repository.replacementRevision;
+        timedPreferenceGeneration = preferences is CoordinatedPreferences
+            ? (preferences as CoordinatedPreferences).mutationGeneration
+            : 0;
+      }
     }
   }
 
   void stopReadingTime() {
     final start = started;
+    final bookId = timedBookId;
+    final revision = timedRevision;
+    final preferenceGeneration = timedPreferenceGeneration;
     started = null;
-    if (incognitoSession || start == null) return;
-    final end = DateTime.now();
+    timedBookId = null;
+    if (incognitoSession || start == null || bookId == null) return;
+    final end = readingClock();
+    bool isCurrent() =>
+        repository.replacementRevision == revision &&
+        (preferences is! CoordinatedPreferences ||
+            (preferences as CoordinatedPreferences).mutationGeneration ==
+                preferenceGeneration);
     timeWrites = timeWrites
-        .then((_) async {
-          var cursor = start;
-          while (cursor.isBefore(end)) {
-            final midnight = DateTime(
-              cursor.year,
-              cursor.month,
-              cursor.day + 1,
+        .then(
+          (_) => LibraryPreferenceWrites.serialize(preferences, () async {
+            if (!isCurrent()) return;
+            final seconds = end.difference(start).inSeconds;
+            if (seconds <= 0) return;
+            final times = BookReadingTimes.decode(
+              preferences.getString(BookReadingTimes.preferenceKey),
             );
-            final until = end.isBefore(midnight) ? end : midnight;
-            final seconds = until.difference(cursor).inSeconds;
-            if (seconds > 0) {
-              final key =
-                  'readSeconds:${cursor.year}-${cursor.month}-${cursor.day}';
-              await preferences.setInt(
-                key,
-                (preferences.getInt(key) ?? 0) + seconds,
-              );
+            final encoded = BookReadingTimes({
+              ...times.seconds,
+              bookId: times.of(bookId) + seconds,
+            }).encode();
+            final saved = preferences is CoordinatedPreferences
+                ? await (preferences as CoordinatedPreferences)
+                      .setStringIfCurrent(
+                        BookReadingTimes.preferenceKey,
+                        encoded,
+                        isCurrent,
+                      )
+                : await preferences.setString(
+                    BookReadingTimes.preferenceKey,
+                    encoded,
+                  );
+            if (!saved) {
+              throw StateError('Không lưu được thời lượng đọc truyện.');
             }
-            cursor = until;
-          }
-        })
+            var cursor = start;
+            while (cursor.isBefore(end)) {
+              if (!isCurrent()) return;
+              final midnight = DateTime(
+                cursor.year,
+                cursor.month,
+                cursor.day + 1,
+              );
+              final until = end.isBefore(midnight) ? end : midnight;
+              final seconds = until.difference(cursor).inSeconds;
+              if (seconds > 0) {
+                final key =
+                    'readSeconds:${cursor.year}-${cursor.month}-${cursor.day}';
+                await preferences.setInt(
+                  key,
+                  (preferences.getInt(key) ?? 0) + seconds,
+                );
+              }
+              cursor = until;
+            }
+          }),
+        )
         .catchError((Object e) {
           debugPrint('Cannot save reading time: $e');
         });

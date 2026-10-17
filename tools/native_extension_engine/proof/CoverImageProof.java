@@ -11,6 +11,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.*;
 import okhttp3.*;
 
 /** Loopback-only proof for cover headers/client/cookies, bounds and page-hook isolation. */
@@ -51,11 +52,19 @@ public final class CoverImageProof {
         HttpServer server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
         String base="http://127.0.0.1:"+server.getAddress().getPort();
         AtomicInteger requests=new AtomicInteger();
+        ExecutorService serverWorkers=Executors.newFixedThreadPool(4),rpcWorkers=Executors.newFixedThreadPool(3);
+        server.setExecutor(serverWorkers);
+        CountDownLatch parallelStarted=new CountDownLatch(2),releaseParallel=new CountDownLatch(1);
         server.createContext("/",exchange->{
             requests.incrementAndGet();
             boolean correct=(base+"/").equals(exchange.getRequestHeaders().getFirst("Referer"))&&base.equals(exchange.getRequestHeaders().getFirst("Origin"))&&"Cover-Fixture-UA".equals(exchange.getRequestHeaders().getFirst("User-Agent"))&&"cover_cookie=fixture".equals(exchange.getRequestHeaders().getFirst("Cookie"))&&"fixture".equals(exchange.getRequestHeaders().getFirst("X-Source-Client"));
             if(!correct){exchange.sendResponseHeaders(403,-1);exchange.close();return;}
             String path=exchange.getRequestURI().getPath();
+            if(path.equals("/parallel")){
+                parallelStarted.countDown();
+                try{if(!releaseParallel.await(8,TimeUnit.SECONDS))throw new IOException("Parallel cover deadline");}
+                catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new IOException(interrupted);}
+            }
             if(path.equals("/status")){exchange.sendResponseHeaders(403,-1);exchange.close();return;}
             exchange.getResponseHeaders().add("Content-Type","image/png");
             if(path.equals("/empty")){exchange.sendResponseHeaders(200,-1);exchange.close();return;}
@@ -87,8 +96,21 @@ public final class CoverImageProof {
             require(!missing.get("ok").getAsBoolean()&&"source_not_installed".equals(missing.getAsJsonObject("error").get("code").getAsString()),"Uninstalled source cannot load cover");
             require(requests.get()==8,"Uninstalled source makes no network requests");
             require(cover("/cover.png").get("ok").getAsBoolean(),"Failure closes body and leaves cover loader usable");
+            JsonObject status=cover("/status");
+            require(status.getAsJsonObject("error").get("httpStatus").getAsInt()==403,"Cover HTTP status survives the RPC boundary without URLs");
+            require(source.client.callTimeoutMillis()==0,"Bounded cover timeout does not mutate the source client");
+            Future<JsonObject> first=rpcWorkers.submit(()->cover("/parallel?one"));
+            Future<JsonObject> second=rpcWorkers.submit(()->cover("/parallel?two"));
+            require(parallelStarted.await(5,TimeUnit.SECONDS),"Two covers reach the server concurrently");
+            Future<JsonObject> exclusive=rpcWorkers.submit(()->rpc("health",new JsonObject()));
+            Thread.sleep(50);
+            require(!exclusive.isDone(),"Non-cover operations wait for existing read leases");
+            releaseParallel.countDown();
+            require(first.get(5,TimeUnit.SECONDS).get("ok").getAsBoolean(),"First concurrent cover succeeds");
+            require(second.get(5,TimeUnit.SECONDS).get("ok").getAsBoolean(),"Second concurrent cover succeeds");
+            require(exclusive.get(5,TimeUnit.SECONDS).get("ok").getAsBoolean(),"Exclusive worker resumes after both covers");
             System.out.println("JAVA8_COVER_IMAGE_PROOF_OK assertions="+assertions+" loopback-only headers client cookies relative-urls bounds page-hook-isolation");
-        }finally{server.stop(0);}
+        }finally{releaseParallel.countDown();server.stop(0);serverWorkers.shutdownNow();rpcWorkers.shutdownNow();}
         System.exit(0);
     }
 }

@@ -11,6 +11,20 @@ import 'support/backup_fixtures.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test(
+    'Tachimanga preserves exact source display names separately from author',
+    () async {
+      final repository = MemoryLibraryRepository();
+      final service = BackupService(repository);
+      final preview = await service.preview(tmbFixture(sourceMetadata: true));
+      await service.mergePreview(preview);
+      final book = (await repository.list()).single;
+      expect(book.sourceName, 'Nguồn mẫu');
+      expect(book.author, 'Tác giả');
+      expect(book.sourceId, fixtureSource);
+    },
+  );
+
   test('Tachimanga SQLite adapter imports library only, exact source IDs and nonsequential read state', () async {
     final repository = MemoryLibraryRepository();
     final service = BackupService(repository);

@@ -7,6 +7,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/diagnostics/diagnostic_error_type.dart';
+import '../../../core/diagnostics/diagnostic_log.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -17,6 +18,7 @@ import '../domain/native_source_engine.dart';
 import '../domain/source_filters.dart';
 import '../domain/extension_backup.dart';
 import 'extension_mutation_queue.dart';
+import 'source_cover_cache.dart';
 
 typedef NativeTachiExecutor = Future<String> Function(String request);
 typedef NativeTachiBrowser = Future<Map<String, dynamic>> Function(String url);
@@ -27,6 +29,7 @@ class NativeTachiRepository
         NativeSourceEngine,
         NativeImageEngine,
         NativeCoverImageEngine,
+        NativeCoverCacheEngine,
         NativeSourceBrowserEngine,
         NativeSourceMaintenanceEngine,
         NativeCatalogueBrowserEngine,
@@ -41,6 +44,8 @@ class NativeTachiRepository
     http.Client? client,
     Directory? storageDirectory,
     this.iconForPackage,
+    this.canCacheCover,
+    this.coverCacheEpoch,
   }) : _execute = executor ?? const TachiRuntime().invoke,
        _openBrowser = browser ?? const TachiRuntime().openBrowser,
        _client = client ?? http.Client(),
@@ -52,12 +57,68 @@ class NativeTachiRepository
   final http.Client _client;
   final bool _ownsClient;
   final String Function(String packageUrl)? iconForPackage;
+  final bool Function()? canCacheCover;
+  final int Function()? coverCacheEpoch;
+  Future<SourceCoverCache>? _coverCache;
+  final _pendingCovers = <String, Future<SourceImageData>>{};
+  Future<SourceCoverCache> _coverStorage() => _coverCache ??= () async {
+    final directory = await _storage();
+    return SourceCoverCache(Directory('${directory.path}/cover-cache'));
+  }();
   Directory? _directory;
   Future<void>? _initialization;
   bool _initialized = false;
-  Future<void> _imageTail = Future<void>.value();
+  final _pageRequests = <Future<void> Function()>[];
+  final _coverRequests = <Future<void> Function()>[];
+  bool _loadingImage = false;
+  int _loadingCovers = 0;
+
+  // Keep at most one request on JNI. A library grid can enqueue hundreds of
+  // covers; a chapter opened afterwards must not wait behind all of them.
+  Future<SourceImageData> _enqueueImage(
+    Future<SourceImageData> Function() load, {
+    required bool cover,
+  }) {
+    final result = Completer<SourceImageData>();
+    (cover ? _coverRequests : _pageRequests).add(() async {
+      try {
+        if (_disposed) throw StateError('Engine đã đóng.');
+        result.complete(await load());
+      } catch (error, stack) {
+        result.completeError(error, stack);
+      }
+    });
+    _pumpImages();
+    return result.future;
+  }
+
+  void _pumpImages() {
+    if (_loadingImage) return;
+    if (_pageRequests.isNotEmpty) {
+      if (_loadingCovers > 0) return;
+      _loadingImage = true;
+      unawaited(
+        _pageRequests.removeAt(0)().whenComplete(() {
+          _loadingImage = false;
+          _pumpImages();
+        }),
+      );
+      return;
+    }
+    while (_loadingCovers < 2 && _coverRequests.isNotEmpty) {
+      _loadingCovers++;
+      unawaited(
+        _coverRequests.removeAt(0)().whenComplete(() {
+          _loadingCovers--;
+          _pumpImages();
+        }),
+      );
+    }
+  }
+
   bool _disposed = false;
   final Map<String, List<String>> _preferenceKeys = {};
+  final _verifiedBookRefs = <String, String>{};
 
   Future<Directory> _storage() async => _directory ??= Directory(
     '${(await getApplicationSupportDirectory()).path}/TachiBooks/extension-runtime',
@@ -82,6 +143,7 @@ class NativeTachiRepository
       'clearCookies',
       'clearSourceCache',
     }.contains(method)) {
+      _verifiedBookRefs.clear();
       return exclusiveExtensionBackup(() => _requestUnlocked(method, args));
     }
     return _requestUnlocked(method, args);
@@ -107,6 +169,12 @@ class NativeTachiRepository
               ? error['code'] as String
               : 'TACHI_RUNTIME_FAILED',
           diagnosticType: canonicalDiagnosticType(error['type']),
+          statusCode:
+              error['httpStatus'] is int &&
+                  (error['httpStatus'] as int) >= 100 &&
+                  (error['httpStatus'] as int) <= 599
+              ? error['httpStatus'] as int
+              : null,
         );
       }
       return value['result'];
@@ -160,8 +228,13 @@ class NativeTachiRepository
     String method, [
     Map<String, dynamic> args = const {},
   ]) async {
-    await _ready();
-    return _request(method, args);
+    try {
+      await _ready();
+      return await _request(method, args);
+    } catch (error) {
+      DiagnosticLogs.error('source', error, operation: method);
+      rethrow;
+    }
   }
 
   @override
@@ -169,11 +242,13 @@ class NativeTachiRepository
 
   @override
   Future<void> clearSourceCache() async {
+    await (await _coverStorage()).clear();
     await _call('clearSourceCache');
   }
 
   @override
   Future<void> clearCookies() async {
+    await (await _coverStorage()).clear();
     await _call('clearCookies');
   }
 
@@ -472,25 +547,83 @@ class NativeTachiRepository
     _preferenceKeys.clear();
   }
 
-  Map<String, dynamic> _ref(CatalogueBook book) {
+  Future<Map<String, dynamic>> _ref(CatalogueBook book) async {
     // Numeric companion IDs cannot identify a title in a new on-device runtime.
     if (RegExp(r'^\d+$').hasMatch(book.ref)) {
-      throw const ApiException(
+      const unresolved = ApiException(
         'Truyện cũ dùng mã của server. Hãy mở lại đúng truyện từ nguồn đã cài.',
         code: 'RESTORED_TITLE_UNRESOLVED',
       );
+      final known = book.knownChapterRefs.toSet();
+      if (known.isEmpty ||
+          known.any((ref) => ref.isEmpty || RegExp(r'^\d+$').hasMatch(ref))) {
+        throw unresolved;
+      }
+      final key = sha256
+          .convert(
+            utf8.encode(
+              jsonEncode([
+                book.sourceId,
+                book.ref,
+                book.title,
+                (known.toList()..sort()),
+              ]),
+            ),
+          )
+          .toString();
+      final cached = _verifiedBookRefs[key];
+      if (cached != null) {
+        return {'sourceId': book.sourceId, 'ref': cached, 'title': book.title};
+      }
+      final source = CatalogueSource(
+        id: book.sourceId,
+        name: '',
+        lang: '',
+        baseUrl: '',
+        kind: ContentKind.manga,
+        engine: SourceEngine.tachimanga,
+      );
+      String normalized(String value) =>
+          value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+      final candidates = (await search(source, book.title))
+          .where(
+            (candidate) =>
+                normalized(candidate.title) == normalized(book.title) &&
+                !RegExp(r'^\d+$').hasMatch(candidate.ref),
+          )
+          .toList();
+      if (candidates.length > 5) throw unresolved;
+      final deadline = DateTime.now().add(const Duration(seconds: 90));
+      final matches = <String>{};
+      for (final candidate in candidates) {
+        if (DateTime.now().isAfter(deadline)) throw unresolved;
+        // Do not skip failed candidates and then claim a unique match. Every
+        // saved URL must be present; matching names alone are insufficient.
+        final refs = (await chapters(candidate))
+            .map((chapter) => chapter.ref)
+            .toSet();
+        if (refs.containsAll(known)) matches.add(candidate.ref);
+      }
+      if (matches.length != 1) throw unresolved;
+      if (_verifiedBookRefs.length >= 64) _verifiedBookRefs.clear();
+      _verifiedBookRefs[key] = matches.single;
+      return {
+        'sourceId': book.sourceId,
+        'ref': matches.single,
+        'title': book.title,
+      };
     }
     return {'sourceId': book.sourceId, 'ref': book.ref, 'title': book.title};
   }
 
   @override
   Future<CatalogueBook> detail(CatalogueBook book) async =>
-      _book(_map(await _call('detail', _ref(book))), book.sourceId);
+      _book(_map(await _call('detail', await _ref(book))), book.sourceId);
 
   @override
   Future<List<CatalogueChapter>> chapters(CatalogueBook book) async {
     final chapters = [
-      for (final value in _list(await _call('chapters', _ref(book))))
+      for (final value in _list(await _call('chapters', await _ref(book))))
         _chapter(_map(value)),
     ];
     if (chapters.map((c) => c.ref).toSet().length != chapters.length ||
@@ -532,7 +665,9 @@ class NativeTachiRepository
     }
     final content = _map(
       await _call('chapter', {
-        ..._ref(book),
+        // A chapter URL identifies its content without the old server's manga
+        // ID. Do not reject restored books that already have real chapter URLs.
+        'sourceId': book.sourceId,
         'bookRef': book.ref,
         'ref': chapter.ref,
         'title': chapter.title,
@@ -579,17 +714,111 @@ class NativeTachiRepository
 
   @override
   Future<SourceImageData> fetchCover(CatalogueBook book) {
-    // Covers share the serial JNI image queue, with their timeout beginning
-    // only when the request reaches the native worker.
-    final result = _imageTail.then((_) => _fetchCover(book));
-    _imageTail = result.then<void>(
-      (_) {},
-      onError: (Object _, StackTrace _) {},
-    );
-    return result;
+    final key = _coverKey(book);
+    return _pendingCovers.putIfAbsent(key, () async {
+      try {
+        final allowed = canCacheCover?.call() ?? true;
+        final epoch = coverCacheEpoch?.call();
+        final cache = await _coverStorage();
+        if (_disposed) throw StateError('Engine đã đóng.');
+        _validateCover(book);
+        final generation = cache.generation;
+        if (allowed) {
+          final saved = await cache.read(key);
+          if (saved != null && generation == cache.generation) {
+            try {
+              return _sourceImage(saved);
+            } catch (_) {
+              await cache.remove(key);
+            }
+          }
+        }
+        final image = await _enqueueImage(() => _fetchCover(book), cover: true);
+        if (allowed &&
+            (canCacheCover?.call() ?? true) &&
+            epoch == coverCacheEpoch?.call()) {
+          await cache.write(key, {
+            'base64': base64Encode(image.bytes),
+            'mimeType': image.mimeType,
+          }, generation);
+        }
+        return image;
+      } finally {
+        _pendingCovers.remove(key);
+      }
+    });
   }
 
+  String _coverKey(CatalogueBook book) => sha256
+      .convert(
+        utf8.encode(
+          jsonEncode([book.engine.name, book.sourceId, book.coverUrl]),
+        ),
+      )
+      .toString();
+
+  @override
+  Future<void> invalidateCover(CatalogueBook book) async =>
+      (await _coverStorage()).remove(_coverKey(book));
+
+  @override
+  Future<void> clearCoverCache() async => (await _coverStorage()).clear();
+
   Future<SourceImageData> _fetchCover(CatalogueBook book) async {
+    _validateCover(book);
+    try {
+      return _sourceImage(
+        _map(
+          await _call('cover', {
+            'sourceId': book.sourceId,
+            'url': book.coverUrl,
+          }),
+        ),
+      );
+    } on ApiException catch (error) {
+      // An imported library can contain public thumbnails before its extension
+      // is installed. Only that case permits an ordinary public cover GET;
+      // loaded-source/challenge errors always keep the extension client path.
+      final url = Uri.tryParse(book.coverUrl);
+      if (error.code?.toLowerCase() != 'source_not_installed' ||
+          url == null ||
+          !url.hasAuthority ||
+          !url.hasScheme) {
+        rethrow;
+      }
+      final response = await _client
+          .send(http.Request('GET', url))
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200 ||
+          (response.contentLength ?? 0) > 8 * 1024 * 1024) {
+        await response.stream.listen((_) {}).cancel();
+        throw ApiException(
+          'Không tải được ảnh bìa công khai.',
+          statusCode: response.statusCode,
+        );
+      }
+      final bytes = BytesBuilder(copy: false);
+      final started = DateTime.now();
+      await for (final chunk in response.stream.timeout(
+        const Duration(seconds: 15),
+      )) {
+        if (bytes.length + chunk.length > 8 * 1024 * 1024 ||
+            DateTime.now().difference(started) > const Duration(seconds: 20)) {
+          throw const ApiException(
+            'Ảnh bìa quá lớn hoặc phản hồi quá lâu.',
+            code: 'TIMEOUT',
+          );
+        }
+        bytes.add(chunk);
+      }
+      return _sourceImage({
+        'base64': base64Encode(bytes.takeBytes()),
+        'mimeType': 'application/octet-stream',
+      });
+    }
+  }
+
+  void _validateCover(CatalogueBook book) {
     final url = Uri.tryParse(book.coverUrl);
     final sourceId = BigInt.tryParse(book.sourceId);
     if (book.engine != SourceEngine.tachimanga ||
@@ -609,11 +838,6 @@ class NativeTachiRepository
     }
     // The native source resolves relative cover URLs using its own base URL.
     // A legacy numeric book reference does not prevent loading its saved cover.
-    return _sourceImage(
-      _map(
-        await _call('cover', {'sourceId': book.sourceId, 'url': book.coverUrl}),
-      ),
-    );
   }
 
   @override
@@ -623,16 +847,10 @@ class NativeTachiRepository
     int page,
     String url,
   ) {
-    // The JNI worker is serial. Start the per-request timeout only when this
-    // image reaches that worker, instead of timing out a whole page queue.
-    final result = _imageTail.then(
-      (_) => _fetchImage(book, chapter, page, url),
+    return _enqueueImage(
+      () => _fetchImage(book, chapter, page, url),
+      cover: false,
     );
-    _imageTail = result.then<void>(
-      (_) {},
-      onError: (Object _, StackTrace _) {},
-    );
-    return result;
   }
 
   Future<SourceImageData> _fetchImage(
@@ -654,7 +872,9 @@ class NativeTachiRepository
     }
     final image = _map(
       await _call('image', {
-        ..._ref(book),
+        'sourceId': book.sourceId,
+        'ref': book.ref,
+        'title': book.title,
         'chapterRef': chapter.ref,
         'chapterTitle': chapter.title,
         'index': page,
@@ -714,7 +934,7 @@ class NativeTachiRepository
 
   @override
   Future<void> openWebsite(CatalogueBook book) async {
-    _ref(book);
+    final resolved = await _ref(book);
     final sources = await listSources();
     final matches = sources.where((source) => source.id == book.sourceId);
     if (matches.length != 1) {
@@ -727,7 +947,8 @@ class NativeTachiRepository
         base.userInfo.isNotEmpty) {
       throw const ApiException('Nguồn chưa có địa chỉ trang web hợp lệ.');
     }
-    final url = book.ref.isEmpty ? base : base.resolve(book.ref);
+    final bookRef = resolved['ref'] as String;
+    final url = bookRef.isEmpty ? base : base.resolve(bookRef);
     if (url.host != base.host ||
         url.userInfo.isNotEmpty ||
         !['http', 'https'].contains(url.scheme)) {

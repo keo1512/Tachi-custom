@@ -83,6 +83,8 @@ class SourceRepository {
   Future<SourceImageData> fetchCover(CatalogueBook book) =>
       throw UnsupportedError('This engine uses ordinary HTTP covers.');
 
+  Future<void> invalidateCover(CatalogueBook book) async {}
+
   bool _externalManga(CatalogueBook book) =>
       book.engine == SourceEngine.tachimanga &&
       !RegExp(r'^\d+$').hasMatch(book.ref);

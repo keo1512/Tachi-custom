@@ -6,7 +6,8 @@
 #include <string.h>
 #include "jni.h"
 
-// A JVM is process-wide. All calls share one serial worker; its JNIEnv remains
+// A JVM is process-wide. Java serializes mutations and permits bounded cover
+// reads in parallel; its JNIEnv remains
 // thread-local even when GCD chooses a different thread for the next request.
 static JavaVM *tachiVM;
 static jclass tachiHost;
@@ -20,7 +21,7 @@ static NSString *tachiStartupError;
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
   static dispatch_once_t queueOnce;
   dispatch_once(&queueOnce, ^{
-    tachiQueue = dispatch_queue_create("dev.tachibooks.tachi-runtime", DISPATCH_QUEUE_SERIAL);
+    tachiQueue = dispatch_queue_create("dev.tachibooks.tachi-runtime", DISPATCH_QUEUE_CONCURRENT);
   });
   FlutterMethodChannel *channel = [FlutterMethodChannel
     methodChannelWithName:@"dev.tachibooks/tachi_runtime"
@@ -173,7 +174,9 @@ static NSString *tachiStartupError;
 }
 
 - (NSString *)invoke:(NSString *)request error:(NSError **)error {
-  if (![self start:error]) return nil;
+  @synchronized([TachiRuntimePlugin class]) {
+    if (![self start:error]) return nil;
+  }
   JNIEnv *env = NULL;
   jint status = (*tachiVM)->GetEnv(tachiVM, (void **)&env, JNI_VERSION_1_8);
   BOOL attached = status == JNI_EDETACHED;

@@ -101,6 +101,14 @@ class OnDeviceSourceRepository extends SourceRepository
   }
 
   @override
+  Future<void> invalidateCover(CatalogueBook book) async {
+    final runtime = runtimes[book.engine];
+    if (runtime is NativeCoverCacheEngine) {
+      await (runtime as NativeCoverCacheEngine).invalidateCover(book);
+    }
+  }
+
+  @override
   bool canOpenNativeWebsite(CatalogueBook book) =>
       runtimes[book.engine] is NativeSourceBrowserEngine;
 

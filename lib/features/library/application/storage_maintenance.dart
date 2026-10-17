@@ -46,6 +46,9 @@ class StorageMaintenance {
             description: current.description,
             coverUrl: current.cover,
             sourceId: current.sourceId,
+            knownChapterRefs: [
+              for (final chapter in current.chapters) chapter.id,
+            ],
             kind: current.kind == 'manga'
                 ? ContentKind.manga
                 : ContentKind.novel,
@@ -54,6 +57,9 @@ class StorageMaintenance {
                 : SourceEngine.tachimanga,
           ),
         );
+        guard();
+        checkLibraryRevision(repository.replacementRevision, expectedRevision);
+        await source.invalidateCover(incoming);
         guard();
         checkLibraryRevision(repository.replacementRevision, expectedRevision);
         final saved = await repository.mutateBook(current.id, (latest) {

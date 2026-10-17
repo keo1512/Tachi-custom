@@ -65,6 +65,12 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        expect(
+          tester
+              .widgetList<BookCover>(find.byType(BookCover))
+              .every((cover) => !cover.showTitle),
+          isTrue,
+        );
         await tester.tap(find.widgetWithText(ListTile, 'New title').first);
         await tester.pumpAndSettle();
         await repository.replaceSnapshot(

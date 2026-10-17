@@ -4,12 +4,15 @@ import '../data/backup_compatibility/mihon_tracking.dart';
 import '../data/backup_compatibility/protobuf_reader.dart';
 import 'library_book.dart';
 import 'library_reading.dart';
+import 'book_reading_times.dart';
 
 class ReadingStatistics {
   ReadingStatistics(
     Iterable<LibraryBook> values, {
     Map<String, Set<int>>? cachedChapters,
+    BookReadingTimes? readingTimes,
   }) : books = List.unmodifiable(values),
+       readingTimes = readingTimes ?? BookReadingTimes(),
        cachedChapters = cachedChapters == null
            ? null
            : Map.unmodifiable(
@@ -19,6 +22,36 @@ class ReadingStatistics {
                ),
              );
   final List<LibraryBook> books;
+  final BookReadingTimes readingTimes;
+  int readingSecondsOf(LibraryBook book) => readingTimes.of(book.id);
+  List<LibraryBook> get longestReadBooks =>
+      sortedBooks(ReadingStatisticsOrder.duration)
+          .where((book) => readingSecondsOf(book) > 0)
+          .take(20)
+          .toList();
+
+  List<LibraryBook> sortedBooks(ReadingStatisticsOrder order) {
+    final result = books.toList()
+      ..sort((a, b) {
+        final compared = switch (order) {
+          ReadingStatisticsOrder.duration => readingSecondsOf(
+            b,
+          ).compareTo(readingSecondsOf(a)),
+          ReadingStatisticsOrder.title => a.title.toLowerCase().compareTo(
+            b.title.toLowerCase(),
+          ),
+          ReadingStatisticsOrder.chapters => readChapterCount(
+            b,
+          ).compareTo(readChapterCount(a)),
+          ReadingStatisticsOrder.recent =>
+            (b.lastRead ?? DateTime(0)).compareTo(a.lastRead ?? DateTime(0)),
+        };
+        if (compared != 0) return compared;
+        final title = a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        return title != 0 ? title : a.id.compareTo(b.id);
+      });
+    return List.unmodifiable(result);
+  }
 
   /// Null preserves the legacy metadata-only counter. Screens supply verified
   /// cached contents, so a downloaded flag alone cannot claim offline access.
@@ -152,6 +185,16 @@ class ReadingStatistics {
       });
     return Map.fromEntries(entries);
   }
+}
+
+enum ReadingStatisticsOrder {
+  duration('Thời lượng đọc nhiều nhất'),
+  title('Tên truyện'),
+  chapters('Số chương đã đọc nhiều nhất'),
+  recent('Đọc gần đây');
+
+  const ReadingStatisticsOrder(this.label);
+  final String label;
 }
 
 String readingStateOf(LibraryBook book) {

@@ -11,6 +11,8 @@ import java.io.*;
 import java.lang.reflect.Method;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 import kotlinx.serialization.json.Json;
@@ -35,6 +37,10 @@ public final class ExtensionHost {
         protected boolean removeEldestEntry(Map.Entry<String,CachedChapter> item){return size()>8;}
     };
     private static final long MAX_IMAGE_BYTES=8L*1024*1024;
+    private static final class HttpStatusException extends IOException{
+        final int status;
+        HttpStatusException(int status){super("Source returned an HTTP error");this.status=status;}
+    }
     private static final Map<String,SManga> mangaMetadata=new LinkedHashMap<String,SManga>(256,0.75f,true){
         protected boolean removeEldestEntry(Map.Entry<String,SManga> item){return size()>256;}
     };
@@ -43,7 +49,17 @@ public final class ExtensionHost {
         CachedChapter(String sourceId,String ref,List<? extends Page> pages){this.sourceId=sourceId;this.ref=ref;this.pages=pages;}
     }
     private ExtensionHost(){}
-    public static synchronized String invoke(String requestJson){
+    // Covers only read the loaded registry and use OkHttp's thread-safe client.
+    // Everything that can mutate registry/page/metadata state stays exclusive.
+    // A fair lock lets a waiting reader-page request run before newer covers.
+    private static final ReentrantReadWriteLock requests=new ReentrantReadWriteLock(true);
+    public static String invoke(String requestJson){
+        Lock lock=requests.writeLock();
+        try{if(requestJson!=null&&requestJson.length()<=1024*1024&&"cover".equals(new JsonParser().parse(requestJson).getAsJsonObject().get("method").getAsString()))lock=requests.readLock();}catch(RuntimeException invalid){}
+        lock.lock();
+        try{return invokeLocked(requestJson);}finally{lock.unlock();}
+    }
+    private static String invokeLocked(String requestJson){
         JsonObject response=new JsonObject();
         try{
             if(requestJson==null||requestJson.length()>1024*1024)throw new IllegalArgumentException("Invalid request size");
@@ -83,6 +99,7 @@ public final class ExtensionHost {
         }catch(Throwable failure){
             JsonObject error=new JsonObject();String code,message;
             if(requiresBrowser(failure)){code="source_requires_browser";message="The source requires an interactive browser session.";}
+            else if(failure instanceof HttpStatusException){code="http_error";message="Source returned an HTTP error";error.addProperty("httpStatus",((HttpStatusException)failure).status);}
             else if(failure instanceof SourceNotLoadedException){code="source_not_installed";message="Required source extension is not loaded.";}
             else if(failure instanceof LinkageError){code="unsupported_extension";message="The extension requires an Android or Java API that this engine does not provide.";}
             else if(failure instanceof IllegalArgumentException){code="invalid_request";message=failure.getMessage();}
@@ -201,7 +218,8 @@ public final class ExtensionHost {
         if(page.getImageUrl()==null||page.getImageUrl().isEmpty())page.setImageUrl(SuspendBridge.await(completion->((HttpSource)source).getImageUrl(originalPage,completion)));
         if(!url.equals(page.getImageUrl()))throw new IllegalArgumentException("Image URL no longer matches the source page");
         try(Response response=SuspendBridge.await(completion->((HttpSource)source).getImage(originalPage,completion))){
-            if(!response.isSuccessful()||response.body()==null)throw new IOException("Image HTTP response failed");
+            if(!response.isSuccessful())throw new HttpStatusException(response.code());
+            if(response.body()==null)throw new IOException("Image HTTP response is empty");
             if(response.body().contentLength()>MAX_IMAGE_BYTES)throw new IOException("Image size exceeds native response limit");
             ByteArrayOutputStream output=new ByteArrayOutputStream();try(InputStream input=response.body().byteStream()){byte[] block=new byte[32768];int read;while((read=input.read(block))!=-1){if(output.size()+(long)read>MAX_IMAGE_BYTES)throw new IOException("Image size exceeds native response limit");output.write(block,0,read);}}
             JsonObject result=new JsonObject();result.addProperty("base64",Base64.getEncoder().encodeToString(output.toByteArray()));result.addProperty("mimeType",response.header("Content-Type","application/octet-stream"));return result;
@@ -226,8 +244,9 @@ public final class ExtensionHost {
         // must not be applied to a cover. The client retains its cookie jar and
         // source interceptors, including browser clearance when available.
         Request request=new Request.Builder().url(url).headers(http.getHeaders()).build();
-        try(Response response=http.getClient().newCall(request).execute()){
-            if(!response.isSuccessful()||response.body()==null)throw new IOException("Cover HTTP response failed");
+        try(Response response=http.getClient().newBuilder().callTimeout(20,java.util.concurrent.TimeUnit.SECONDS).build().newCall(request).execute()){
+            if(!response.isSuccessful())throw new HttpStatusException(response.code());
+            if(response.body()==null)throw new IOException("Cover HTTP response is empty");
             if(response.body().contentLength()>MAX_IMAGE_BYTES)throw new IOException("Cover size exceeds native response limit");
             ByteArrayOutputStream output=new ByteArrayOutputStream();try(InputStream input=response.body().byteStream()){byte[] block=new byte[32768];int read;while((read=input.read(block))!=-1){if(output.size()+(long)read>MAX_IMAGE_BYTES)throw new IOException("Cover size exceeds native response limit");output.write(block,0,read);}}
             if(output.size()==0)throw new IOException("Cover response is empty");

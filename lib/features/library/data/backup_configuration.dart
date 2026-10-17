@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/library_categories.dart';
 import '../domain/library_grouping.dart';
+import '../domain/library_folders.dart';
+import '../domain/book_reading_times.dart';
 import '../presentation/library_filter_sheet.dart';
 import '../../reader/domain/reader_options.dart';
 import '../../sources/domain/source_filters.dart';
@@ -36,6 +38,8 @@ class BackupConfiguration {
     'taskNotificationsEnabledV1',
   };
   static const _json = {
+    LibraryFolders.preferenceKey,
+    BookReadingTimes.preferenceKey,
     'extensionRepositoriesV1',
     'libraryCategoriesV1',
     'libraryGroupOrderV1',
@@ -214,6 +218,10 @@ class BackupConfiguration {
     }
     final data = _object(value);
     switch (key) {
+      case LibraryFolders.preferenceKey:
+        LibraryFolders.decode(jsonEncode(data));
+      case BookReadingTimes.preferenceKey:
+        BookReadingTimes.decode(jsonEncode(data));
       case 'libraryCategoriesV1':
         _keys(data, {'categories', 'defaultCategories'});
         final registry = LibraryCategoryRegistry.fromJson(data);

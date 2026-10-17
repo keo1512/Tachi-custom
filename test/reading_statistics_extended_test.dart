@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tachi_books/features/settings/settings_controller.dart';
 import 'package:tachi_books/features/library/application/reading_statistics_controller.dart';
 import 'package:tachi_books/features/library/data/backup_compatibility/protobuf_writer.dart';
 import 'package:tachi_books/features/library/data/backup_service.dart';
@@ -197,8 +199,13 @@ void main() {
       ),
     );
     final before = (await repo.snapshot()).fingerprint;
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
     final container = ProviderContainer(
-      overrides: [libraryRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        libraryRepositoryProvider.overrideWithValue(repo),
+        preferencesProvider.overrideWithValue(preferences),
+      ],
     );
     addTearDown(container.dispose);
     final sub = container.listen(readingStatisticsProvider, (_, _) {});
