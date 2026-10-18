@@ -6,8 +6,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tachi_books/app.dart';
 import 'package:tachi_books/core/widgets/book_cover.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
+import 'package:tachi_books/features/library/data/backup_configuration.dart';
+import 'package:tachi_books/features/library/data/coordinated_preferences.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/domain/book_reading_times.dart';
+import 'package:tachi_books/features/library/domain/book_daily_reading_times.dart';
 import 'package:tachi_books/features/library/application/reading_statistics_controller.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/reader/presentation/reader_screen.dart';
@@ -39,6 +42,11 @@ void main() {
       );
       expect(fixture.preferences.getInt('readSeconds:2030-1-1'), 5);
       expect(fixture.preferences.getInt('readSeconds:2030-1-2'), 7);
+      final daily = BookDailyReadingTimes.decode(
+        fixture.preferences.getString(BookDailyReadingTimes.preferenceKey),
+      );
+      expect(daily.onDay(fixture.book.id, DateTime(2030, 1, 1)), 5);
+      expect(daily.onDay(fixture.book.id, DateTime(2030, 1, 2)), 7);
       clock = clock.add(const Duration(minutes: 10));
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pumpAndSettle();
@@ -53,6 +61,12 @@ void main() {
         20,
       );
       expect(fixture.preferences.getInt('readSeconds:2030-1-2'), 15);
+      expect(
+        BookDailyReadingTimes.decode(
+          fixture.preferences.getString(BookDailyReadingTimes.preferenceKey),
+        ).totalOf(fixture.book.id),
+        20,
+      );
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pumpAndSettle();
       await _dispose(tester, fixture.container);
@@ -76,6 +90,42 @@ void main() {
         isNull,
       );
       expect(_readSeconds(fixture.preferences), fixture.seconds);
+      expect(
+        fixture.preferences.getString(BookDailyReadingTimes.preferenceKey),
+        isNull,
+      );
+    },
+  );
+
+  testWidgets(
+    'configuration-only restore rejects old reader daily time even with unchanged library revision',
+    (tester) async {
+      var clock = DateTime(2030, 1, 1, 10);
+      final fixture = await _open(
+        tester,
+        false,
+        clock: () => clock,
+        coordinated: true,
+      );
+      final prefs = fixture.preferences as CoordinatedPreferences;
+      final revision = fixture.repo.replacementRevision;
+      final config = BackupConfiguration.capture(prefs);
+      final library = await fixture.repo.snapshot();
+      await prefs.exclusive(
+        () => prefs.restoreLocked(
+          incoming: config,
+          expectedFingerprint: config.fingerprint,
+          oldLibraryFingerprint: library.fingerprint,
+          newLibraryFingerprint: library.fingerprint,
+          commit: (beforeCommit) => beforeCommit(),
+        ),
+      );
+      expect(fixture.repo.replacementRevision, revision);
+      clock = clock.add(const Duration(minutes: 5));
+      await _dispose(tester, fixture.container);
+      expect(prefs.getString(BookReadingTimes.preferenceKey), isNull);
+      expect(prefs.getString(BookDailyReadingTimes.preferenceKey), isNull);
+      expect(_readSeconds(prefs), fixture.seconds);
     },
   );
 
@@ -97,6 +147,10 @@ void main() {
         await tester.pumpAndSettle();
         final saved = (await fixture.repo.find(fixture.book.id))!;
         if (private) {
+          expect(
+            fixture.preferences.getString(BookDailyReadingTimes.preferenceKey),
+            isNull,
+          );
           expect(
             saved.toJson(),
             fixture.book.toJson(),
@@ -256,6 +310,7 @@ Future<_Fixture> _open(
   WidgetTester tester,
   bool incognito, {
   DateTime Function()? clock,
+  bool coordinated = false,
 }) async {
   final now = DateTime.now();
   SharedPreferences.setMockInitialValues({
@@ -263,7 +318,7 @@ Future<_Fixture> _open(
     'readSeconds:${now.year}-${now.month}-${now.day}': 37,
     'readSeconds:2020-1-1': 11,
   });
-  final preferences = await SharedPreferences.getInstance();
+  final rawPreferences = await SharedPreferences.getInstance();
   final repo = MemoryLibraryRepository();
   final book = LibraryBook(
     id: 'privacy-reader',
@@ -307,6 +362,9 @@ Future<_Fixture> _open(
       ReaderContent(kind: 'novel', html: contents[index]),
     );
   }
+  final SharedPreferences preferences = coordinated
+      ? await CoordinatedPreferences.open(rawPreferences, repo)
+      : rawPreferences;
   final container = ProviderContainer(
     overrides: [
       if (clock != null)

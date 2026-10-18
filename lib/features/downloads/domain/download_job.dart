@@ -2,6 +2,13 @@ import 'dart:convert';
 
 enum DownloadJobStatus { pending, active, failed, paused }
 
+/// Ephemeral measured progress for one execution; never persisted as completed.
+class DownloadPageProgress {
+  const DownloadPageProgress(this.completed, this.total);
+  final int completed, total;
+  double get fraction => completed / total;
+}
+
 class DownloadJob {
   const DownloadJob({
     required this.bookId,

@@ -34,6 +34,25 @@ class DownloadExecution {
   final String? sourceKey;
   bool _cancelled = false;
   bool get isCancelled => _cancelled;
+  DownloadPageProgress? _progress;
+  void Function()? _onProgress;
+
+  void reportPageProgress(int completed, int total) {
+    if (_cancelled ||
+        total <= 0 ||
+        total > 100000 ||
+        completed < 0 ||
+        completed > total) {
+      return;
+    }
+    final previous = _progress;
+    if (previous != null &&
+        (previous.total != total || completed <= previous.completed)) {
+      return;
+    }
+    _progress = DownloadPageProgress(completed, total);
+    _onProgress?.call();
+  }
 }
 
 final _defaultDownloadJobExecutorProvider = Provider<DownloadJobExecutor>((
@@ -66,6 +85,7 @@ final guardedDownloadJobExecutorProvider = Provider<GuardedDownloadJobExecutor>(
             isCancelled: () => execution.isCancelled || !ref.mounted,
             onPageProgress: (completed, total) {
               if (!ref.mounted || execution.isCancelled) return;
+              execution.reportPageProgress(completed, total);
               final platform = ref.read(taskPlatformProvider);
               if (platform is ContinuedTaskPlatform) {
                 unawaited(
@@ -91,6 +111,17 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
   static const _restoredMessage =
       'Thư viện đã được thay đổi hoặc khôi phục. Hàng đợi đã tạm dừng; '
       'kiểm tra các truyện trước khi tiếp tục.';
+
+  DownloadPageProgress? pageProgressFor(String identity) {
+    final execution = _active[identity];
+    if (execution == null ||
+        execution.isCancelled ||
+        ref.read(libraryRepositoryProvider).replacementRevision !=
+            execution.revision) {
+      return null;
+    }
+    return execution._progress;
+  }
 
   @override
   DownloadQueueState build() {
@@ -630,6 +661,19 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
         ref.mounted &&
         !execution.isCancelled &&
         identical(_active[job.identity], execution);
+    execution._onProgress = () {
+      if (!current() ||
+          ref.read(libraryRepositoryProvider).replacementRevision !=
+              execution.revision) {
+        return;
+      }
+      state = DownloadQueueState(
+        tasks: state.tasks,
+        running: state.running,
+        storageError: state.storageError,
+        pauseReason: state.pauseReason,
+      );
+    };
     try {
       await _change(
         (tasks) => !current()
@@ -715,6 +759,7 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
         }
       }
     } finally {
+      execution._onProgress = null;
       if (identical(_active[job.identity], execution)) {
         _active.remove(job.identity);
       }

@@ -37,16 +37,16 @@ public final class BrowserSessionProof {
         require(child.size()==1&&named(child,"domain_cookie")!=null,"Host-only cookie does not leak to a child host");
         require(jar.loadForRequest(HttpUrl.get("https://other.example/reader")).isEmpty(),"Unrelated website receives no restored cookies");
         require(jar.loadForRequest(HttpUrl.get("http://fixture.example/reader")).isEmpty(),"Secure cookies do not leak to HTTP");
-        require(USER_AGENT.equals(CFClearance.INSTANCE.getWebViewUserAgent()),"Browser user agent restored");
+        require(USER_AGENT.equals(CFClearance.INSTANCE.getWebViewUserAgentForHost("fixture.example")),"Browser user agent restored for its host");
         Field field=ExtensionHost.class.getDeclaredField("application");field.setAccessible(true);
         NetworkHelper helper=new NetworkHelper((EngineApplication)field.get(null));
-        require(USER_AGENT.equals(helper.getDefaultUserAgentProvider().invoke()),"Networking uses the actual restored browser user agent");
+        require(!USER_AGENT.equals(helper.getDefaultUserAgentProvider().invoke()),"Browser session does not replace unrelated sources' fallback user agent");
     }
     private static void rejectWithoutMutation(Path directory,JsonObject invalid)throws Exception{
         String stored=EngineFiles.sha256(directory.resolve("browser-sessions.json"));
         JsonObject response=request("browserSession",invalid);require(!response.get("ok").getAsBoolean(),"Invalid browser input is rejected");
         require(stored.equals(EngineFiles.sha256(directory.resolve("browser-sessions.json"))),"Invalid input does not replace the saved session");
-        require(USER_AGENT.equals(CFClearance.INSTANCE.getWebViewUserAgent()),"Invalid input does not publish a new user agent");
+        require(USER_AGENT.equals(CFClearance.INSTANCE.getWebViewUserAgentForHost("fixture.example")),"Invalid input does not publish a new user agent");
         require(jar().loadForRequest(HttpUrl.get(ORIGIN)).size()==2,"Invalid input does not publish a partial cookie set");
     }
     public static void main(String[] argv)throws Exception{

@@ -107,6 +107,9 @@ class CoordinatedPreferences implements SharedPreferences {
           checkpointAttempted = true;
           await _files!.writeCheckpoint(BackupConfiguration.capture(this));
         }
+        if (isCurrent?.call() == false) {
+          throw StateError('Thư viện hoặc thiết lập đã đổi trong khi lưu.');
+        }
       } catch (_) {
         // Attempt raw rollback even when the checkpoint path is unavailable.
         try {
@@ -413,6 +416,41 @@ class CoordinatedPreferences implements SharedPreferences {
     throw const FormatException(
       'Thư viện hoặc quyền truy cập đã đổi. Hãy mở lại liên kết.',
     );
+  }, isCurrent: isCurrent);
+
+  /// One portable update/checkpoint boundary, including rollback of plugin RAM
+  /// values if any setter fails. The transform reads the latest queued values;
+  /// it must return only the keys being changed, never secrets/device state.
+  Future<bool> updatePortableValuesIfCurrent(
+    Map<String, Object> Function(BackupConfiguration current) changes,
+    bool Function() isCurrent,
+  ) => _write(null, () async {
+    final before = BackupConfiguration.capture(this);
+    final patch = Map<String, Object>.of(changes(before));
+    final checked = BackupConfiguration.fromJson({
+      'version': 1,
+      'preferences': patch,
+    });
+    // Check the combined configuration's size/shape before the first setter.
+    BackupConfiguration.fromJson({
+      'version': 1,
+      'preferences': {...before.values, ...checked.values},
+    });
+    for (final entry in checked.values.entries) {
+      final saved = await switch (entry.value) {
+        final bool value => _raw.setBool(entry.key, value),
+        final int value => _raw.setInt(entry.key, value),
+        final double value => _raw.setDouble(entry.key, value),
+        final String value => _raw.setString(entry.key, value),
+        final List<String> value => _raw.setStringList(entry.key, value),
+        _ => throw const FormatException('Kiểu thiết lập không hợp lệ.'),
+      };
+      if (!saved) return false;
+      if (!isCurrent()) {
+        throw StateError('Thư viện hoặc thiết lập đã đổi trong khi lưu.');
+      }
+    }
+    return true;
   }, isCurrent: isCurrent);
   @override
   Future<bool> setStringList(String key, List<String> value) {

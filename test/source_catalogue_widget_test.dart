@@ -48,6 +48,48 @@ CatalogueExtension _package(String id, String version) => CatalogueExtension(
 );
 
 void main() {
+  testWidgets(
+    'nonempty final source page stops pagination from the actual flag',
+    (tester) async {
+      final repo = _Repository()..finalPage = true;
+      final fixture = await _mount(
+        tester,
+        repo,
+        const SourceSearchScreen(source: _source),
+      );
+      expect(find.byType(SourceResultTile), findsOneWidget);
+      expect(find.text('Tải thêm kết quả'), findsNothing);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -1500));
+      await tester.pumpAndSettle();
+      expect(repo.browsed, [SourceBrowseMode.popular]);
+      await _dispose(tester, fixture, repo);
+    },
+  );
+
+  testWidgets(
+    'unsupported latest capability keeps popular without a latest control',
+    (tester) async {
+      const source = CatalogueSource(
+        id: 'no-latest',
+        name: 'Popular only',
+        lang: 'vi',
+        baseUrl: 'https://source.test',
+        kind: ContentKind.manga,
+        engine: SourceEngine.tachimanga,
+        supportsLatest: false,
+      );
+      final repo = _Repository();
+      final fixture = await _mount(
+        tester,
+        repo,
+        const SourceSearchScreen(source: source),
+      );
+      expect(find.text('Mới nhất'), findsNothing);
+      expect(repo.browsed, [SourceBrowseMode.popular]);
+      expect(find.byType(SourceResultTile), findsOneWidget);
+      await _dispose(tester, fixture, repo);
+    },
+  );
   setUp(() => SharedPreferences.setMockInitialValues({}));
   testWidgets(
     'APK selected from Files uses the on-device installer and exposes confirmed package metadata',
@@ -360,6 +402,7 @@ class _Repository extends SourceRepository {
   Completer<void>? firstInstallGate;
   bool rejectSecond = false;
   bool rejectFiles = false;
+  bool finalPage = false;
   int fileInstalls = 0;
   Uint8List? importedBytes;
   int detailLoads = 0;
@@ -395,7 +438,7 @@ class _Repository extends SourceRepository {
     int page = 1,
   }) async {
     browsed.add(mode);
-    return [_book];
+    return finalPage ? CataloguePage([_book], hasNextPage: false) : [_book];
   }
 
   @override

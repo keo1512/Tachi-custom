@@ -5,6 +5,22 @@ class TachiRuntime {
 
   static const channel = MethodChannel('dev.tachibooks/tachi_runtime');
 
+  Future<Map<String, dynamic>> openSourceBrowser(
+    Map<String, dynamic> options,
+  ) async {
+    final response = await channel.invokeMapMethod<String, dynamic>(
+      'openSourceBrowser',
+      options,
+    );
+    if (response == null) {
+      throw PlatformException(
+        code: 'EMPTY_BROWSER_RESPONSE',
+        message: 'Trang nguồn chưa trả phiên đăng nhập.',
+      );
+    }
+    return response;
+  }
+
   Future<Map<String, dynamic>> openBrowser(String url) async {
     final response = await channel.invokeMapMethod<String, dynamic>(
       'openBrowser',

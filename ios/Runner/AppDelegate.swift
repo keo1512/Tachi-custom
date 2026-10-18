@@ -99,6 +99,23 @@ import UserNotifications
   }
 }
 
+// Flutter uses a top-left origin; Vision uses a bottom-left origin.
+enum ReaderRecognitionRegion {
+  static func visionRect(_ value: Any?) -> CGRect? {
+    guard let values = value as? [String: Any] else { return nil }
+    func number(_ key: String) -> Double? {
+      guard let value = values[key] as? NSNumber,
+        CFGetTypeID(value) != CFBooleanGetTypeID(), value.doubleValue.isFinite else { return nil }
+      return value.doubleValue
+    }
+    guard let left = number("left"), let top = number("top"),
+      let width = number("width"), let height = number("height"),
+      left >= 0, top >= 0, width > 0, height > 0,
+      left + width <= 1, top + height <= 1 else { return nil }
+    return CGRect(x: left, y: max(0, 1 - top - height), width: width, height: height)
+  }
+}
+
 @MainActor
 private final class ReaderPlatformBridge {
   private let channel: FlutterMethodChannel
@@ -167,11 +184,21 @@ private final class ReaderPlatformBridge {
       result(nil)
       return
     }
-    guard ["copyImage", "shareImage", "saveImage", "recognizeText"].contains(call.method) else {
+    guard ["copyImage", "shareImage", "saveImage", "recognizeText", "recognizeTextRegion"].contains(call.method) else {
       result(FlutterMethodNotImplemented)
       return
     }
-    guard let bytes = call.arguments as? FlutterStandardTypedData,
+    let recognitionPayload = call.method == "recognizeTextRegion" ? call.arguments as? [String: Any] : nil
+    let region: CGRect
+    if call.method == "recognizeTextRegion" {
+      guard let selected = ReaderRecognitionRegion.visionRect(recognitionPayload?["region"]) else {
+        result(FlutterError(code: "invalid_region", message: "Vùng nhận dạng phải nằm trong ảnh.", details: nil))
+        return
+      }
+      region = selected
+    } else { region = CGRect(x: 0, y: 0, width: 1, height: 1) }
+    let imageArgument: Any? = call.method == "recognizeTextRegion" ? recognitionPayload?["bytes"] : call.arguments
+    guard let bytes = imageArgument as? FlutterStandardTypedData,
           !bytes.data.isEmpty, bytes.data.count <= 8 * 1024 * 1024,
           let source = CGImageSourceCreateWithData(bytes.data as CFData, nil),
           let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
@@ -188,19 +215,22 @@ private final class ReaderPlatformBridge {
       result(nil)
       return
     }
-    if call.method == "recognizeText" {
+    if call.method == "recognizeText" || call.method == "recognizeTextRegion" {
       let data = bytes.data
+      let rawOrientation = (properties[kCGImagePropertyOrientation] as? NSNumber)?.uint32Value ?? 1
+      let orientation = CGImagePropertyOrientation(rawValue: rawOrientation) ?? .up
       DispatchQueue.global(qos: .userInitiated).async {
         do {
           let request = VNRecognizeTextRequest()
           request.recognitionLevel = .accurate
           request.usesLanguageCorrection = true
+          request.regionOfInterest = region
           if #available(iOS 16.0, *) { request.automaticallyDetectsLanguage = true }
           let supported = try request.supportedRecognitionLanguages()
           let preferred = ["vi-VN", "en-US", "ja-JP", "zh-Hans", "zh-Hant", "ko-KR"]
           let selected = preferred.filter { supported.contains($0) }
           if !selected.isEmpty { request.recognitionLanguages = selected }
-          try VNImageRequestHandler(data: data).perform([request])
+          try VNImageRequestHandler(data: data, orientation: orientation).perform([request])
           let text = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
           DispatchQueue.main.async { result(text) }
         } catch {

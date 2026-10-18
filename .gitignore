@@ -55,3 +55,39 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 ios/Runner/GoogleService-Info.plist
+
+# Local IPA reference audit and portable build cache.
+# Reference application and generated distribution are local evidence only.
+/Payload/
+/dist/
+*.ipa
+
+# Local toolchains and build outputs.
+/.tools/
+/.gradle/
+**/.gradle/
+**/build/
+**/.dart_tool/
+**/.flutter-plugins*
+**/Pods/
+**/.symlinks/
+**/Flutter/ephemeral/
+**/__pycache__/
+*.py[cod]
+
+# Credentials and local machine settings.
+.env
+.env.*
+*.p12
+*.p8
+*.mobileprovision
+**/local.properties
+**/GoogleService-Info.plist
+**/google-services.json
+.DS_Store
+
+# Public upstream snapshot is reference-only, not the application engine.
+/engine/
+
+# Local immutable classpaths/APKs from integration proofs; keep JSON evidence.
+/verification/extension-coverage-*/

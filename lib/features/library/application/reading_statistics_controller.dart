@@ -4,6 +4,7 @@ import '../data/library_mutation.dart';
 import '../data/library_repository.dart';
 import '../domain/reading_statistics.dart';
 import '../domain/book_reading_times.dart';
+import '../domain/book_daily_reading_times.dart';
 import '../../settings/settings_controller.dart';
 import 'backup_service_provider.dart';
 import '../presentation/library_view_model.dart';
@@ -41,6 +42,11 @@ final readingStatisticsProvider = FutureProvider.autoDispose<ReadingStatistics>(
     cachedChapters: cached,
     readingTimes: BookReadingTimes.decode(
       ref.read(preferencesProvider).getString(BookReadingTimes.preferenceKey),
+    ),
+    dailyReadingTimes: BookDailyReadingTimes.decode(
+      ref
+          .read(preferencesProvider)
+          .getString(BookDailyReadingTimes.preferenceKey),
     ),
   );
 });

@@ -1,12 +1,13 @@
 #import "TachiSourceBrowser.h"
 #import <WebKit/WebKit.h>
+#import <math.h>
 
 static void TachiBrowserOnMain(dispatch_block_t block) {
   if (NSThread.isMainThread) block();
   else dispatch_async(dispatch_get_main_queue(), block);
 }
 
-@interface TachiSourceBrowser () <WKNavigationDelegate, WKUIDelegate, UIAdaptivePresentationControllerDelegate>
+@interface TachiSourceBrowser () <WKNavigationDelegate, WKUIDelegate, UIAdaptivePresentationControllerDelegate, WKHTTPCookieStoreObserver>
 @property(nonatomic, strong) WKWebView *webView;
 @property(nonatomic, strong) NSURL *origin;
 @property(nonatomic, copy) FlutterResult completion;
@@ -16,6 +17,14 @@ static void TachiBrowserOnMain(dispatch_block_t block) {
 @property(nonatomic, strong) UIBarButtonItem *forwardButton;
 @property(nonatomic, strong) UIBarButtonItem *optionsButton;
 @property(nonatomic, strong) UILabel *pageErrorLabel;
+@property(nonatomic, strong) NSDictionary *seed;
+@property(nonatomic) BOOL automatic;
+@property(nonatomic) BOOL verified;
+@property(nonatomic) BOOL cleared;
+@property(nonatomic) BOOL pageReady;
+@property(nonatomic) BOOL mainResponseAllowed;
+@property(nonatomic) BOOL observingCookies;
+@property(nonatomic) BOOL checkingClearance;
 + (BOOL)isHTTPURL:(NSURL *)url;
 - (void)complete:(id)value dismiss:(BOOL)dismiss;
 - (NSArray *)sourceCookies:(NSArray<NSHTTPCookie *> *)cookies;
@@ -27,7 +36,11 @@ static TachiSourceBrowser *tachiActiveBrowser;
 
 @implementation TachiSourceBrowser
 + (void)openURL:(NSString *)url result:(FlutterResult)result {
+  [self openOptions:@{@"url":url ?: @""} result:result];
+}
++ (void)openOptions:(NSDictionary *)options result:(FlutterResult)result {
   TachiBrowserOnMain(^{
+    id url = options[@"url"];
     NSURL *origin = [url isKindOfClass:NSString.class] ? [NSURL URLWithString:url] : nil;
     if (![self isHTTPURL:origin]) {
       result([FlutterError errorWithCode:@"INVALID_SOURCE_URL" message:@"Địa chỉ nguồn không hợp lệ." details:nil]);
@@ -62,6 +75,15 @@ static TachiSourceBrowser *tachiActiveBrowser;
     }
     TachiSourceBrowser *browser = [TachiSourceBrowser new];
     browser.origin = origin;
+    browser.automatic = [options[@"automatic"] isEqual:@YES];
+    id seed = options[@"seed"];
+    if (seed && seed != NSNull.null && (![seed isKindOfClass:NSDictionary.class] ||
+        ![seed[@"url"] isEqual:origin.absoluteString] || ![seed[@"cookies"] isKindOfClass:NSArray.class] ||
+        [seed[@"cookies"] count] > 512)) {
+      result([FlutterError errorWithCode:@"INVALID_BROWSER_SESSION" message:@"Phiên nguồn không hợp lệ." details:nil]);
+      return;
+    }
+    browser.seed = [seed isKindOfClass:NSDictionary.class] ? seed : nil;
     browser.completion = result;
     tachiActiveBrowser = browser;
     UINavigationController *navigation = [[UINavigationController alloc] initWithRootViewController:browser];
@@ -75,6 +97,14 @@ static TachiSourceBrowser *tachiActiveBrowser;
         [browser complete:[FlutterError errorWithCode:@"BROWSER_UNAVAILABLE" message:@"Không mở được trang nguồn." details:nil] dismiss:NO];
       }
     });
+    if (browser.automatic) {
+      __weak TachiSourceBrowser *weakBrowser = browser;
+      dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 120 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        TachiSourceBrowser *current = weakBrowser;
+        if (current && !current.completed && !current.completing)
+          [current complete:[FlutterError errorWithCode:@"BROWSER_VERIFICATION_TIMEOUT" message:@"Xác minh quá lâu. Hãy mở trang nguồn và thử lại." details:nil] dismiss:YES];
+      });
+    }
   });
 }
 + (BOOL)isHTTPURL:(NSURL *)url {
@@ -93,6 +123,8 @@ static TachiSourceBrowser *tachiActiveBrowser;
   NSDictionary *agents = [NSUserDefaults.standardUserDefaults dictionaryForKey:@"dev.tachibooks.browserUserAgents"];
   NSString *agent = agents[self.origin.host.lowercaseString];
   if ([agent isKindOfClass:NSString.class] && [self validUserAgent:agent]) self.webView.customUserAgent = agent;
+  NSString *seedAgent = self.seed[@"userAgent"];
+  if ([seedAgent isKindOfClass:NSString.class] && seedAgent.length && [self validUserAgent:seedAgent]) self.webView.customUserAgent = seedAgent;
   self.webView.navigationDelegate = self;
   self.webView.UIDelegate = self;
   self.webView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -127,7 +159,90 @@ static TachiSourceBrowser *tachiActiveBrowser;
     [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil], self.optionsButton];
   [self.navigationController setToolbarHidden:NO animated:NO];
   [self updateNavigationButtons];
-  [self.webView loadRequest:[NSURLRequest requestWithURL:self.origin]];
+  [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(applicationBackgrounded:) name:UIApplicationDidEnterBackgroundNotification object:nil];
+  [NSNotificationCenter.defaultCenter addObserver:self selector:@selector(sessionInvalidated:) name:@"dev.tachibooks.clearSourceSessions" object:nil];
+  [self seedAndLoad];
+}
+- (void)applicationBackgrounded:(NSNotification *)notification {
+  if (self.automatic && !self.completed) [self complete:@{@"cancelled":@YES} dismiss:YES];
+}
+- (void)sessionInvalidated:(NSNotification *)notification {
+  if (!self.completed) [self complete:@{@"cancelled":@YES} dismiss:YES];
+}
+- (BOOL)cookieDomainMatches:(NSString *)domain hostOnly:(BOOL)hostOnly {
+  if (![domain isKindOfClass:NSString.class]) return NO;
+  NSString *host = self.origin.host.lowercaseString;
+  domain = domain.lowercaseString;
+  if ([domain hasPrefix:@"."]) domain = [domain substringFromIndex:1];
+  return domain.length && ![domain hasPrefix:@"."] && ([host isEqual:domain] || (!hostOnly && [host hasSuffix:[@"." stringByAppendingString:domain]]));
+}
+- (void)seedAndLoad {
+  WKHTTPCookieStore *store = self.webView.configuration.websiteDataStore.httpCookieStore;
+  void (^load)(void) = ^{
+    if (self.completed || self.completing) return;
+    [store addObserver:self]; self.observingCookies = YES;
+    [self.webView loadRequest:[NSURLRequest requestWithURL:self.origin]];
+  };
+  if (!self.seed) { load(); return; }
+  NSMutableArray<NSHTTPCookie *> *incoming = [NSMutableArray new];
+  for (id item in self.seed[@"cookies"]) {
+    if (![item isKindOfClass:NSDictionary.class] || ![item[@"name"] isKindOfClass:NSString.class] ||
+        ![item[@"value"] isKindOfClass:NSString.class] || ![item[@"path"] isKindOfClass:NSString.class] ||
+        ![item[@"hostOnly"] isKindOfClass:NSNumber.class] || ![item[@"secure"] isKindOfClass:NSNumber.class] || ![item[@"httpOnly"] isKindOfClass:NSNumber.class] ||
+        ![item[@"name"] length] || [item[@"name"] length] + [item[@"value"] length] > 4096 || ![item[@"path"] hasPrefix:@"/"] ||
+        ![self cookieDomainMatches:item[@"domain"] hostOnly:[item[@"hostOnly"] boolValue]]) {
+      [self complete:[FlutterError errorWithCode:@"INVALID_BROWSER_SESSION" message:@"Cookie nguồn không hợp lệ." details:nil] dismiss:YES]; return;
+    }
+    NSString *domain = [item[@"domain"] hasPrefix:@"."] ? [item[@"domain"] substringFromIndex:1] : item[@"domain"];
+    NSMutableDictionary *properties = [@{NSHTTPCookieName:item[@"name"], NSHTTPCookieValue:item[@"value"],
+      NSHTTPCookieDomain:[item[@"hostOnly"] boolValue] ? domain : [@"." stringByAppendingString:domain],
+      NSHTTPCookiePath:item[@"path"], NSHTTPCookieOriginURL:self.origin} mutableCopy];
+    if ([item[@"secure"] boolValue]) properties[NSHTTPCookieSecure] = @"TRUE";
+    if ([item[@"httpOnly"] boolValue]) properties[@"HttpOnly"] = @"TRUE";
+    id expiry = item[@"expiresAt"];
+    if (expiry && expiry != NSNull.null) {
+      if (![expiry isKindOfClass:NSNumber.class] || !isfinite([expiry doubleValue])) {
+        [self complete:[FlutterError errorWithCode:@"INVALID_BROWSER_SESSION" message:@"Hạn cookie không hợp lệ." details:nil] dismiss:YES]; return;
+      }
+      NSDate *expires = [NSDate dateWithTimeIntervalSince1970:[expiry doubleValue] / 1000];
+      if (expires.timeIntervalSinceNow <= 0) continue;
+      properties[NSHTTPCookieExpires] = expires;
+    }
+    NSHTTPCookie *cookie = [NSHTTPCookie cookieWithProperties:properties];
+    if (!cookie) { [self complete:[FlutterError errorWithCode:@"INVALID_BROWSER_SESSION" message:@"Không nạp được cookie nguồn." details:nil] dismiss:YES]; return; }
+    [incoming addObject:cookie];
+  }
+  [store getAllCookies:^(NSArray<NSHTTPCookie *> *cookies) {
+    TachiBrowserOnMain(^{
+      if (self.completed || self.completing) return;
+      dispatch_group_t removals = dispatch_group_create();
+      for (NSHTTPCookie *cookie in cookies) if ([self cookieDomainMatches:cookie.domain hostOnly:![cookie.domain hasPrefix:@"."]]) {
+        dispatch_group_enter(removals); [store deleteCookie:cookie completionHandler:^{ dispatch_group_leave(removals); }];
+      }
+      dispatch_group_notify(removals, dispatch_get_main_queue(), ^{
+        if (self.completed || self.completing) return;
+        dispatch_group_t writes = dispatch_group_create();
+        for (NSHTTPCookie *cookie in incoming) {
+          dispatch_group_enter(writes); [store setCookie:cookie completionHandler:^{ dispatch_group_leave(writes); }];
+        }
+        dispatch_group_notify(writes, dispatch_get_main_queue(), load);
+      });
+    });
+  }];
+}
+- (void)cookiesDidChangeInCookieStore:(WKHTTPCookieStore *)cookieStore { TachiBrowserOnMain(^{ [self checkClearance]; }); }
+- (void)checkClearance {
+  if (!self.automatic || self.checkingClearance || !self.pageReady || !self.mainResponseAllowed || self.completed || self.completing) return;
+  self.checkingClearance = YES;
+  [self.webView.configuration.websiteDataStore.httpCookieStore getAllCookies:^(NSArray<NSHTTPCookie *> *cookies) {
+    TachiBrowserOnMain(^{
+      self.checkingClearance = NO;
+      if (!self.pageReady || !self.mainResponseAllowed || self.completed || self.completing) return;
+      for (NSDictionary *cookie in [self sourceCookies:cookies]) if ([cookie[@"name"] isEqual:@"cf_clearance"] && [cookie[@"value"] length]) {
+        self.verified = YES; [self finish]; break;
+      }
+    });
+  }];
 }
 - (void)reload { if (!self.completing && !self.completed) [self.webView reload]; }
 - (void)goBack { if (!self.completing && !self.completed && self.webView.canGoBack) [self.webView goBack]; }
@@ -196,6 +311,8 @@ static TachiSourceBrowser *tachiActiveBrowser;
       dispatch_group_notify(group, dispatch_get_main_queue(), ^{
         TachiSourceBrowser *current = weakBrowser;
         if (!current || current.completed || current.completing) return;
+        current.cleared = YES;
+        current.verified = NO;
         [current finish];
       });
     });
@@ -235,11 +352,16 @@ static TachiSourceBrowser *tachiActiveBrowser;
   self.pageErrorLabel.text = [NSString stringWithFormat:@"%@\nBấm tải lại để thử lại.", message];
   self.pageErrorLabel.hidden = NO;
 }
-- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation { self.pageErrorLabel.hidden = YES; }
-- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation { [self updateNavigationButtons]; }
+- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation { self.pageErrorLabel.hidden = YES; self.pageReady = NO; self.mainResponseAllowed = NO; }
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation { [self updateNavigationButtons]; self.pageReady = YES; [self checkClearance]; }
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationResponse:(WKNavigationResponse *)response decisionHandler:(void (^)(WKNavigationResponsePolicy))decisionHandler {
   if (response.isForMainFrame && [response.response isKindOfClass:NSHTTPURLResponse.class]) {
     NSHTTPURLResponse *http = (NSHTTPURLResponse *)response.response;
+    self.mainResponseAllowed = http.statusCode >= 200 && http.statusCode < 300 &&
+      [http.URL.host.lowercaseString isEqual:self.origin.host.lowercaseString] &&
+      ![http.URL.path hasPrefix:@"/cdn-cgi/"];
+    for (id key in http.allHeaderFields) if ([[[key description] lowercaseString] isEqual:@"cf-mitigated"] &&
+        [[[http.allHeaderFields[key] description] lowercaseString] isEqual:@"challenge"]) self.mainResponseAllowed = NO;
     if (http.statusCode >= 400) {
       BOOL cloudflare = NO;
       for (id key in http.allHeaderFields) {
@@ -313,12 +435,14 @@ static TachiSourceBrowser *tachiActiveBrowser;
           TachiBrowserOnMain(^{
             TachiSourceBrowser *current = weakBrowser;
             if (!current || current.completed) return;
-            NSArray *session = [current sourceCookies:cookies];
+            // Explicit logout must publish an empty source session even when a
+            // cancelled page response races the WebKit cookie collection.
+            NSArray *session = current.cleared ? @[] : [current sourceCookies:cookies];
             if (session.count > 512) {
               [current complete:[FlutterError errorWithCode:@"BROWSER_SESSION_FAILED" message:@"Phiên trang nguồn vượt giới hạn cookie." details:nil] dismiss:YES];
               return;
             }
-            [current complete:@{@"url":current.origin.absoluteString, @"userAgent":agent, @"cookies":session, @"cancelled":@NO} dismiss:YES];
+            [current complete:@{@"url":current.origin.absoluteString, @"userAgent":agent, @"cookies":session, @"cancelled":@NO, @"verified":@(current.verified), @"cleared":@(current.cleared)} dismiss:YES];
           });
         }];
       });
@@ -348,6 +472,8 @@ static TachiSourceBrowser *tachiActiveBrowser;
   TachiBrowserOnMain(^{
     if (self.completed) return;
     self.completed = YES;
+    [NSNotificationCenter.defaultCenter removeObserver:self];
+    if (self.observingCookies) { [self.webView.configuration.websiteDataStore.httpCookieStore removeObserver:self]; self.observingCookies = NO; }
     self.completing = NO;
     FlutterResult result = self.completion;
     self.completion = nil;

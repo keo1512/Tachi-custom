@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../domain/library_grouping.dart';
+import '../domain/library_folders.dart';
 import 'library_filter_controller.dart';
 import 'library_group_order_controller.dart';
 
@@ -82,6 +83,18 @@ class LibraryCategoryPreferenceMigration {
         }
       }
       after[LibraryFilterController.preferenceKey] = jsonEncode(filters);
+    }
+    final folderScopes = read(LibraryFolders.categoryPreferenceKey);
+    if (folderScopes != null) {
+      LibraryFolders.decodeWithCategories(null, jsonEncode(folderScopes));
+      final previous = folderScopes.remove(oldName);
+      if (previous != null && newName != null) {
+        if (folderScopes.containsKey(newName)) {
+          throw const FormatException('Thư mục danh mục đích đã tồn tại.');
+        }
+        folderScopes[newName] = previous;
+      }
+      after[LibraryFolders.categoryPreferenceKey] = jsonEncode(folderScopes);
     }
     return LibraryCategoryPreferenceMigration._(preferences, before, after);
   }

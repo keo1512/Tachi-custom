@@ -73,15 +73,31 @@ final class ExtensionRegistry {
         JsonObject metadata=metadata(input);
         String id=metadata.get("id").getAsString(),digest=EngineFiles.sha256(input);
         if(!expectedHash.isEmpty()&&(!expectedHash.matches("(?i)[a-f0-9]{64}")||!expectedHash.equalsIgnoreCase(digest)))throw new IllegalArgumentException("Downloaded APK checksum does not match the catalogue");
-        String convertedName=EngineFiles.sha256((digest+CONVERSION_PROFILE).getBytes(StandardCharsets.US_ASCII));
-        Path directory=root.resolve("packages"),apk=directory.resolve(digest+".apk"),jar=directory.resolve(convertedName+".jar");
-        if(!Files.exists(apk)){
+        Path directory=root.resolve("packages"),apk=directory.resolve(digest+".apk");
+        // A retained path alone does not prove that an interrupted write or
+        // later disk damage left the content-addressed original intact.
+        if(!Files.isRegularFile(apk)||!EngineFiles.sha256(apk).equals(digest)){
             Path pending=Files.createTempFile(directory,".pending-",".apk");
             try{Files.copy(input,pending,StandardCopyOption.REPLACE_EXISTING);if(!EngineFiles.sha256(pending).equals(digest))throw new IOException("APK changed during installation");Files.move(pending,apk,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}finally{Files.deleteIfExists(pending);}
         }
-        if(!Files.exists(jar)){
-            convert(apk,jar);
-        }
+        // An explicit install/reinstall rebuilds the derived artifact. Cached
+        // JARs can be ZIP-valid yet differ from registered bytes, or outlive
+        // uninstall metadata. Never bless their current hash as a new baseline.
+        // Publish under its actual byte digest so a live previous loader keeps
+        // its old immutable path if conversion or source validation later fails.
+        Path candidate=directory.resolve(EngineFiles.sha256(UUID.randomUUID().toString().getBytes(StandardCharsets.US_ASCII))+".jar"),jar;
+        try{
+            convert(apk,candidate);
+            String convertedDigest=EngineFiles.sha256(candidate);
+            jar=directory.resolve(convertedDigest+".jar");
+            if(Files.exists(jar)&&(!Files.isRegularFile(jar)||!EngineFiles.sha256(jar).equals(convertedDigest))){
+                // A loader can still hold the damaged old path open (notably
+                // on Windows). Keep the fresh candidate's distinct valid name
+                // instead of replacing bytes underneath that live loader.
+                jar=candidate;
+            }else if(!Files.exists(jar))Files.move(candidate,jar,StandardCopyOption.ATOMIC_MOVE);
+            if(jar.equals(candidate))candidate=null;
+        }finally{if(candidate!=null)Files.deleteIfExists(candidate);}
         metadata.addProperty("apk",apk.getFileName().toString());metadata.addProperty("jar",jar.getFileName().toString());
         metadata.addProperty("apkSha256",digest);metadata.addProperty("jarSha256",EngineFiles.sha256(jar));
         metadata.addProperty("conversionProfile",CONVERSION_PROFILE);
@@ -91,7 +107,8 @@ final class ExtensionRegistry {
         if(entries.has(id))for(JsonElement oldId:entries.getAsJsonObject(id).getAsJsonArray("sourceIds"))oldIds.add(oldId.getAsString());
         for(CatalogueSource source:loaded.sources)if(sources.containsKey(Long.toString(source.getId()))&&!oldIds.contains(Long.toString(source.getId()))){loaded.loader.close();throw new IllegalArgumentException("Source identity collides with another installed package");}
         JsonArray ids=new JsonArray();for(CatalogueSource source:loaded.sources)ids.add(Long.toString(source.getId()));metadata.add("sourceIds",ids);
-        JsonObject next=entries.deepCopy();next.add(id,metadata);persist(next);
+        JsonObject next=entries.deepCopy();next.add(id,metadata);
+        try{persist(next);}catch(Exception failure){loaded.loader.close();throw failure;}
         loaders.remove(id);for(String sourceId:oldIds)sources.remove(sourceId);
         entries=next;failures.remove(id);adopt(id,loaded);
         JsonObject result=metadata.deepCopy();result.remove("classes");result.remove("jar");result.remove("apk");result.addProperty("installed",true);return result;
@@ -167,18 +184,22 @@ final class ExtensionRegistry {
             boolean extension=false;NodeList features=document.getElementsByTagName("uses-feature");
             for(int i=0;i<features.getLength();i++)if("tachiyomi.extension".equals(((Element)features.item(i)).getAttributeNS(ANDROID,"name")))extension=true;
             if(!extension)throw new IllegalArgumentException("APK extension feature declaration is missing");
+            String declaredLibrary=null;
             JsonArray classes=new JsonArray();NodeList metadata=document.getElementsByTagName("meta-data");
             for(int i=0;i<metadata.getLength();i++){
                 Element element=(Element)metadata.item(i);
+                if("tachiyomix.extensionLib".equals(element.getAttributeNS(ANDROID,"name")))declaredLibrary=element.getAttributeNS(ANDROID,"value");
                 if("tachiyomi.extension.class".equals(element.getAttributeNS(ANDROID,"name"))){
-                    for(String value:element.getAttributeNS(ANDROID,"value").split(";")){
+                    for(String part:element.getAttributeNS(ANDROID,"value").split(";")){
+                        String value=part.trim();
                         String fqn=value.startsWith(".")?id+value:value;
                         if(!fqn.matches("[A-Za-z_$][A-Za-z0-9_$.]{1,250}"))throw new IllegalArgumentException("Invalid extension class");classes.add(fqn);
                     }
                 }
             }
             if(classes.size()==0||classes.size()>128)throw new IllegalArgumentException("Extension entry classes are missing");
-            JsonObject result=new JsonObject();result.addProperty("id",id);result.addProperty("pkgName",id);result.addProperty("name",meta.getLabel());result.addProperty("version",meta.getVersionName());result.addProperty("versionCode",meta.getVersionCode());result.add("classes",classes);return result;
+            double libraryVersion=ExtensionPackageRules.libraryVersion(declaredLibrary,meta.getVersionName());
+            JsonObject result=new JsonObject();result.addProperty("id",id);result.addProperty("pkgName",id);result.addProperty("name",meta.getLabel());result.addProperty("version",meta.getVersionName());result.addProperty("versionCode",meta.getVersionCode());result.addProperty("libVersion",libraryVersion);result.add("classes",classes);return result;
         }
     }
     private static void validateArchive(Path file)throws IOException{

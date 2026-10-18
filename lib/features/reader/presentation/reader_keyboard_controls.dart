@@ -10,11 +10,13 @@ class ReaderKeyboardControls extends StatelessWidget {
     required this.canScroll,
     required this.onChapter,
     required this.child,
+    this.onPage,
   });
   final ScrollController scroll;
   final bool Function() canScroll;
   final ValueChanged<int> onChapter;
   final Widget child;
+  final ValueChanged<int>? onPage;
   void move(double delta, {double? edge}) {
     if (!canScroll() || !scroll.hasClients) return;
     final position = scroll.position;
@@ -27,6 +29,10 @@ class ReaderKeyboardControls extends StatelessWidget {
   }
 
   void page(int direction) {
+    if (onPage != null && canScroll()) {
+      onPage!(direction);
+      return;
+    }
     if (!scroll.hasClients) return;
     move(direction * scroll.position.viewportDimension * .85);
   }
@@ -34,8 +40,14 @@ class ReaderKeyboardControls extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CallbackShortcuts(
     bindings: {
-      const SingleActivator(LogicalKeyboardKey.arrowDown): () => move(80),
-      const SingleActivator(LogicalKeyboardKey.arrowUp): () => move(-80),
+      const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+          onPage != null ? page(1) : move(80),
+      const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+          onPage != null ? page(-1) : move(-80),
+      if (onPage != null) ...{
+        const SingleActivator(LogicalKeyboardKey.arrowRight): () => page(1),
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): () => page(-1),
+      },
       const SingleActivator(LogicalKeyboardKey.pageDown): () => page(1),
       const SingleActivator(LogicalKeyboardKey.pageUp): () => page(-1),
       const SingleActivator(LogicalKeyboardKey.space): () => page(1),

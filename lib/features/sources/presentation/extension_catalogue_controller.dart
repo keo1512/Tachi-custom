@@ -27,10 +27,35 @@ class ExtensionCatalogueController extends AsyncNotifier<List<ExtensionIndex>> {
 
   // Fetches can take seconds. Serialize edits so each edit sees the latest
   // saved list instead of overwriting an edit started during its HTTP request.
-  Future<void> _serialized(Future<void> Function() operation) {
-    final next = _pending.then((_) => operation());
+  Future<void> _serialized(
+    Future<void> Function(bool Function() isCurrent) operation, {
+    bool Function()? isCurrent,
+  }) {
+    final preferences = ref.read(preferencesProvider);
+    final generation = preferences is CoordinatedPreferences
+        ? preferences.mutationGeneration
+        : null;
+    bool current() =>
+        ref.mounted &&
+        (preferences is! CoordinatedPreferences ||
+            preferences.mutationGeneration == generation) &&
+        isCurrent?.call() != false;
+    // Capture before waiting for the edit queue: a restore also invalidates
+    // edits the user submitted while an earlier HTTP request was in flight.
+    final next = _pending.then((_) {
+      _checkCurrent(current);
+      return operation(current);
+    });
     _pending = next.then<void>((_) {}, onError: (Object _, StackTrace _) {});
     return next;
+  }
+
+  void _checkCurrent(bool Function() isCurrent) {
+    if (!isCurrent()) {
+      throw const FormatException(
+        'Thư viện hoặc thiết lập đã đổi. Hãy mở lại liên kết.',
+      );
+    }
   }
 
   @override
@@ -101,21 +126,13 @@ class ExtensionCatalogueController extends AsyncNotifier<List<ExtensionIndex>> {
     SourceEngine engine,
     String url, {
     bool Function()? isCurrent,
-  }) => _serialized(() async {
-    if (isCurrent?.call() == false) {
-      throw const FormatException(
-        'Thư viện hoặc thiết lập đã đổi. Hãy mở lại liên kết.',
-      );
-    }
+  }) => _serialized((currentOperation) async {
     final current = await future;
+    _checkCurrent(currentOperation);
     final fetched = await ref
         .read(extensionIndexRepositoryProvider)
         .fetch(url, engine);
-    if (isCurrent?.call() == false) {
-      throw const FormatException(
-        'Thư viện hoặc thiết lập đã đổi. Hãy mở lại liên kết.',
-      );
-    }
+    _checkCurrent(currentOperation);
     final next = [
       ...current.where((item) => item.identity != fetched.identity),
       fetched.withLabel(
@@ -129,41 +146,48 @@ class ExtensionCatalogueController extends AsyncNotifier<List<ExtensionIndex>> {
     if (next.length > 50) {
       throw const FormatException('Tối đa 50 kho extension.');
     }
-    await _save(next, isCurrent: isCurrent);
-    if (ref.mounted) state = AsyncData(next);
-  });
+    await _save(next, isCurrent: currentOperation);
+    _checkCurrent(currentOperation);
+    state = AsyncData(next);
+  }, isCurrent: isCurrent);
 
-  Future<void> remove(String identity) => _serialized(() async {
-    final next = (await future)
-        .where((item) => item.identity != identity)
-        .toList();
-    await _save(next);
-    if (ref.mounted) state = AsyncData(next);
-  });
-
-  Future<void> rename(String identity, String name) => _serialized(() async {
-    final label = name.trim();
-    if (label.length > 100 || RegExp(r'[\x00-\x1f]').hasMatch(label)) {
-      throw const FormatException(
-        'Tên kho tối đa 100 ký tự, không có ký tự điều khiển.',
-      );
-    }
+  Future<void> remove(String identity) => _serialized((currentOperation) async {
     final current = await future;
-    if (!current.any((item) => item.identity == identity)) {
-      throw StateError('Kho không còn trong danh sách.');
-    }
-    final next = [
-      for (final item in current)
-        item.identity == identity ? item.withLabel(label) : item,
-    ];
-    await _save(next);
-    if (ref.mounted) state = AsyncData(next);
+    _checkCurrent(currentOperation);
+    final next = current.where((item) => item.identity != identity).toList();
+    await _save(next, isCurrent: currentOperation);
+    _checkCurrent(currentOperation);
+    state = AsyncData(next);
   });
 
-  Future<void> refresh() => _serialized(() async {
+  Future<void> rename(String identity, String name) =>
+      _serialized((currentOperation) async {
+        final label = name.trim();
+        if (label.length > 100 || RegExp(r'[\x00-\x1f]').hasMatch(label)) {
+          throw const FormatException(
+            'Tên kho tối đa 100 ký tự, không có ký tự điều khiển.',
+          );
+        }
+        final current = await future;
+        _checkCurrent(currentOperation);
+        if (!current.any((item) => item.identity == identity)) {
+          throw StateError('Kho không còn trong danh sách.');
+        }
+        final next = [
+          for (final item in current)
+            item.identity == identity ? item.withLabel(label) : item,
+        ];
+        await _save(next, isCurrent: currentOperation);
+        _checkCurrent(currentOperation);
+        state = AsyncData(next);
+      });
+
+  Future<void> refresh() => _serialized((currentOperation) async {
     final current = await future;
+    _checkCurrent(currentOperation);
     final next = <ExtensionIndex>[];
     for (final item in current) {
+      _checkCurrent(currentOperation);
       try {
         next.add(
           (await ref
@@ -183,14 +207,19 @@ class ExtensionCatalogueController extends AsyncNotifier<List<ExtensionIndex>> {
           ),
         );
       }
+      // Outside the error-isolation catch: stale work must not be published as
+      // an ordinary failed repository refresh after a configuration restore.
+      _checkCurrent(currentOperation);
     }
-    if (ref.mounted) state = AsyncData(next);
+    _checkCurrent(currentOperation);
+    state = AsyncData(next);
   });
 
   Future<void> _save(
     List<ExtensionIndex> items, {
-    bool Function()? isCurrent,
+    required bool Function() isCurrent,
   }) async {
+    _checkCurrent(isCurrent);
     final preferences = ref.read(preferencesProvider);
     final raw = jsonEncode(
       items
@@ -203,7 +232,7 @@ class ExtensionCatalogueController extends AsyncNotifier<List<ExtensionIndex>> {
           )
           .toList(),
     );
-    final saved = preferences is CoordinatedPreferences && isCurrent != null
+    final saved = preferences is CoordinatedPreferences
         ? await preferences.setStringIfCurrent(preferenceKey, raw, isCurrent)
         : await preferences.setString(preferenceKey, raw);
     if (!saved) throw StateError('Không lưu được danh sách kho extension.');

@@ -7,6 +7,7 @@ import '../domain/library_categories.dart';
 import '../domain/library_grouping.dart';
 import '../domain/library_folders.dart';
 import '../domain/book_reading_times.dart';
+import '../domain/book_daily_reading_times.dart';
 import '../presentation/library_filter_sheet.dart';
 import '../../reader/domain/reader_options.dart';
 import '../../sources/domain/source_filters.dart';
@@ -39,7 +40,9 @@ class BackupConfiguration {
   };
   static const _json = {
     LibraryFolders.preferenceKey,
+    LibraryFolders.categoryPreferenceKey,
     BookReadingTimes.preferenceKey,
+    BookDailyReadingTimes.preferenceKey,
     'extensionRepositoriesV1',
     'libraryCategoriesV1',
     'libraryGroupOrderV1',
@@ -184,6 +187,10 @@ class BackupConfiguration {
   }
 
   static void _validateJson(String key, Object? value) {
+    if (key == LibraryFolders.categoryPreferenceKey) {
+      LibraryFolders.decodeWithCategories(null, jsonEncode(value));
+      return;
+    }
     if (key == 'extensionRepositoriesV1') {
       if (value is! List || value.length > 50) {
         throw const FormatException('Danh sách kho không hợp lệ.');
@@ -222,6 +229,8 @@ class BackupConfiguration {
         LibraryFolders.decode(jsonEncode(data));
       case BookReadingTimes.preferenceKey:
         BookReadingTimes.decode(jsonEncode(data));
+      case BookDailyReadingTimes.preferenceKey:
+        BookDailyReadingTimes.decode(jsonEncode(data));
       case 'libraryCategoriesV1':
         _keys(data, {'categories', 'defaultCategories'});
         final registry = LibraryCategoryRegistry.fromJson(data);

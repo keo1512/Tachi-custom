@@ -1,6 +1,7 @@
 package dev.tachibooks.engine;
 
 import android.app.Application;
+import android.content.SharedPreferences;
 import androidx.preference.*;
 import com.google.gson.*;
 import eu.kanade.tachiyomi.network.NetworkHelper;
@@ -8,7 +9,6 @@ import eu.kanade.tachiyomi.source.*;
 import eu.kanade.tachiyomi.source.model.*;
 import eu.kanade.tachiyomi.source.online.HttpSource;
 import java.io.*;
-import java.lang.reflect.Method;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
@@ -32,6 +32,7 @@ import org.koin.core.qualifier.Qualifier;
 public final class ExtensionHost {
     private static ExtensionRegistry registry;
     private static EngineApplication application;
+    private static NetworkHelper networking;
     private static Path dataDirectory;
     private static final Map<String,CachedChapter> chapterPages=new LinkedHashMap<String,CachedChapter>(16,0.75f,true){
         protected boolean removeEldestEntry(Map.Entry<String,CachedChapter> item){return size()>8;}
@@ -46,6 +47,7 @@ public final class ExtensionHost {
     };
     private static final class CachedChapter{
         final String sourceId,ref;final List<? extends Page> pages;
+        boolean restoredForImages;
         CachedChapter(String sourceId,String ref,List<? extends Page> pages){this.sourceId=sourceId;this.ref=ref;this.pages=pages;}
     }
     private ExtensionHost(){}
@@ -77,7 +79,10 @@ public final class ExtensionHost {
                         mangaMetadata.clear();chapterPages.clear();result=new JsonPrimitive(true);break;
                     case "clearCookies":
                         if(!args.entrySet().isEmpty())throw new IllegalArgumentException("Cookie cleanup accepts no paths");
-                        result=BrowserSession.clear(registry);break;
+                        result=BrowserSession.clear(registry,networking.getClient().cookieJar());break;
+                    case "resetUserAgents":
+                        if(!args.entrySet().isEmpty())throw new IllegalArgumentException("User-agent reset accepts no paths");
+                        result=BrowserSession.resetUserAgents();break;
                     case "extensions":result=registry.extensions();break;
                     case "inspectPackage":result=registry.inspect(Paths.get(required(args,"apkPath")));break;
                     case "install":result=registry.install(Paths.get(required(args,"apkPath")),optional(args,"packageUrl"),optional(args,"iconUrl"),optional(args,"packageHash"));chapterPages.clear();mangaMetadata.clear();BrowserSession.initialize(dataDirectory,registry);break;
@@ -90,6 +95,7 @@ public final class ExtensionHost {
                     case "image":result=image(args);break;
                     case "cover":result=cover(args);break;
                     case "browserSession":result=BrowserSession.apply(args,registry.source(required(args,"sourceId")));break;
+                    case "browserSeed":result=BrowserSession.seed(args,registry.source(required(args,"sourceId")));break;
                     case "preferences":result=preferences(args);break;
                     case "setPreference":result=setPreference(args);break;
                     default:throw new IllegalArgumentException("Unsupported engine method");
@@ -101,7 +107,7 @@ public final class ExtensionHost {
             if(requiresBrowser(failure)){code="source_requires_browser";message="The source requires an interactive browser session.";}
             else if(failure instanceof HttpStatusException){code="http_error";message="Source returned an HTTP error";error.addProperty("httpStatus",((HttpStatusException)failure).status);}
             else if(failure instanceof SourceNotLoadedException){code="source_not_installed";message="Required source extension is not loaded.";}
-            else if(failure instanceof LinkageError){code="unsupported_extension";message="The extension requires an Android or Java API that this engine does not provide.";}
+            else if(failure instanceof LinkageError||failure instanceof UnsupportedExtensionVersionException){code="unsupported_extension";message="The extension requires an Android or Java API that this engine does not provide.";}
             else if(failure instanceof IllegalArgumentException){code="invalid_request";message=failure.getMessage();}
             else if(failure instanceof IllegalStateException&&registry==null){code="engine_unavailable";message="The native extension engine could not initialize.";}
             else{code="extension_failed";message="The extension operation failed. Check the source settings and network connection.";}
@@ -116,11 +122,19 @@ public final class ExtensionHost {
         if(registry!=null){if(!dataDirectory.equals(requested))throw new IllegalArgumentException("Engine is already initialized with another data directory");return status();}
         Files.createDirectories(requested);application=new EngineApplication(requested);
         if(GlobalContext.INSTANCE.getOrNull()==null)GlobalContext.INSTANCE.startKoin(KoinApplication.Companion.init());
-        register(Application.class,application);register(NetworkHelper.class,new NetworkHelper(application));
+        networking=new NetworkHelper(application);
+        register(Application.class,application);register(NetworkHelper.class,networking);
         Json json=JsonKt.Json(Json.Default,new Function1<JsonBuilder,Unit>(){public Unit invoke(JsonBuilder builder){builder.setIgnoreUnknownKeys(true);return Unit.INSTANCE;}});
         register(Json.class,json);ExtensionRegistry loaded=new ExtensionRegistry(requested);BrowserSession.initialize(requested,loaded);registry=loaded;dataDirectory=requested;return status();
     }
-    private static JsonObject status(){JsonObject result=new JsonObject();result.addProperty("engine","tachi");result.addProperty("protocolVersion",1);result.addProperty("sourceCount",registry.sources().size());result.addProperty("execution","java-interpreter");return result;}
+    private static JsonObject status(){
+        JsonObject result=new JsonObject();result.addProperty("engine","tachi");result.addProperty("protocolVersion",1);result.addProperty("sourceCount",registry.sources().size());result.addProperty("execution","java-interpreter");
+        boolean cookieHealthy=true;
+        List<CookieJar> jars=new ArrayList<>();jars.add(networking.getClient().cookieJar());
+        for(CatalogueSource source:registry.sources())if(source instanceof HttpSource)jars.add(((HttpSource)source).getClient().cookieJar());
+        for(CookieJar jar:jars)if(jar instanceof eu.kanade.tachiyomi.network.SourceCookieJar&&!((eu.kanade.tachiyomi.network.SourceCookieJar)jar).isPersistenceHealthy())cookieHealthy=false;
+        result.addProperty("cookiePersistenceHealthy",cookieHealthy);return result;
+    }
     private static <T>void register(final Class<T> type,final T value){
         org.koin.core.Koin koin=GlobalContext.INSTANCE.get();
         Qualifier root=koin.getScopeRegistry().getRootScope().getScopeQualifier();
@@ -129,7 +143,7 @@ public final class ExtensionHost {
         koin.getInstanceRegistry().saveMapping(true,BeanDefinitionKt.indexKey(JvmClassMappingKt.getKotlinClass(type),null,root),new SingleInstanceFactory<>(definition),false);
     }
     private static JsonArray sources(){JsonArray result=new JsonArray();for(CatalogueSource source:registry.sources()){
-        JsonObject item=new JsonObject();item.addProperty("id",Long.toString(source.getId()));item.addProperty("name",source.getName());item.addProperty("lang",source.getLang());item.addProperty("baseUrl",source instanceof HttpSource?((HttpSource)source).getBaseUrl():"");item.addProperty("iconUrl",registry.iconUrl(Long.toString(source.getId())));item.addProperty("engine","tachi");item.addProperty("kind","manga");item.addProperty("configurable",source instanceof ConfigurableSource);result.add(item);
+        JsonObject item=new JsonObject();item.addProperty("id",Long.toString(source.getId()));item.addProperty("name",source.getName());item.addProperty("lang",source.getLang());item.addProperty("baseUrl",source instanceof HttpSource?((HttpSource)source).getBaseUrl():"");item.addProperty("iconUrl",registry.iconUrl(Long.toString(source.getId())));item.addProperty("engine","tachi");item.addProperty("kind","manga");item.addProperty("configurable",source instanceof ConfigurableSource);item.addProperty("supportsLatest",source.getSupportsLatest());result.add(item);
     }return result;}
     private static JsonObject search(JsonObject args)throws Exception{
         CatalogueSource source=registry.source(required(args,"sourceId"));int page=args.has("page")?args.get("page").getAsInt():1;
@@ -170,12 +184,27 @@ public final class ExtensionHost {
     }
     private static JsonObject chapter(JsonObject args)throws Exception{
         CatalogueSource source=registry.source(required(args,"sourceId"));String ref=required(args,"ref");
+        // Metadata does not execute image request hooks. getImage() invokes the
+        // original source's request/headers/cookies only for the requested page.
+        // Empty header envelopes retain transport compatibility; Flutter does
+        // not issue raw image HTTP requests for this native engine.
         List<? extends Page> pages=loadPages(source,ref,optional(args,"title"));JsonArray images=new JsonArray();JsonObject imageHeaders=new JsonObject();
-        for(Page page:pages){String image=page.getImageUrl();if(image==null||image.isEmpty()){if(!(source instanceof HttpSource))throw new IllegalArgumentException("Source did not return image URLs");image=SuspendBridge.await(completion->((HttpSource)source).getImageUrl(page,completion));page.setImageUrl(image);}
-            if(image==null||image.isEmpty())throw new IllegalArgumentException("Extension returned an empty image URL");images.add(image);
-            if(source instanceof HttpSource){Request request=imageRequest((HttpSource)source,page);imageHeaders.add(image,requestHeaders((HttpSource)source,request));}
+        int ordinal=0;
+        for(Page page:pages){String image=page.getImageUrl();if(image==null||image.isEmpty()){
+                if(!(source instanceof HttpSource))throw new IllegalArgumentException("Source did not return image URLs");
+                // The image RPC owns resolution. A slow/broken later page must
+                // not keep an already-readable first page from opening.
+                images.add(deferredPageUrl(Long.toString(source.getId()),ref,ordinal++));continue;
+            }
+            ordinal++;images.add(image);
         }
         JsonObject result=new JsonObject();result.addProperty("kind","manga");result.add("images",images);result.add("headers",new JsonObject());result.add("imageHeaders",imageHeaders);return result;
+    }
+    private static String deferredPageUrl(String sourceId,String ref,int ordinal)throws Exception{
+        // This reserved, non-network locator preserves the existing string-list
+        // transport and partial-download format. Only image(source,chapter,index)
+        // consumes it; it is never passed to the source's HTTP image request.
+        return "https://page.tachibooks.invalid/"+EngineFiles.sha256((sourceId+"\n"+ref+"\n"+ordinal).getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
     private static List<? extends Page> loadPages(CatalogueSource source,String ref,String title)throws Exception{
         SChapter chapter=SChapter.Companion.create();chapter.setUrl(ref);chapter.setName(title);
@@ -185,25 +214,29 @@ public final class ExtensionHost {
         String sourceId=Long.toString(source.getId());chapterPages.put(sourceId+"\n"+ref,new CachedChapter(sourceId,ref,retained));
         return retained;
     }
-    private static Request imageRequest(HttpSource source,Page page)throws Exception{
-        // The official API protects this hook; reflective invocation preserves overrides
-        // in the original package and exposes its exact headers to the native image loader.
-        Method method=HttpSource.class.getDeclaredMethod("imageRequest",Page.class);
-        method.setAccessible(true);return (Request)method.invoke(source,page);
-    }
-    private static JsonObject requestHeaders(HttpSource source,Request request){
-        JsonObject headers=new JsonObject();for(String name:request.headers().names())headers.addProperty(name,request.header(name));
-        List<Cookie> cookies=source.getClient().cookieJar().loadForRequest(request.url());
-        if(!cookies.isEmpty()&&!headers.has("Cookie")){StringBuilder value=new StringBuilder();for(Cookie cookie:cookies){if(value.length()>0)value.append("; ");value.append(cookie.name()).append('=').append(cookie.value());}headers.addProperty("Cookie",value.toString());}
-        return headers;
-    }
     private static JsonObject image(JsonObject args)throws Exception{
         CatalogueSource source=registry.source(required(args,"sourceId"));if(!(source instanceof HttpSource))throw new IllegalArgumentException("Source has no HTTP image loader");
         String url=required(args,"url"),chapterRef=optional(args,"chapterRef"),sourceId=Long.toString(source.getId());
-        int ordinal=args.has("index")?args.get("index").getAsInt():0;Page page=null;
+        int ordinal=args.has("index")?args.get("index").getAsInt():0;Page page=null;boolean refreshed=false;
+        // Validate caller metadata before a cache miss can trigger source work.
+        // The supplied URL identifies old cached content; it never chooses the
+        // network destination after we refresh a stable chapter/page identity.
+        if(ordinal<0||ordinal>=10000)throw new IllegalArgumentException("Page index is invalid");
+        for(int i=0;i<url.length();i++)if(url.charAt(i)<=32||url.charAt(i)=='\\')throw new IllegalArgumentException("Image URL is invalid");
+        HttpUrl supplied=HttpUrl.parse(url);
+        if(supplied==null||!supplied.username().isEmpty()||!supplied.password().isEmpty())throw new IllegalArgumentException("Image URL is invalid");
+        boolean deferred="page.tachibooks.invalid".equals(supplied.host());
+        if(deferred&&(chapterRef.isEmpty()||!url.equals(deferredPageUrl(sourceId,chapterRef,ordinal))))throw new IllegalArgumentException("Deferred page identity is invalid");
         if(!chapterRef.isEmpty()){
             CachedChapter cached=chapterPages.get(sourceId+"\n"+chapterRef);
             List<? extends Page> pages=cached!=null?cached.pages:loadPages(source,chapterRef,optional(args,"chapterTitle"));
+            if(cached==null){cached=chapterPages.get(sourceId+"\n"+chapterRef);cached.restoredForImages=true;}
+            // Every remaining page in a persisted partial chapter can have an
+            // expired signature. Retain the reload's stable-identity authority
+            // for the whole chapter, rather than only its first image request.
+            // A normal chapter() metadata fetch replaces this cache entry and
+            // restores strict URL matching. The caller URL never drives HTTP.
+            refreshed=cached.restoredForImages;
             if(ordinal<0||ordinal>=pages.size())throw new IllegalArgumentException("Page index is invalid");page=pages.get(ordinal);
         }else{
             // Compatibility for clients that obtained a chapter immediately before
@@ -216,7 +249,11 @@ public final class ExtensionHost {
         }
         final Page originalPage=page;
         if(page.getImageUrl()==null||page.getImageUrl().isEmpty())page.setImageUrl(SuspendBridge.await(completion->((HttpSource)source).getImageUrl(originalPage,completion)));
-        if(!url.equals(page.getImageUrl()))throw new IllegalArgumentException("Image URL no longer matches the source page");
+        if(page.getImageUrl()==null||page.getImageUrl().isEmpty())throw new IllegalArgumentException("Extension returned an empty image URL");
+        // A persisted partial download can outlive CDN signatures and this
+        // process's Page cache. The extension's fresh Page is authoritative in
+        // that case. A warm cache still rejects an unrelated caller URL.
+        if(!deferred&&!refreshed&&!url.equals(page.getImageUrl()))throw new IllegalArgumentException("Image URL no longer matches the source page");
         try(Response response=SuspendBridge.await(completion->((HttpSource)source).getImage(originalPage,completion))){
             if(!response.isSuccessful())throw new HttpStatusException(response.code());
             if(response.body()==null)throw new IOException("Image HTTP response is empty");
@@ -275,9 +312,38 @@ public final class ExtensionHost {
             if(!preference.isEnabled()||!preference.getVisible())throw new IllegalArgumentException("Source preference is disabled or hidden");
             Object typed;String type=preference.getDefaultValueType();
             if("Boolean".equalsIgnoreCase(type)||"bool".equalsIgnoreCase(type))typed=value.getAsBoolean();else if("Set<String>".equals(type)){Set<String> strings=new LinkedHashSet<>();for(JsonElement item:value.getAsJsonArray())strings.add(item.getAsString());typed=strings;}else if("Int".equalsIgnoreCase(type)||"Integer".equalsIgnoreCase(type))typed=value.getAsInt();else if("Long".equalsIgnoreCase(type))typed=value.getAsLong();else if("Float".equalsIgnoreCase(type))typed=value.getAsFloat();else typed=value.getAsString();
-            if(!preference.callChangeListener(typed))throw new IllegalArgumentException("Source rejected the preference value");preference.saveNewValue(typed);registry.reload();chapterPages.clear();mangaMetadata.clear();try{BrowserSession.initialize(dataDirectory,registry);}catch(IOException failure){throw new IllegalStateException("Saved browser session could not be restored",failure);}return new JsonPrimitive(true);
+            SharedPreferences store=preference.getSharedPreferences();
+            Map<String,?> before=store.getAll();
+            try{
+                if(!preference.callChangeListener(typed))throw new IllegalArgumentException("Source rejected the preference value");
+                preference.saveNewValue(typed);registry.reload();
+                // reload isolates package errors, so explicitly require this
+                // source to remain usable before confirming the update.
+                registry.source(Long.toString(source.getId()));
+                BrowserSession.initialize(dataDirectory,registry);
+                return new JsonPrimitive(true);
+            }catch(Exception failure){
+                try{restorePreferences(store,before);registry.reload();BrowserSession.initialize(dataDirectory,registry);}
+                catch(Exception recovery){failure.addSuppressed(recovery);}
+                throw new IllegalStateException("Source preference could not be applied",failure);
+            }finally{chapterPages.clear();mangaMetadata.clear();}
         }
         throw new IllegalArgumentException("Source preference does not exist");
+    }
+    @SuppressWarnings("unchecked")
+    private static void restorePreferences(SharedPreferences store,Map<String,?> before){
+        SharedPreferences.Editor editor=store.edit().clear();
+        for(Map.Entry<String,?> item:before.entrySet()){
+            String key=item.getKey();Object value=item.getValue();
+            if(value instanceof String)editor.putString(key,(String)value);
+            else if(value instanceof Boolean)editor.putBoolean(key,(Boolean)value);
+            else if(value instanceof Integer)editor.putInt(key,(Integer)value);
+            else if(value instanceof Long)editor.putLong(key,(Long)value);
+            else if(value instanceof Float)editor.putFloat(key,(Float)value);
+            else if(value instanceof Set)editor.putStringSet(key,(Set<String>)value);
+            else if(value!=null)throw new IllegalStateException("Unsupported preference recovery type");
+        }
+        if(!editor.commit())throw new IllegalStateException("Source preference recovery failed");
     }
     private static SManga manga(JsonObject args){String ref=required(args,"ref");SManga cached=mangaMetadata.get(required(args,"sourceId")+"\n"+ref);if(cached!=null)return cached;SManga value=SManga.Companion.create();value.setUrl(ref);value.setTitle(optional(args,"title"));return value;}
     private static SChapter schapter(JsonObject args){SChapter value=SChapter.Companion.create();value.setUrl(required(args,"ref"));value.setName(optional(args,"title"));return value;}

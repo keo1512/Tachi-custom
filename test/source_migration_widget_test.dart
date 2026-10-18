@@ -7,18 +7,83 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/sources/data/source_repository.dart';
 import 'package:tachi_books/features/sources/domain/catalogue.dart';
+import 'package:tachi_books/features/sources/domain/source_migration.dart';
+import 'package:tachi_books/features/sources/application/source_migration_service.dart';
 import 'package:tachi_books/features/sources/presentation/source_migration_screen.dart';
 import 'package:tachi_books/features/sources/presentation/source_bulk_migration_screen.dart';
 import 'package:tachi_books/core/widgets/book_cover.dart';
 import 'package:tachi_books/core/theme/app_theme.dart';
+import 'package:tachi_books/features/settings/settings_controller.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late SharedPreferences preferences;
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    preferences = await SharedPreferences.getInstance();
+  });
+  testWidgets(
+    'committed journal failure refreshes library and explains reopening without claiming no change',
+    (tester) async {
+      final repository = MemoryLibraryRepository();
+      await repository.save(
+        LibraryBook(
+          id: 'old',
+          title: 'Old title',
+          engine: 'vbook',
+          sourceId: 'old-source',
+          chapters: const [
+            BookChapter(id: '/c', title: 'One', index: 0, number: 1),
+          ],
+        ),
+      );
+      final sources = _Sources();
+      addTearDown(sources.dispose);
+      late ProviderContainer container;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            preferencesProvider.overrideWithValue(preferences),
+            libraryRepositoryProvider.overrideWithValue(repository),
+            sourceRepositoryProvider.overrideWithValue(sources),
+            sourceMigrationProvider.overrideWithValue(
+              _CommittedMigration(repository),
+            ),
+          ],
+          child: Builder(
+            builder: (context) {
+              container = ProviderScope.containerOf(context);
+              return const MaterialApp(
+                home: SourceMigrationScreen(bookId: 'old', source: _source),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'New title'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Chuyển và giữ truyện cũ'));
+      await tester.tap(find.text('Chuyển và giữ truyện cũ'));
+      await tester.pumpAndSettle();
+      expect((await repository.list()).length, 2);
+      expect(container.read(libraryProvider).requireValue.length, 2);
+      expect(
+        find.textContaining('Đã chuyển truyện và giữ bản phục hồi'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Cần mở lại ứng dụng'), findsOneWidget);
+      expect(find.textContaining('Chưa chuyển truyện nào'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
   setUpAll(() async {
     for (final family in [
       'NotoSans',
@@ -52,6 +117,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              preferencesProvider.overrideWithValue(preferences),
               libraryRepositoryProvider.overrideWithValue(repository),
               sourceRepositoryProvider.overrideWithValue(sources),
             ],
@@ -133,6 +199,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            preferencesProvider.overrideWithValue(preferences),
             libraryRepositoryProvider.overrideWithValue(repository),
             sourceRepositoryProvider.overrideWithValue(sources),
           ],
@@ -195,6 +262,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          preferencesProvider.overrideWithValue(preferences),
           libraryRepositoryProvider.overrideWithValue(repository),
           sourceRepositoryProvider.overrideWithValue(sources),
         ],
@@ -264,6 +332,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            preferencesProvider.overrideWithValue(preferences),
             libraryRepositoryProvider.overrideWithValue(repository),
             sourceRepositoryProvider.overrideWithValue(sources),
           ],
@@ -388,6 +457,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            preferencesProvider.overrideWithValue(preferences),
             libraryRepositoryProvider.overrideWithValue(repository),
             sourceRepositoryProvider.overrideWithValue(sources),
           ],
@@ -443,6 +513,24 @@ const _source = CatalogueSource(
   kind: ContentKind.novel,
   engine: SourceEngine.vbook,
 );
+
+class _CommittedMigration extends SourceMigration {
+  _CommittedMigration(super.repository);
+  @override
+  Future<LibraryBook> commit(
+    SourceMigrationPreview preview, {
+    bool replaceOld = false,
+    int? expectedRevision,
+  }) async {
+    await super.commit(
+      preview,
+      replaceOld: replaceOld,
+      expectedRevision: expectedRevision,
+    );
+    throw SourceMigrationRecoveryRequired();
+  }
+}
+
 const _target = CatalogueBook(
   ref: '/new',
   title: 'New title',

@@ -64,7 +64,7 @@ void main() {
 
   for (final width in [320.0, 430.0, 1024.0]) {
     testWidgets(
-      'tracking tool edits real library and resets search at $width',
+      'local reading status edits real library and resets search at $width',
       (tester) async {
         tester.view.physicalSize = Size(width, 768);
         tester.view.devicePixelRatio = 1;
@@ -97,6 +97,8 @@ void main() {
             ),
           ),
         );
+        expect(find.text('Trạng thái và đánh giá'), findsOneWidget);
+        expect(find.text('Dịch vụ theo dõi bên ngoài'), findsNothing);
         await tester.tap(find.text('Trạng thái và đánh giá từng truyện'));
         await tester.pumpAndSettle();
         await tester.enterText(

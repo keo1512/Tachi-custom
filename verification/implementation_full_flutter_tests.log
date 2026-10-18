@@ -1,0 +1,1422 @@
+00:00 +0: loading D:/Codex/TachiBooks/test/activity_downloads_widget_test.dart
+00:00 +0: D:/Codex/TachiBooks/test/activity_downloads_widget_test.dart: activity and empty downloads fit Size(320.0, 568.0)
+00:01 +1: D:/Codex/TachiBooks/test/activity_downloads_widget_test.dart: activity and empty downloads fit Size(844.0, 390.0)
+00:01 +2: D:/Codex/TachiBooks/test/activity_downloads_widget_test.dart: activity and empty downloads fit Size(1024.0, 768.0)
+00:01 +3: D:/Codex/TachiBooks/test/activity_downloads_widget_test.dart: updates retain earlier unread flags, hide later read flags and filter by shelf
+00:02 +4: D:/Codex/TachiBooks/test/activity_downloads_widget_test.dart: history searches real books and removes one history entry without changing progress or cache
+00:02 +5: D:/Codex/TachiBooks/test/activity_downloads_widget_test.dart: download concurrency control persists the selected setting and recent page lists actual cached chapter flags
+00:03 +6: loading D:/Codex/TachiBooks/test/activity_spec_interactions_test.dart
+00:04 +6: D:/Codex/TachiBooks/test/activity_spec_interactions_test.dart: history offers an explicit resume action at 320.0 with large text
+00:05 +7: D:/Codex/TachiBooks/test/activity_spec_interactions_test.dart: updates select range, invert and mark real chapters at 320.0 with large text
+00:05 +8: D:/Codex/TachiBooks/test/activity_spec_interactions_test.dart: download selection confirms and protects bookmarks and imported content at 320.0
+00:06 +9: D:/Codex/TachiBooks/test/activity_spec_interactions_test.dart: history offers an explicit resume action at 430.0 with large text
+00:06 +10: D:/Codex/TachiBooks/test/activity_spec_interactions_test.dart: updates select range, invert and mark real chapters at 430.0 with large text
+00:07 +11: D:/Codex/TachiBooks/test/activity_spec_interactions_test.dart: download selection confirms and protects bookmarks and imported content at 430.0
+00:07 +12: D:/Codex/TachiBooks/test/activity_spec_interactions_test.dart: restoring a library cancels stale update selection
+00:07 +13: loading D:/Codex/TachiBooks/test/adaptive_navigation_test.dart
+00:08 +13: D:/Codex/TachiBooks/test/adaptive_navigation_test.dart: small iPhone keeps adaptive navigation and library controls usable
+00:11 +14: D:/Codex/TachiBooks/test/adaptive_navigation_test.dart: landscape iPhone keeps adaptive navigation and library controls usable
+00:13 +15: D:/Codex/TachiBooks/test/adaptive_navigation_test.dart: iPad keeps adaptive navigation and library controls usable
+00:14 +16: loading D:/Codex/TachiBooks/test/attachment_store_integrity_test.dart
+00:14 +16: D:/Codex/TachiBooks/test/attachment_store_integrity_test.dart: stored bytes retain their content address after reopening
+00:14 +17: D:/Codex/TachiBooks/test/attachment_store_integrity_test.dart: truncated existing attachment is repaired rather than reused
+00:14 +18: D:/Codex/TachiBooks/test/attachment_store_integrity_test.dart: same-size corruption is rejected on resolve and repaired on store
+00:14 +19: D:/Codex/TachiBooks/test/attachment_store_integrity_test.dart: valid existing attachment is preserved without rewriting it
+00:14 +20: D:/Codex/TachiBooks/test/attachment_store_integrity_test.dart: concurrent stores publish one complete file and clean staging files
+00:14 +21: D:/Codex/TachiBooks/test/attachment_store_integrity_test.dart: oversized inputs and oversized stored files are rejected
+00:14 +22: loading D:/Codex/TachiBooks/test/automatic_backup_test.dart
+00:15 +22: D:/Codex/TachiBooks/test/automatic_backup_test.dart: flushed backup restores content in a different library; retention touches only owned names
+00:15 +23: D:/Codex/TachiBooks/test/automatic_backup_test.dart: name traversal and corrupt backup are refused without library changes
+00:15 +24: D:/Codex/TachiBooks/test/automatic_backup_test.dart: disabled automatic backup stays off; concurrent check dedups and honors interval after restart
+00:16 +25: D:/Codex/TachiBooks/test/automatic_backup_test.dart: failed destination does not delete old backups or record successful timestamp
+00:16 +26: D:/Codex/TachiBooks/test/automatic_backup_test.dart: previous running record is shown interrupted after restart
+00:16 +27: D:/Codex/TachiBooks/test/automatic_backup_test.dart: automatic capture cannot initialize extensions while the app is locked
+00:16 +28: D:/Codex/TachiBooks/test/automatic_backup_test.dart: locking during destination lookup prevents capture and publication
+00:16 +29: D:/Codex/TachiBooks/test/automatic_backup_test.dart: a later restore failure blocks a queued automatic snapshot before capture
+00:16 +30: loading D:/Codex/TachiBooks/test/backup_activity_test.dart
+00:16 +30: D:/Codex/TachiBooks/test/backup_activity_test.dart: only a successful Files save records time, export retains offline bytes and reader flags
+00:17 +31: D:/Codex/TachiBooks/test/backup_activity_test.dart: writer error leaves last successful timestamp unchanged; parallel operations preserve both fields
+00:17 +32: loading D:/Codex/TachiBooks/test/backup_compatibility_test.dart
+00:17 +32: D:/Codex/TachiBooks/test/backup_compatibility_test.dart: Tachimanga preserves exact source display names separately from author
+00:18 +33: D:/Codex/TachiBooks/test/backup_compatibility_test.dart: Tachimanga SQLite adapter imports library only, exact source IDs and nonsequential read state
+00:18 +34: D:/Codex/TachiBooks/test/backup_compatibility_test.dart: Mihon and TMB preserve all categories and original publication metadata through a native backup
+00:18 +35: D:/Codex/TachiBooks/test/backup_compatibility_test.dart: Mihon gzip protobuf shares identities, preserves read/bookmarks, warns about absent page counts
+00:18 +36: D:/Codex/TachiBooks/test/backup_compatibility_test.dart: Valid empty Mihon library imports no books
+00:18 +37: D:/Codex/TachiBooks/test/backup_compatibility_test.dart: Unsupported versions/checksums/malformed gzip/unknown vBook reject before mutations
+00:18 +38: D:/Codex/TachiBooks/test/backup_compatibility_test.dart: Forged ZIP small expansion and gzip CRC are rejected
+00:18 +39: D:/Codex/TachiBooks/test/backup_compatibility_test.dart: User-provided TMB is read-only convertible with no fabricated offline bytes
+  Skip: Opt-in: TACHI_TMB_SAMPLE points to a read-only private sample.
+00:18 +39 ~1: loading D:/Codex/TachiBooks/test/backup_configuration_test.dart
+00:19 +39 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: public repository names are portable while malformed names are rejected
+00:19 +40 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: v1 config contains all public settings and original media, never credentials/device state/queue
+00:19 +41 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: manual merge defaults keep configuration; opt-in applies and recovery includes prior full image
+00:19 +42 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: legacy backups leave settings untouched while full recovery remains self-contained
+00:19 +43 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: invalid/secret/nested malformed configurations cause zero writes
+00:19 +44 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: corrupt saved public configuration is retained and blocks export
+00:19 +45 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: joint fingerprint rejects configuration and book changes after preview
+00:19 +46 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: CAS rechecks a book edit while native-style staging awaits, without applying preferences
+00:19 +47 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: DB failure after configuration callback rolls all public prefs back
+00:19 +48 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: partial preference write failure rolls back books and config; failed rollback keeps journal for startup
+00:19 +49 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: normal edits during restore are refused and cannot overwrite committed settings
+00:19 +50 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: prepared crash journal chooses old/new committed DB; ambiguous/corrupt journal never erased
+00:19 +51 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: committed journal cleanup preserves a later configuration/book edit
+00:19 +52 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: restore refreshes settings/category/reader/deletion providers already in use
+00:19 +53 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: config-only sync detects changes and cloud resolution transfers full config with recovery
+00:19 +54 ~1: D:/Codex/TachiBooks/test/backup_configuration_test.dart: real native Isar callback rollback and restart full configuration/offline recovery
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+00:20 +55 ~1: loading D:/Codex/TachiBooks/test/backup_preview_configuration_widget_test.dart
+00:20 +55 ~1: D:/Codex/TachiBooks/test/backup_preview_configuration_widget_test.dart: restore preview keeps configuration opt-in; present=true
+00:22 +56 ~1: D:/Codex/TachiBooks/test/backup_preview_configuration_widget_test.dart: restore preview keeps configuration opt-in; present=false
+00:22 +57 ~1: loading D:/Codex/TachiBooks/test/backup_preview_widget_test.dart
+00:23 +57 ~1: D:/Codex/TachiBooks/test/backup_preview_widget_test.dart: Backup preview shows limitations and returns only the explicit decision at Size(320.0, 568.0)
+00:24 +58 ~1: D:/Codex/TachiBooks/test/backup_preview_widget_test.dart: Backup preview shows limitations and returns only the explicit decision at Size(430.0, 932.0)
+00:24 +59 ~1: loading D:/Codex/TachiBooks/test/backup_progress_help_widget_test.dart
+00:25 +59 ~1: D:/Codex/TachiBooks/test/backup_progress_help_widget_test.dart: native notice asset keeps all declared resource hashes and full original text
+00:25 +60 ~1: D:/Codex/TachiBooks/test/backup_progress_help_widget_test.dart: searchable feature help opens at 320.0 with large text
+00:26 +61 ~1: D:/Codex/TachiBooks/test/backup_progress_help_widget_test.dart: searchable feature help opens at 430.0 with large text
+00:27 +62 ~1: D:/Codex/TachiBooks/test/backup_progress_help_widget_test.dart: restore progress closes with real result and preserves atomic recovery
+00:27 +63 ~1: loading D:/Codex/TachiBooks/test/backup_restore_completion_widget_test.dart
+00:28 +63 ~1: D:/Codex/TachiBooks/test/backup_restore_completion_widget_test.dart: (setUpAll)
+00:28 +63 ~1: D:/Codex/TachiBooks/test/backup_restore_completion_widget_test.dart: saved backup shows its location and offers library only after restore at Size(320.0, 568.0)
+00:30 +64 ~1: D:/Codex/TachiBooks/test/backup_restore_completion_widget_test.dart: saved backup shows its location and offers library only after restore at Size(430.0, 932.0)
+00:30 +65 ~1: D:/Codex/TachiBooks/test/backup_restore_completion_widget_test.dart: saved backup shows its location and offers library only after restore at Size(1024.0, 768.0)
+00:30 +66 ~1: D:/Codex/TachiBooks/test/backup_restore_completion_widget_test.dart: (tearDownAll)
+00:31 +66 ~1: loading D:/Codex/TachiBooks/test/backup_restore_progress_test.dart
+00:31 +66 ~1: D:/Codex/TachiBooks/test/backup_restore_progress_test.dart: preparation emits real book counts before one atomic commit
+00:31 +67 ~1: D:/Codex/TachiBooks/test/backup_restore_progress_test.dart: cancel during per-title preparation leaves library and recovery untouched
+00:31 +68 ~1: D:/Codex/TachiBooks/test/backup_restore_progress_test.dart: edit during progress is rejected by final CAS without losing the edit
+00:31 +69 ~1: D:/Codex/TachiBooks/test/backup_restore_progress_test.dart: cancel or throwing detached observer after commit begins does not report a failed atomic write
+00:31 +70 ~1: loading D:/Codex/TachiBooks/test/backup_service_test.dart
+00:32 +70 ~1: D:/Codex/TachiBooks/test/backup_service_test.dart: Roundtrip preserves book state and self-contained manga / novel content
+00:32 +71 ~1: D:/Codex/TachiBooks/test/backup_service_test.dart: Existing book and chapter bytes keep the current progress during merge
+00:32 +72 ~1: D:/Codex/TachiBooks/test/backup_service_test.dart: An invalid later book causes zero writes, including earlier valid books
+00:32 +73 ~1: D:/Codex/TachiBooks/test/backup_service_test.dart: Reject versions, duplicate IDs, chapter order, progress and absent downloaded bytes before writing
+00:32 +74 ~1: D:/Codex/TachiBooks/test/backup_service_test.dart: Malformed JSON and invalid root never write
+00:32 +75 ~1: D:/Codex/TachiBooks/test/backup_service_test.dart: A write failure rolls back new books and orphan content while keeping prior books
+00:32 +76 ~1: D:/Codex/TachiBooks/test/backup_service_test.dart: Export rejects incomplete downloaded content rather than emitting unrestorable backup
+00:32 +77 ~1: D:/Codex/TachiBooks/test/backup_service_test.dart: Stale preview rejects metadata and content-only changes without overwriting either
+00:32 +78 ~1: D:/Codex/TachiBooks/test/backup_service_test.dart: Atomic manual merge preserves a complete pre-merge recovery image
+00:33 +79 ~1: loading D:/Codex/TachiBooks/test/backup_source_availability_test.dart
+00:33 +79 ~1: D:/Codex/TachiBooks/test/backup_source_availability_test.dart: exact engine and 64-bit source identities; unique groups and immutable backup
+00:33 +80 ~1: D:/Codex/TachiBooks/test/backup_source_availability_test.dart: local backups query no engine; one failed engine does not hide another
+00:33 +81 ~1: D:/Codex/TachiBooks/test/backup_source_availability_test.dart: timeout cannot be reported as missing or block future restore
+00:33 +82 ~1: D:/Codex/TachiBooks/test/backup_source_availability_test.dart: preview uses configured source repository and shows missing titles
+00:34 +83 ~1: D:/Codex/TachiBooks/test/backup_source_availability_test.dart: failed inventory stays unverified; restore remains available offline
+00:35 +84 ~1: D:/Codex/TachiBooks/test/backup_source_availability_test.dart: late check from a replaced preview cannot overwrite current result
+00:35 +85 ~1: loading D:/Codex/TachiBooks/test/book_cover_compact_badges_test.dart
+00:35 +85 ~1: D:/Codex/TachiBooks/test/book_cover_compact_badges_test.dart: thumbnail with a separate title never paints duplicate text even without an image
+00:36 +86 ~1: D:/Codex/TachiBooks/test/book_cover_compact_badges_test.dart: compact covers keep large unread and downloaded badges within their bounds
+00:36 +87 ~1: loading D:/Codex/TachiBooks/test/book_cover_viewer_test.dart
+00:37 +87 ~1: D:/Codex/TachiBooks/test/book_cover_viewer_test.dart: full-screen cover keeps theme and retries failed provider at 320.0
+00:38 +88 ~1: D:/Codex/TachiBooks/test/book_cover_viewer_test.dart: full-screen cover keeps theme and retries failed provider at 430.0
+00:38 +89 ~1: D:/Codex/TachiBooks/test/book_cover_viewer_test.dart: cover save and share send the displayed PNG without refetch and keep actions bounded at 320.0 (variant: TargetPlatform.iOS)
+00:38 +90 ~1: D:/Codex/TachiBooks/test/book_cover_viewer_test.dart: cover save and share send the displayed PNG without refetch and keep actions bounded at 430.0 (variant: TargetPlatform.iOS)
+00:38 +91 ~1: D:/Codex/TachiBooks/test/book_cover_viewer_test.dart: denied Photos permission is actionable and leaves the cover available to share (variant: TargetPlatform.iOS)
+00:38 +92 ~1: D:/Codex/TachiBooks/test/book_cover_viewer_test.dart: changing the cover disables export until the replacement frame arrives
+00:39 +93 ~1: D:/Codex/TachiBooks/test/book_cover_viewer_test.dart: closing the viewer while native share is pending disposes its frame and ignores the late result (variant: TargetPlatform.iOS)
+00:39 +94 ~1: loading D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart
+00:39 +94 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: daily codec rejects malformed dates/counts/types/size without inventing legacy attribution
+00:39 +95 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: midnight fractional and sessions over a day keep all duration indexes consistent
+00:39 +96 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: new daily configuration roundtrips backup; old maps remain absent
+00:40 +97 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: legacy failure at bookReadingTimesV1 rolls back all indexes
+00:40 +98 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: coordinated failure at bookReadingTimesV1 rolls back all indexes
+00:40 +99 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: legacy failure at bookDailyReadingTimesV1 rolls back all indexes
+00:40 +100 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: coordinated failure at bookDailyReadingTimesV1 rolls back all indexes
+00:40 +101 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: legacy failure at readSeconds:2026-10-18 rolls back all indexes
+00:40 +102 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: coordinated failure at readSeconds:2026-10-18 rolls back all indexes
+00:40 +103 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: portable batch reads latest queued values and refuses secrets or stale guard
+00:40 +104 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: guard becoming stale inside a setter rolls the portable batch back
+00:40 +105 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: checkpoint failure rolls raw values back and cold-open keeps previous indexes
+00:40 +106 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: per-book daily chart is reachable and range changes actual data at 320.0
+00:41 +107 ~1: D:/Codex/TachiBooks/test/book_daily_reading_times_test.dart: per-book daily chart is reachable and range changes actual data at 430.0
+00:41 +108 ~1: loading D:/Codex/TachiBooks/test/book_detail_layout_test.dart
+00:42 +108 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: cover opens in a themed zoomable viewer at Size(320.0, 568.0)
+00:44 +109 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: long press selects chapters and the row menu stays available at Size(320.0, 568.0)
+00:45 +110 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: empty chapter search can reset without changing source identities at Size(320.0, 568.0)
+00:46 +111 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: cover opens in a themed zoomable viewer at Size(430.0, 932.0)
+00:46 +112 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: long press selects chapters and the row menu stays available at Size(430.0, 932.0)
+00:47 +113 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: empty chapter search can reset without changing source identities at Size(430.0, 932.0)
+00:48 +114 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: a range opened before restore cannot select chapters from the replacement
+00:48 +115 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: copy title or current chapter link resolves stable identity reading=false
+00:48 +116 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: copy title or current chapter link resolves stable identity reading=true
+00:49 +117 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: a stale completed popup cannot change the restored book or queue
+00:49 +118 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: a stale collection popup cannot change the restored book or queue
+00:50 +119 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: a stale notes popup cannot change the restored book or queue
+00:51 +120 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: a stale remove popup cannot change the restored book or queue
+00:51 +121 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: a stale download popup cannot change the restored book or queue
+00:52 +122 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: cover-backed details respect Brightness.dark and Size(320.0, 568.0)
+00:53 +123 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: cover-backed details respect Brightness.light and Size(320.0, 568.0)
+00:53 +124 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: cover-backed details respect Brightness.dark and Size(430.0, 932.0)
+00:54 +125 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: cover-backed details respect Brightness.light and Size(430.0, 932.0)
+00:54 +126 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: details copy the actual source address and keep favorite behavior
+00:55 +127 ~1: D:/Codex/TachiBooks/test/book_detail_layout_test.dart: new chapter toolbar sorts and filters without changing original route indexes
+00:56 +128 ~1: loading D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart
+00:57 +128 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: metadata uncomplete clears only the explicit completed status ()
+00:57 +129 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: metadata uncomplete clears only the explicit completed status (planned)
+00:57 +130 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: metadata uncomplete clears only the explicit completed status (reading)
+00:57 +131 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: metadata uncomplete clears only the explicit completed status (paused)
+00:57 +132 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: metadata uncomplete clears only the explicit completed status (completed)
+00:57 +133 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: chapter uncomplete clears only the explicit completed status ()
+00:57 +134 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: chapter uncomplete clears only the explicit completed status (planned)
+00:57 +135 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: chapter uncomplete clears only the explicit completed status (reading)
+00:57 +136 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: chapter uncomplete clears only the explicit completed status (paused)
+00:57 +137 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: chapter uncomplete clears only the explicit completed status (completed)
+00:57 +138 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: chapters uncomplete clears only the explicit completed status ()
+00:57 +139 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: chapters uncomplete clears only the explicit completed status (planned)
+00:57 +140 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: chapters uncomplete clears only the explicit completed status (reading)
+00:57 +141 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: chapters uncomplete clears only the explicit completed status (paused)
+00:57 +142 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: chapters uncomplete clears only the explicit completed status (completed)
+00:57 +143 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: many uncomplete clears only the explicit completed status ()
+00:57 +144 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: many uncomplete clears only the explicit completed status (planned)
+00:57 +145 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: many uncomplete clears only the explicit completed status (reading)
+00:57 +146 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: many uncomplete clears only the explicit completed status (paused)
+00:57 +147 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: many uncomplete clears only the explicit completed status (completed)
+00:57 +148 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: reset uncomplete clears only the explicit completed status ()
+00:57 +149 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: reset uncomplete clears only the explicit completed status (planned)
+00:57 +150 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: reset uncomplete clears only the explicit completed status (reading)
+00:57 +151 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: reset uncomplete clears only the explicit completed status (paused)
+00:57 +152 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: reset uncomplete clears only the explicit completed status (completed)
+00:57 +153 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows explicit planned keeps existing reading progress at Size(320.0, 568.0)
+00:58 +154 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows explicit reading before the first chapter at Size(320.0, 568.0)
+00:58 +155 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows explicit paused keeps existing reading progress at Size(320.0, 568.0)
+00:58 +156 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows explicit completed without the legacy completion flag at Size(320.0, 568.0)
+00:58 +157 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows legacy unread falls back to planned at Size(320.0, 568.0)
+00:58 +158 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows legacy reading progress falls back to reading at Size(320.0, 568.0)
+00:58 +159 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows legacy completion takes precedence over a paused state at Size(320.0, 568.0)
+00:58 +160 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows explicit planned keeps existing reading progress at Size(430.0, 932.0)
+00:58 +161 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows explicit reading before the first chapter at Size(430.0, 932.0)
+00:58 +162 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows explicit paused keeps existing reading progress at Size(430.0, 932.0)
+00:59 +163 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows explicit completed without the legacy completion flag at Size(430.0, 932.0)
+00:59 +164 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows legacy unread falls back to planned at Size(430.0, 932.0)
+00:59 +165 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows legacy reading progress falls back to reading at Size(430.0, 932.0)
+00:59 +166 ~1: D:/Codex/TachiBooks/test/book_detail_reading_state_test.dart: detail shows legacy completion takes precedence over a paused state at Size(430.0, 932.0)
+00:59 +167 ~1: loading D:/Codex/TachiBooks/test/book_metadata_management_test.dart
+01:00 +167 ~1: D:/Codex/TachiBooks/test/book_metadata_management_test.dart: legacy metadata defaults remain compatible and aliases are searched
+01:00 +168 ~1: D:/Codex/TachiBooks/test/book_metadata_management_test.dart: backup rejects invalid aliases or original cover before storage changes
+01:00 +169 ~1: D:/Codex/TachiBooks/test/book_metadata_management_test.dart: custom cover retains original, survives metadata refresh and restores latest source cover
+01:00 +170 ~1: D:/Codex/TachiBooks/test/book_metadata_management_test.dart: image validation rejects fake bytes and preserves selected valid bytes
+01:00 +171 ~1: D:/Codex/TachiBooks/test/book_metadata_management_test.dart: metadata popup captured before restore cannot overwrite restored data
+01:00 +172 ~1: D:/Codex/TachiBooks/test/book_metadata_management_test.dart: metadata editor shows only two aliases and saves valid names at 320.0
+01:01 +173 ~1: D:/Codex/TachiBooks/test/book_metadata_management_test.dart: metadata editor shows only two aliases and saves valid names at 430.0
+01:02 +174 ~1: D:/Codex/TachiBooks/test/book_metadata_management_test.dart: native inline original cover survives full backup and fresh database restore
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+01:02 +175 ~1: loading D:/Codex/TachiBooks/test/book_reading_times_test.dart
+01:03 +175 ~1: D:/Codex/TachiBooks/test/book_reading_times_test.dart: time sorts by measured seconds, keeps unrecorded books and never invents legacy attribution
+01:03 +176 ~1: D:/Codex/TachiBooks/test/book_reading_times_test.dart: book statistics show time and allow sorting on a small screen with large text
+01:04 +177 ~1: loading D:/Codex/TachiBooks/test/bulk_download_queue_test.dart
+01:05 +177 ~1: D:/Codex/TachiBooks/test/bulk_download_queue_test.dart: bulk enqueue skips local/offline chapters and deduplicates books and existing jobs durably
+01:05 +178 ~1: D:/Codex/TachiBooks/test/bulk_download_queue_test.dart: unread batch uses fresh independent flags rather than the selection snapshot or resume prefix
+01:05 +179 ~1: D:/Codex/TachiBooks/test/bulk_download_queue_test.dart: large batch is one durable write and persistence failure leaves the prior queue untouched
+01:05 +180 ~1: D:/Codex/TachiBooks/test/bulk_download_queue_test.dart: bulk selection from before restore cannot change the queue
+01:05 +181 ~1: D:/Codex/TachiBooks/test/bulk_download_queue_test.dart: queued batches retain concurrency/pause behavior and skip chapters completed by another download
+01:05 +182 ~1: loading D:/Codex/TachiBooks/test/cbz_export_service_test.dart
+01:06 +182 ~1: D:/Codex/TachiBooks/test/cbz_export_service_test.dart: CBZ keeps original bytes, duplicate pages and stable TOC order without modifying library
+01:06 +183 ~1: D:/Codex/TachiBooks/test/cbz_export_service_test.dart: partial remote, missing cache, unresolved attachment and bad image bytes cannot produce a fake complete CBZ
+01:06 +184 ~1: D:/Codex/TachiBooks/test/cbz_export_service_test.dart: explicit selection rejects unknown or not-downloaded chapters and incompatible source snapshots
+01:06 +185 ~1: D:/Codex/TachiBooks/test/cbz_export_service_test.dart: restore while collecting cached pages rejects old bytes and leaves restored data intact
+01:06 +186 ~1: D:/Codex/TachiBooks/test/cbz_export_service_test.dart: CBZ bounds decoded single-image and total byte sizes before writing an archive
+01:08 +187 ~1: D:/Codex/TachiBooks/test/cbz_export_service_test.dart: CBZ bounds page count without truncating or exporting only the first pages
+01:08 +188 ~1: D:/Codex/TachiBooks/test/cbz_export_service_test.dart: native attachment hydration exports original cached page bytes after repository restart
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+01:08 +189 ~1: loading D:/Codex/TachiBooks/test/chapter_list_management_test.dart
+01:09 +189 ~1: D:/Codex/TachiBooks/test/chapter_list_management_test.dart: filters preserve canonical indices and unknown numbers never collapse
+01:09 +190 ~1: D:/Codex/TachiBooks/test/chapter_list_management_test.dart: chapter list options roundtrip; legacy and malformed backups are handled explicitly
+01:09 +191 ~1: D:/Codex/TachiBooks/test/chapter_list_management_test.dart: batch chapter updates preserve unrelated metadata/cache and refuse stale editor
+01:09 +192 ~1: loading D:/Codex/TachiBooks/test/chapter_navigation_test.dart
+01:10 +192 ~1: D:/Codex/TachiBooks/test/chapter_navigation_test.dart: personal notes survive editing and can be cleared without changing chapters
+01:13 +193 ~1: D:/Codex/TachiBooks/test/chapter_navigation_test.dart: detail bulk download uses the durable queue and keeps reading metadata
+01:14 +194 ~1: D:/Codex/TachiBooks/test/chapter_navigation_test.dart: download filter and newest sort open the original chapter and save its progress
+01:15 +195 ~1: D:/Codex/TachiBooks/test/chapter_navigation_test.dart: chapter title search opens the matching original index instead of filtered row zero
+01:15 +196 ~1: D:/Codex/TachiBooks/test/chapter_navigation_test.dart: read filter respects imported per-chapter flags instead of sequential inference
+01:16 +197 ~1: D:/Codex/TachiBooks/test/chapter_navigation_test.dart: chapter menu marks the original chapter under filtering and reverse sort
+01:17 +198 ~1: D:/Codex/TachiBooks/test/chapter_navigation_test.dart: mark unread updates the read filter without changing the resume position
+01:17 +199 ~1: D:/Codex/TachiBooks/test/chapter_navigation_test.dart: chapter action opened before a replacement cannot modify the new library
+01:18 +200 ~1: loading D:/Codex/TachiBooks/test/configuration_restore_files_test.dart
+01:18 +200 ~1: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: Apple system alias and physical directory reopen the same checkpoint
+01:18 +200 ~2: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: caller-owned symlink parents remain rejected without touching targets
+  Skip: Symlink creation requires Windows privileges.
+01:18 +200 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: file checkpoints replace the previous image and leave no pending file
+01:19 +201 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: oversized and malformed checkpoint/journal files are retained
+01:19 +202 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: destination/pending/directory collisions are rejected without overwriting them
+01:19 +203 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: checkpoint replays portable settings after a stale preference restart, preserving local secrets
+01:19 +204 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: prepared file journal selects before/after using the actual committed book fingerprint
+01:19 +205 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: configuration-only prepared restart follows its durable checkpoint
+01:19 +206 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: configuration-only prepared restart without a checkpoint restores before
+01:19 +207 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: configuration-only prepared checkpoint mismatch preserves evidence and blocks startup
+01:19 +208 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: configuration-only interrupted rollback chooses before even with incoming checkpoint
+01:19 +209 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: ambiguous or corrupt file journal blocks startup and keeps all bytes unchanged
+01:19 +210 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: committed journal cleanup preserves the newest durable checkpoint
+01:19 +211 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: failed portable platform write restores cache without changing the checkpoint
+01:19 +212 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: checkpoint write failure rolls a normal edit back and restart replays the old image
+01:19 +213 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: failed clear restores public settings and every local secret without exporting secrets
+01:19 +214 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: false clear result restores local secrets even without file persistence
+01:19 +215 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: database commit failure restores both raw and durable configuration, removing the prepared journal
+01:19 +216 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: configuration-only failed commit and failed rollback recover before on restart
+01:19 +217 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: partial preference/rollback failure keeps a rollback file journal and restart repairs it
+01:20 +218 ~3: D:/Codex/TachiBooks/test/configuration_restore_files_test.dart: real Isar and file checkpoint reopen after full restore with cached offline contents
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+01:20 +219 ~3: loading D:/Codex/TachiBooks/test/configuration_sync_lifecycle_test.dart
+01:21 +219 ~3: D:/Codex/TachiBooks/test/configuration_sync_lifecycle_test.dart: configuration-only edits debounce and upload full config without book mutation or idle polling
+01:21 +220 ~3: D:/Codex/TachiBooks/test/configuration_sync_lifecycle_test.dart: device/private/queue edits never trigger sync and public edits never enable paused link
+01:21 +221 ~3: loading D:/Codex/TachiBooks/test/cover_ui_integration_test.dart
+01:22 +221 ~3: D:/Codex/TachiBooks/test/cover_ui_integration_test.dart: source labels use verified name, URL host or friendly fallback
+01:22 +222 ~3: D:/Codex/TachiBooks/test/cover_ui_integration_test.dart: detail displays source name and shared injected cover at Size(320.0, 568.0)
+01:23 +223 ~3: D:/Codex/TachiBooks/test/cover_ui_integration_test.dart: detail displays source name and shared injected cover at Size(430.0, 932.0)
+01:23 +224 ~3: D:/Codex/TachiBooks/test/cover_ui_integration_test.dart: cover consumers preserve injected provider without ProviderScope
+01:23 +225 ~3: D:/Codex/TachiBooks/test/cover_ui_integration_test.dart: standalone detail data cover shares one provider for both layers
+01:24 +226 ~3: loading D:/Codex/TachiBooks/test/deep_link_reader_handoff_test.dart
+01:24 +226 ~3: D:/Codex/TachiBooks/test/deep_link_reader_handoff_test.dart: real router preserves Sách / 100% tiếng Việt and stable chapter after TOC reorders
+01:26 +227 ~3: D:/Codex/TachiBooks/test/deep_link_reader_handoff_test.dart: real router preserves . and stable chapter after TOC reorders
+01:26 +228 ~3: D:/Codex/TachiBooks/test/deep_link_reader_handoff_test.dart: real router preserves .. and stable chapter after TOC reorders
+01:26 +229 ~3: D:/Codex/TachiBooks/test/deep_link_reader_handoff_test.dart: handoff revision rejects same-ID restore before detail build
+01:27 +230 ~3: D:/Codex/TachiBooks/test/deep_link_reader_handoff_test.dart: handoff revision rejects same-ID restore before reader build
+01:27 +231 ~3: D:/Codex/TachiBooks/test/deep_link_reader_handoff_test.dart: reader rejects a missing stable chapter instead of numeric fallback
+01:27 +232 ~3: D:/Codex/TachiBooks/test/deep_link_reader_handoff_test.dart: restore during reader find cannot publish or fetch replacement content
+01:27 +233 ~3: D:/Codex/TachiBooks/test/deep_link_reader_handoff_test.dart: detail blocks stale asynchronous library result after restore
+01:27 +234 ~3: D:/Codex/TachiBooks/test/deep_link_reader_handoff_test.dart: ordinary numeric reader routes remain usable
+01:28 +235 ~3: loading D:/Codex/TachiBooks/test/deep_link_test.dart
+01:28 +235 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: parser restricts actions and preserves large IDs and stable chapter URLs
+01:28 +236 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: opaque library IDs roundtrip as one canonical encoded segment
+01:28 +237 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: URL bounds match the native inbox and reject unusable generated links
+01:28 +238 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: queue deduplicates initial/warm callbacks, stays bounded and resolves current TOC identities
+01:28 +239 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: reviewed repository write queued behind another operation refuses a library-only restore
+01:29 +240 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: numeric task notification downloads waits for app unlock and only opens its allowed tab
+01:29 +241 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: numeric task notification updates waits for app unlock and only opens its allowed tab
+01:29 +242 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: programmatic task links reject arbitrary routes too
+01:29 +243 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: copy button clipboard roundtrip preserves Unicode space slash ID reading=false
+01:30 +244 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: copy button clipboard roundtrip preserves Unicode space slash ID reading=true
+01:30 +245 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: cold link waits for initialized unlock and duplicate callbacks do not stack routes
+01:30 +246 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: repository link only fetches after explicit preview confirmation, never installs package
+01:31 +247 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: restore or a lock cycle invalidates an open repository preview
+01:31 +248 ~3: D:/Codex/TachiBooks/test/deep_link_test.dart: restore during repository download does not persist fetched catalogue
+01:31 +249 ~3: loading D:/Codex/TachiBooks/test/diagnostic_log_test.dart
+01:32 +249 ~3: D:/Codex/TachiBooks/test/diagnostic_log_test.dart: safe operation stages distinguish cover, page and metadata failures without payloads
+01:32 +250 ~3: D:/Codex/TachiBooks/test/diagnostic_log_test.dart: native diagnostic types survive storage and different failures do not coalesce
+01:32 +251 ~3: D:/Codex/TachiBooks/test/diagnostic_log_test.dart: unknown exception types are discarded on record and legacy or tampered export
+01:32 +252 ~3: D:/Codex/TachiBooks/test/diagnostic_log_test.dart: Firebase permission and authentication errors keep distinct canonical codes
+01:32 +253 ~3: D:/Codex/TachiBooks/test/diagnostic_log_test.dart: native source codes survive logging without extension messages or arbitrary codes
+01:32 +254 ~3: D:/Codex/TachiBooks/test/diagnostic_log_test.dart: raw exception secrets never enter persisted or exported diagnostic events
+01:32 +255 ~3: D:/Codex/TachiBooks/test/diagnostic_log_test.dart: persisted untrusted messages are canonicalized and invalid code bytes stay untouched
+01:32 +256 ~3: D:/Codex/TachiBooks/test/diagnostic_log_test.dart: serial log writes keep newest 100 events and suppress repeated same error for a minute
+01:32 +257 ~3: D:/Codex/TachiBooks/test/diagnostic_log_test.dart: privacy and lock gates are rechecked when queued write executes
+01:32 +258 ~3: D:/Codex/TachiBooks/test/diagnostic_log_test.dart: confirmed clear recovers invalid log data and new writes still work
+01:32 +259 ~3: loading D:/Codex/TachiBooks/test/document_importer_test.dart
+01:33 +259 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: Native Isar metadata and chapter attachments survive closing and reopening
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+01:33 +260 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: Native backup moves all EPUB TXT CBZ content to a separate empty storage directory
+01:33 +261 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: Native stale full-content replacement and failed recovery write preserve current library
+01:34 +262 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: TXT UTF8 BOM imports real chapters and escapes text
+01:34 +263 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: Reimport content under another filename preserves all reading state
+01:34 +264 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: EPUB parses container OPF spine cover and relative images offline
+01:34 +265 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: EPUB imports a single explicit series from calibre or EPUB3 metadata only
+01:34 +266 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: EPUB missing spine or chapter fails without a visible partial book
+01:34 +267 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: EPUB rejects references escaping archive root
+01:34 +268 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: CBZ sorts page2 before page10 and persists real page bytes
+01:34 +269 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: ZIP path traversal and excessive declared expansion are rejected
+01:34 +270 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: Forged small ZIP expansion size is bounded during inflation
+01:34 +271 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: Browser metadata and content survive reopening preferences repository
+01:34 +272 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: Browser preview storage cap rolls back a failed first import
+01:34 +273 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: Native attachment files persist and are removed only for the target book
+01:34 +274 ~3: D:/Codex/TachiBooks/test/document_importer_test.dart: Book serialization includes bookmarks and explicit history clear
+01:34 +275 ~3: loading D:/Codex/TachiBooks/test/download_batch_deletion_test.dart
+01:35 +275 ~3: D:/Codex/TachiBooks/test/download_batch_deletion_test.dart: memory batch validates every title before atomic deletion and preserves local/bookmarked data
+01:35 +276 ~3: D:/Codex/TachiBooks/test/download_batch_deletion_test.dart: memory marking two titles read with automatic deletion is one batch
+01:35 +277 ~3: D:/Codex/TachiBooks/test/download_batch_deletion_test.dart: preferences batch validates every title before atomic deletion and preserves local/bookmarked data
+01:35 +278 ~3: D:/Codex/TachiBooks/test/download_batch_deletion_test.dart: preferences marking two titles read with automatic deletion is one batch
+01:35 +279 ~3: D:/Codex/TachiBooks/test/download_batch_deletion_test.dart: isar batch validates every title before atomic deletion and preserves local/bookmarked data
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+01:35 +280 ~3: D:/Codex/TachiBooks/test/download_batch_deletion_test.dart: isar marking two titles read with automatic deletion is one batch
+01:35 +281 ~3: D:/Codex/TachiBooks/test/download_batch_deletion_test.dart: native batch queued behind a shared-handle restore refuses the replacement before commit
+01:35 +282 ~3: D:/Codex/TachiBooks/test/download_batch_deletion_test.dart: restore while cancelling the first selected book rejects manual batch deletion
+01:35 +283 ~3: D:/Codex/TachiBooks/test/download_batch_deletion_test.dart: restore while cancelling the first selected book rejects automatic batch deletion
+01:35 +284 ~3: loading D:/Codex/TachiBooks/test/download_cancellation_pipeline_test.dart
+01:36 +284 ~3: D:/Codex/TachiBooks/test/download_cancellation_pipeline_test.dart: default queue cancellation retains fully returned native pages and re-enqueue downloads only the missing page
+01:36 +285 ~3: D:/Codex/TachiBooks/test/download_cancellation_pipeline_test.dart: pause and resume default queue retains staged native pages and only downloads missing pages
+01:36 +286 ~3: D:/Codex/TachiBooks/test/download_cancellation_pipeline_test.dart: cancel while source chapter metadata is pending dispatches no images and never creates cache
+01:36 +287 ~3: D:/Codex/TachiBooks/test/download_cancellation_pipeline_test.dart: cancel raw HTTP during a partial byte stream discards that page but retains earlier complete original bytes
+01:36 +288 ~3: loading D:/Codex/TachiBooks/test/download_deletion_test.dart
+01:37 +288 ~3: D:/Codex/TachiBooks/test/download_deletion_test.dart: reader disposal after provider disposal leaves offline content untouched
+01:37 +289 ~3: D:/Codex/TachiBooks/test/download_deletion_test.dart: atomic delete preserves progress/read/bookmarks and protects bookmarked chapters in latest TOC positions
+01:37 +290 ~3: D:/Codex/TachiBooks/test/download_deletion_test.dart: deletion resolves latest stable IDs after TOC reorder and read-only mode uses independent flags
+01:37 +291 ~3: D:/Codex/TachiBooks/test/download_deletion_test.dart: stale revision, local imported originals, mismatched source and unknown selection never delete bytes
+01:37 +292 ~3: D:/Codex/TachiBooks/test/download_deletion_test.dart: automatic deletion policy defaults off, persists opt-in and separates leave/manual-read events
+01:37 +293 ~3: D:/Codex/TachiBooks/test/download_deletion_test.dart: manual deletion cancels active+pending book jobs before invalidating late commit and pauses other restored-sensitive work
+01:37 +294 ~3: D:/Codex/TachiBooks/test/download_deletion_test.dart: invalid bookmark protection refuses deletion, corrupted saved policy defaults safely off without overwriting raw
+01:37 +295 ~3: D:/Codex/TachiBooks/test/download_deletion_test.dart: native deletion removes exclusive files, retains shared/cover pages, and persists flags after restart with shared-handle CAS
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+01:37 +296 ~3: D:/Codex/TachiBooks/test/download_deletion_test.dart: attachment cleanup rejects a foreign folder or traversal without deleting either valid file
+01:37 +297 ~3: loading D:/Codex/TachiBooks/test/download_deletion_widget_test.dart
+01:38 +297 ~3: D:/Codex/TachiBooks/test/download_deletion_widget_test.dart: download policies change persistently, manual delete protects bookmarks and local originals at 320.0
+01:41 +298 ~3: D:/Codex/TachiBooks/test/download_deletion_widget_test.dart: download policies change persistently, manual delete protects bookmarks and local originals at 430.0
+01:42 +299 ~3: D:/Codex/TachiBooks/test/download_deletion_widget_test.dart: manual delete popup opened before restore cannot delete replacement cache
+01:42 +300 ~3: loading D:/Codex/TachiBooks/test/download_job_pause_test.dart
+01:43 +300 ~3: D:/Codex/TachiBooks/test/download_job_pause_test.dart: active job pause retains identity and attempts through late completion; independent job continues
+01:43 +301 ~3: D:/Codex/TachiBooks/test/download_job_pause_test.dart: policy start and retry do not resume manually paused jobs; explicit resume all does
+01:43 +302 ~3: D:/Codex/TachiBooks/test/download_job_pause_test.dart: single resume when whole queue stopped keeps other waiting jobs paused durably
+01:43 +303 ~3: D:/Codex/TachiBooks/test/download_job_pause_test.dart: resume during old HTTP cannot overlap physical concurrency or same source
+01:43 +304 ~3: D:/Codex/TachiBooks/test/download_job_pause_test.dart: per chapter menu pauses and resumes while retaining other pending jobs at 320.0
+01:45 +305 ~3: D:/Codex/TachiBooks/test/download_job_pause_test.dart: per chapter menu pauses and resumes while retaining other pending jobs at 430.0
+01:45 +306 ~3: loading D:/Codex/TachiBooks/test/download_management_widget_test.dart
+01:46 +306 ~3: D:/Codex/TachiBooks/test/download_management_widget_test.dart: actual book drags reorder both directions, persist/restart and cancel at 320.0
+01:48 +307 ~3: D:/Codex/TachiBooks/test/download_management_widget_test.dart: actual book drags reorder both directions, persist/restart and cancel at 430.0
+01:49 +308 ~3: D:/Codex/TachiBooks/test/download_management_widget_test.dart: book Download now menu starts the promoted book and preserves other queued work
+01:50 +309 ~3: D:/Codex/TachiBooks/test/download_management_widget_test.dart: next N picker queues fresh chapters
+01:50 +310 ~3: D:/Codex/TachiBooks/test/download_management_widget_test.dart: next N picker rejects stale restore
+01:50 +311 ~3: D:/Codex/TachiBooks/test/download_management_widget_test.dart: recent downloaded chapter export passes actual CBZ bytes to the file chooser
+01:50 +312 ~3: loading D:/Codex/TachiBooks/test/download_page_progress_test.dart
+01:51 +312 ~3: D:/Codex/TachiBooks/test/download_page_progress_test.dart: measured page progress updates without durable writes or stale callbacks at Size(320.0, 568.0)
+01:52 +313 ~3: D:/Codex/TachiBooks/test/download_page_progress_test.dart: measured page progress updates without durable writes or stale callbacks at Size(430.0, 932.0)
+01:53 +314 ~3: loading D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart
+01:53 +314 ~3: D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart: cancelMany removes only chosen identities across books in one write and survives restart
+01:53 +315 ~3: D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart: cancelMany copies caller selection before queued write and does not target later edits
+01:53 +316 ~3: D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart: stale restore or privacy guard refuses selected cancellation without poisoning storage
+01:53 +317 ~3: D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart: retry-all failed resets attempts while manually paused jobs remain paused
+01:53 +318 ~3: D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart: retry-all rejects stale restore before resetting or dispatching
+01:53 +319 ~3: D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart: bulk picker cancels arbitrary chapters from two books and preserves unchosen at 320.0
+01:55 +320 ~3: D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart: bulk picker cancels arbitrary chapters from two books and preserves unchosen at 430.0
+01:56 +321 ~3: D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart: picker rejects stale restore selection even after unlocking
+01:56 +322 ~3: D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart: picker rejects stale lock selection even after unlocking
+01:56 +323 ~3: D:/Codex/TachiBooks/test/download_queue_bulk_controls_test.dart: explicit failed retry-all menu leaves paused chapters untouched
+01:56 +324 ~3: loading D:/Codex/TachiBooks/test/download_queue_management_test.dart
+01:57 +324 ~3: D:/Codex/TachiBooks/test/download_queue_management_test.dart: chapter and whole-book moves persist both directions and do not lose interleaved tasks
+01:57 +325 ~3: D:/Codex/TachiBooks/test/download_queue_management_test.dart: cancelled completion cannot remove or retry a re-enqueued identical chapter
+01:57 +326 ~3: D:/Codex/TachiBooks/test/download_queue_management_test.dart: cancelled error cannot remove or retry a re-enqueued identical chapter
+01:57 +327 ~3: D:/Codex/TachiBooks/test/download_queue_management_test.dart: cancel one book stops its active signal and removes its pending jobs while another book continues
+01:57 +328 ~3: D:/Codex/TachiBooks/test/download_queue_management_test.dart: download now promotes the selected whole book without preempting an active request
+01:57 +329 ~3: D:/Codex/TachiBooks/test/download_queue_management_test.dart: download now retries one failed chapter and does not start a stale missing selection
+01:57 +330 ~3: D:/Codex/TachiBooks/test/download_queue_management_test.dart: next N reads fresh resume/read/download flags in fresh TOC order and leaves metadata untouched
+01:57 +331 ~3: D:/Codex/TachiBooks/test/download_queue_management_test.dart: next N rejects restore during lookup without altering the queue
+01:57 +332 ~3: D:/Codex/TachiBooks/test/download_queue_management_test.dart: an execution captured before restore is refused before the executor dispatch
+01:57 +333 ~3: loading D:/Codex/TachiBooks/test/download_queue_test.dart
+01:58 +333 ~3: D:/Codex/TachiBooks/test/download_queue_test.dart: queue deduplicates identities durably and starts paused
+01:58 +334 ~3: D:/Codex/TachiBooks/test/download_queue_test.dart: pause finishes active jobs but leaves pending work durable for restart
+01:58 +335 ~3: D:/Codex/TachiBooks/test/download_queue_test.dart: job resolves original chapter identity against fresh reordered book
+01:58 +336 ~3: D:/Codex/TachiBooks/test/download_queue_test.dart: failed downloads retain errors and retry actual pending work
+01:58 +337 ~3: D:/Codex/TachiBooks/test/download_queue_test.dart: a transient failure automatically retries and preserves the original chapter identity
+01:58 +338 ~3: D:/Codex/TachiBooks/test/download_queue_test.dart: old queue entries default attempts to zero and invalid attempts preserve raw data
+01:58 +339 ~3: D:/Codex/TachiBooks/test/download_queue_test.dart: malformed persisted queue is reported and never overwritten
+01:58 +340 ~3: D:/Codex/TachiBooks/test/download_queue_test.dart: default executor downloads real repository content without moving reader progress
+01:58 +341 ~3: loading D:/Codex/TachiBooks/test/download_source_concurrency_test.dart
+01:59 +341 ~3: D:/Codex/TachiBooks/test/download_source_concurrency_test.dart: one active chapter per source across titles, while independent sources fill global slots
+01:59 +342 ~3: D:/Codex/TachiBooks/test/download_source_concurrency_test.dart: cancelling one source does not free its slot until old HTTP ends, other sources continue
+01:59 +343 ~3: loading D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart
+02:00 +343 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: restore rejects pending add after delayed HTTP success
+02:00 +344 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: restore rejects pending add after delayed HTTP error
+02:00 +345 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: restore rejects pending rename after delayed HTTP success
+02:00 +346 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: restore rejects pending rename after delayed HTTP error
+02:00 +347 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: restore rejects pending remove after delayed HTTP success
+02:00 +348 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: restore rejects pending remove after delayed HTTP error
+02:00 +349 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: restore rejects pending refresh after delayed HTTP success
+02:00 +350 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: restore rejects pending refresh after delayed HTTP error
+02:00 +351 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: restore invalidates edits already queued behind a pending add, then permits fresh edits
+02:00 +352 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: custom repository name survives refresh, restart and clearing restores metadata name
+02:00 +353 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: overlapping add, add and remove preserve the final saved repository list
+02:00 +354 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: repository URLs persist across a fresh controller and fetch a real catalogue
+02:00 +355 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: one failed refresh keeps that catalogue and the other repository updates
+02:00 +356 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: failed addition does not erase saved URLs or block the next queued addition
+02:00 +357 ~3: D:/Codex/TachiBooks/test/extension_catalogue_controller_test.dart: malformed saved repository preferences are preserved before any HTTP request
+02:00 +358 ~3: loading D:/Codex/TachiBooks/test/extension_catalogue_icon_widget_test.dart
+02:01 +358 ~3: D:/Codex/TachiBooks/test/extension_catalogue_icon_widget_test.dart: a real catalogue icon decodes in a 38px slot and installation still selects the original package at 320px
+02:02 +359 ~3: D:/Codex/TachiBooks/test/extension_catalogue_icon_widget_test.dart: a failed catalogue icon uses a placeholder and leaves the install button usable
+02:02 +360 ~3: D:/Codex/TachiBooks/test/extension_catalogue_icon_widget_test.dart: a missing catalogue icon keeps the optional-field fallback without an image request
+02:02 +361 ~3: D:/Codex/TachiBooks/test/extension_catalogue_icon_widget_test.dart: an installed package reuses its matching catalogue icon when the engine has no icon field
+02:03 +362 ~3: loading D:/Codex/TachiBooks/test/extension_index_test.dart
+02:03 +362 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: Keiyoushi root and obsolete indexes normalize to actual protobuf store
+02:03 +363 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: Mihon protobuf list supplies absolute package URLs and exact package IDs
+02:03 +364 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: vBook JSON resolves plugin links without a running companion
+02:03 +365 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: legacy tachi JSON links APKs and keeps IDs as strings
+02:03 +366 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: current Keiyoushi JSON uses published release resources and package identity
+02:03 +367 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: current JSON resources resolve relative URLs and combine source languages
+02:03 +368 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: current JSON refuses malformed packages and duplicate identities but keeps icons optional
+02:03 +369 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: credential URLs, APK traversal, duplicated IDs and oversized indexes are rejected
+02:03 +370 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: protobuf rejects missing APK URLs and duplicate package identities
+02:03 +371 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: external protobuf extension list resolves resources relative to that list
+02:03 +372 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: gzip indexes are decoded and checked before protobuf parsing
+02:03 +373 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: truncated protobuf and website HTML fail before claiming any installed extensions
+02:03 +374 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: optional malformed icon links do not hide valid packages or trigger image requests
+02:03 +375 ~3: D:/Codex/TachiBooks/test/extension_index_test.dart: live public Keiyoushi and vBook indexes expose downloadable packages
+02:03 +375 ~4: loading D:/Codex/TachiBooks/test/extension_mutation_queue_test.dart
+02:04 +375 ~4: D:/Codex/TachiBooks/test/extension_mutation_queue_test.dart: nested awaited mutations are reentrant, failures release the queue
+02:04 +376 ~4: D:/Codex/TachiBooks/test/extension_mutation_queue_test.dart: delayed descendant cannot reuse a released lease to bypass the next owner
+02:04 +377 ~4: loading D:/Codex/TachiBooks/test/extension_package_live_test.dart
+02:05 +377 ~4: D:/Codex/TachiBooks/test/extension_package_live_test.dart: original Komga and MANGA Plus APK full Dart backup export, offline reinstall and fresh Java8 JVM restart preserve bytes, String IDs and public preferences
+02:05 +377 ~5: loading D:/Codex/TachiBooks/test/extension_portability_test.dart
+02:05 +377 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: package roundtrip copies original bytes and rejects hash/identity/credential fields
+02:06 +378 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: public preferences exclude text credentials and validate enum choices again
+02:06 +379 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: Tachi capture uses original registry APK, String64 IDs, public prefs and preflight before install
+02:06 +380 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: vBook backup installs offline on new directory, retains local package and never exports localStorage
+02:06 +381 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: full snapshot restore opts into packages and preflights before atomic library write
+02:06 +382 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: failed installation after commit preserves durable plan and recovery; restart finishes without deleting unrelated packages
+02:06 +383 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: uncommitted journal is discarded on restart without installing packages
+02:06 +384 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: stale preview after an extension update rejects before any package validation or library write
+02:06 +385 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: runtime mutation during asynchronous preflight is rejected by commit CAS with the prepared plan discarded
+02:06 +386 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: configuration journal publication failure after library commit retains extension plan and restart replays it
+02:06 +387 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: configuration journal cleanup failure after library commit retains extension plan and restart replays it
+02:06 +388 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: prepared journal whose new library already committed promotes and replays after restart
+02:06 +389 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: same-library interruption remains explicit and retry completes without inferring a commit
+02:06 +390 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: changed library and malformed journal preserve every byte without installing a stale plan
+02:06 +391 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: runtime mutation leases serialize across handles, reenter during restore, and release after errors
+02:06 +392 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: vBook restore lease holds competing package publication but allows source reads
+02:06 +393 ~5: D:/Codex/TachiBooks/test/extension_portability_test.dart: extension bytes stay in bounded reusable sync chunks; old clients preserve packages; conflicts are per package
+02:06 +394 ~5: loading D:/Codex/TachiBooks/test/extension_recovery_lifecycle_test.dart
+02:07 +394 ~5: D:/Codex/TachiBooks/test/extension_recovery_lifecycle_test.dart: a later committed restore failure blocks a completed startup until explicit retry
+02:07 +395 ~5: D:/Codex/TachiBooks/test/extension_recovery_lifecycle_test.dart: startup recovery waits for unlock and does not rerun on later unlocks
+02:07 +396 ~5: D:/Codex/TachiBooks/test/extension_recovery_lifecycle_test.dart: failed recovery remains explicit, retry is blocked while locked
+02:07 +397 ~5: loading D:/Codex/TachiBooks/test/extension_repository_widget_test.dart
+02:08 +397 ~5: D:/Codex/TachiBooks/test/extension_repository_widget_test.dart: repository add/copy/install/remove uses native engines without server URLs at Size(320.0, 568.0)
+02:11 +398 ~5: D:/Codex/TachiBooks/test/extension_repository_widget_test.dart: cloud opens SyncScreen and Keiyoushi preset at Size(320.0, 568.0)
+02:11 +399 ~5: D:/Codex/TachiBooks/test/extension_repository_widget_test.dart: repository custom name is reachable and saved at Size(320.0, 568.0)
+02:12 +400 ~5: D:/Codex/TachiBooks/test/extension_repository_widget_test.dart: repository add/copy/install/remove uses native engines without server URLs at Size(430.0, 932.0)
+02:12 +401 ~5: D:/Codex/TachiBooks/test/extension_repository_widget_test.dart: cloud opens SyncScreen and Keiyoushi preset at Size(430.0, 932.0)
+02:13 +402 ~5: D:/Codex/TachiBooks/test/extension_repository_widget_test.dart: repository custom name is reachable and saved at Size(430.0, 932.0)
+02:13 +403 ~5: D:/Codex/TachiBooks/test/extension_repository_widget_test.dart: failed native install keeps catalogue available without false installed state
+02:13 +404 ~5: loading D:/Codex/TachiBooks/test/external_automatic_backup_test.dart
+02:14 +404 ~5: D:/Codex/TachiBooks/test/external_automatic_backup_test.dart: external backup restores actual offline bytes and prunes only after publish
+02:14 +405 ~5: D:/Codex/TachiBooks/test/external_automatic_backup_test.dart: old destination, bad names and damaged retention inputs never delete
+02:14 +406 ~5: D:/Codex/TachiBooks/test/external_automatic_backup_test.dart: native bookmark identity stays opaque and malformed results are refused
+02:14 +407 ~5: loading D:/Codex/TachiBooks/test/external_backup_metadata_test.dart
+02:15 +407 ~5: D:/Codex/TachiBooks/test/external_backup_metadata_test.dart: Mihon tracker unknown fields and memo bytes survive full backup and exchange byte-for-byte
+02:15 +408 ~5: D:/Codex/TachiBooks/test/external_backup_metadata_test.dart: Tachimanga imports active library tracker rows and preserves original REAL precision
+02:15 +409 ~5: D:/Codex/TachiBooks/test/external_backup_metadata_test.dart: memo provenance is retained but not exported as another source memo
+02:15 +410 ~5: D:/Codex/TachiBooks/test/external_backup_metadata_test.dart: metadata rejects malformed, noncanonical or oversized payloads before restore
+02:15 +411 ~5: D:/Codex/TachiBooks/test/external_backup_metadata_test.dart: bad tracker field types are rejected instead of silently dropping its record
+02:15 +412 ~5: loading D:/Codex/TachiBooks/test/folder_comic_import_test.dart
+02:16 +412 ~5: D:/Codex/TachiBooks/test/folder_comic_import_test.dart: folder scan uses natural order details cover and complete offline media
+02:16 +413 ~5: D:/Codex/TachiBooks/test/folder_comic_import_test.dart: rescan preserves stable progress bookmarks metadata and removed offline chapters
+02:16 +414 ~5: D:/Codex/TachiBooks/test/folder_comic_import_test.dart: folder changes or concurrent library edits reject the staged scan without overwriting
+02:16 +415 ~5: D:/Codex/TachiBooks/test/folder_comic_import_test.dart: invalid metadata paths or cancelled scan do not publish any book
+02:16 +416 ~5: D:/Codex/TachiBooks/test/folder_comic_import_test.dart: explicit reconnect after backup restore to another device keeps old book identity and progress
+02:16 +417 ~5: D:/Codex/TachiBooks/test/folder_comic_import_test.dart: explicit single book folder groups chapter subdirectories with root metadata and cover
+02:16 +418 ~5: D:/Codex/TachiBooks/test/folder_comic_import_test.dart: reconnect refuses stale source or absent path without changing restored data
+02:16 +419 ~5: D:/Codex/TachiBooks/test/folder_comic_import_test.dart: CBZ and RAR chapters in folder share stable archive paths and offline import
+02:16 +420 ~5: D:/Codex/TachiBooks/test/folder_comic_import_test.dart: folder picker cancellation select rescan and forget are reachable at 320.0
+02:17 +421 ~5: D:/Codex/TachiBooks/test/folder_comic_import_test.dart: folder picker cancellation select rescan and forget are reachable at 430.0
+02:18 +422 ~5: loading D:/Codex/TachiBooks/test/google_account_actions_test.dart
+02:18 +422 ~5: D:/Codex/TachiBooks/test/google_account_actions_test.dart: Google account actions send allowlisted tokens instead of arbitrary URLs
+02:18 +423 ~5: loading D:/Codex/TachiBooks/test/history_selection_test.dart
+02:19 +423 ~5: D:/Codex/TachiBooks/test/history_selection_test.dart: clearing [legacy] preserves inferred and explicit chapter reading
+02:19 +424 ~5: D:/Codex/TachiBooks/test/history_selection_test.dart: clearing [legacy, mixed, already-empty, missing] preserves inferred and explicit chapter reading
+02:19 +425 ~5: D:/Codex/TachiBooks/test/history_selection_test.dart: filtered multi-history cancel and clear retain offline data at 320.0
+02:21 +426 ~5: D:/Codex/TachiBooks/test/history_selection_test.dart: filtered multi-history cancel and clear retain offline data at 430.0
+02:22 +427 ~5: D:/Codex/TachiBooks/test/history_selection_test.dart: confirmation created before restore cannot clear restored history
+02:23 +428 ~5: loading D:/Codex/TachiBooks/test/incognito_reader_test.dart
+02:24 +428 ~5: D:/Codex/TachiBooks/test/incognito_reader_test.dart: per-book time splits midnight, pauses in background and counts resumed sessions once
+02:27 +429 ~5: D:/Codex/TachiBooks/test/incognito_reader_test.dart: restore invalidates time from a reader opened on the old library
+Cannot save reading progress: Bad state: Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.
+02:28 +430 ~5: D:/Codex/TachiBooks/test/incognito_reader_test.dart: configuration-only restore rejects old reader daily time even with unchanged library revision
+02:28 +431 ~5: D:/Codex/TachiBooks/test/incognito_reader_test.dart: normal reader preserves privacy policy through chapter changes and reopening
+02:30 +432 ~5: D:/Codex/TachiBooks/test/incognito_reader_test.dart: incognito reader preserves privacy policy through chapter changes and reopening
+02:32 +433 ~5: D:/Codex/TachiBooks/test/incognito_reader_test.dart: private session keeps its policy after setting changes and explicit bookmarks remain deliberate saves
+02:33 +434 ~5: D:/Codex/TachiBooks/test/incognito_reader_test.dart: history glasses toggles persisted incognito mode and keeps previous history visible
+02:34 +435 ~5: loading D:/Codex/TachiBooks/test/legacy_chapter_remap_test.dart
+02:34 +435 ~5: D:/Codex/TachiBooks/test/legacy_chapter_remap_test.dart: same-source stable URL and unique unchanged ordinals migrate while preserving cache/read/progress/bookmarks
+02:35 +436 ~5: D:/Codex/TachiBooks/test/legacy_chapter_remap_test.dart: unverified numeric manga references, reordered or ambiguous chapters keep original bytes untouched
+02:35 +437 ~5: D:/Codex/TachiBooks/test/legacy_chapter_remap_test.dart: source change and restored revision reject a verified mapping atomically
+02:35 +438 ~5: D:/Codex/TachiBooks/test/legacy_chapter_remap_test.dart: Isar numeric remap persists stable IDs and matching offline bytes after reopen
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+02:35 +439 ~5: loading D:/Codex/TachiBooks/test/library_add_categories_test.dart
+02:36 +439 ~5: D:/Codex/TachiBooks/test/library_add_categories_test.dart: source add chooses multiple categories at Size(320.0, 568.0) before fetching
+02:37 +440 ~5: D:/Codex/TachiBooks/test/library_add_categories_test.dart: source add chooses multiple categories at Size(430.0, 932.0) before fetching
+02:37 +441 ~5: D:/Codex/TachiBooks/test/library_add_categories_test.dart: cancel does not request the source or add a title
+02:38 +442 ~5: D:/Codex/TachiBooks/test/library_add_categories_test.dart: unselecting defaults adds to the legacy Mặc định category
+02:38 +443 ~5: D:/Codex/TachiBooks/test/library_add_categories_test.dart: replacement while the category sheet is open cannot add a stale title
+02:38 +444 ~5: D:/Codex/TachiBooks/test/library_add_categories_test.dart: a category removed during the source request cannot be recreated by insertion
+02:38 +445 ~5: D:/Codex/TachiBooks/test/library_add_categories_test.dart: without custom categories the existing quick-add flow is preserved
+02:38 +446 ~5: D:/Codex/TachiBooks/test/library_add_categories_test.dart: category removal queued during insertion sees and removes the new membership
+02:38 +447 ~5: loading D:/Codex/TachiBooks/test/library_automatic_update_test.dart
+02:39 +447 ~5: D:/Codex/TachiBooks/test/library_automatic_update_test.dart: prediction uses distinct known dates and rejects irregular/completed/local books
+02:39 +448 ~5: D:/Codex/TachiBooks/test/library_automatic_update_test.dart: policy smart exclusions and concurrent persistence keep independent choices
+02:39 +449 ~5: D:/Codex/TachiBooks/test/library_automatic_update_test.dart: interval, Wi-Fi and category rules avoid network; new chapters use common queue
+02:40 +450 ~5: D:/Codex/TachiBooks/test/library_automatic_update_test.dart: unknown or unmet device conditions do not dispatch
+02:40 +451 ~5: D:/Codex/TachiBooks/test/library_automatic_update_test.dart: overlap shares one request and restore prevents automatic queue/timestamp writes
+02:40 +452 ~5: D:/Codex/TachiBooks/test/library_automatic_update_test.dart: download ahead selects next IDs, preserves progress, and refuses stale reader
+02:40 +453 ~5: D:/Codex/TachiBooks/test/library_automatic_update_test.dart: expired update never commits a late response, starts the next source or records a completed cycle
+02:40 +454 ~5: D:/Codex/TachiBooks/test/library_automatic_update_test.dart: execution waits for a grant; an expired token stays cancelled after resume
+02:40 +455 ~5: loading D:/Codex/TachiBooks/test/library_bulk_actions_test.dart
+02:40 +455 ~5: D:/Codex/TachiBooks/test/library_bulk_actions_test.dart: bulk unread clears completed status without changing other explicit reading states
+02:41 +456 ~5: D:/Codex/TachiBooks/test/library_bulk_actions_test.dart: bulk read uses current metadata and preserves cache, bookmarks, categories and history
+02:41 +457 ~5: D:/Codex/TachiBooks/test/library_bulk_actions_test.dart: removal is atomic with full recovery and rejects stale metadata or chapter changes
+02:41 +458 ~5: D:/Codex/TachiBooks/test/library_bulk_actions_test.dart: duplicate suggestions normalize whitespace and case without merging editions
+02:41 +459 ~5: loading D:/Codex/TachiBooks/test/library_bulk_download_widget_test.dart
+02:42 +459 ~5: D:/Codex/TachiBooks/test/library_bulk_download_widget_test.dart: bulk download selects visible books, deduplicates and supports pause/resume at Size(320.0, 568.0)
+02:45 +460 ~5: D:/Codex/TachiBooks/test/library_bulk_download_widget_test.dart: bulk download selects visible books, deduplicates and supports pause/resume at Size(430.0, 932.0)
+02:46 +461 ~5: D:/Codex/TachiBooks/test/library_bulk_download_widget_test.dart: unread-only bulk download preserves original IDs and independent read flags
+02:47 +462 ~5: D:/Codex/TachiBooks/test/library_bulk_download_widget_test.dart: cancel and queue errors do not report a successful bulk download
+02:48 +463 ~5: D:/Codex/TachiBooks/test/library_bulk_download_widget_test.dart: bulk sheet opened before restore cannot enqueue the replacement
+02:48 +464 ~5: loading D:/Codex/TachiBooks/test/library_cache_maintenance_test.dart
+02:49 +464 ~5: D:/Codex/TachiBooks/test/library_cache_maintenance_test.dart: invalid downloaded flag with remote media blocks cleanup and retains all bytes
+02:50 +465 ~5: D:/Codex/TachiBooks/test/library_cache_maintenance_test.dart: transient cache deletion retains local, all offline and flagged partial downloads with recovery
+02:50 +466 ~5: D:/Codex/TachiBooks/test/library_cache_maintenance_test.dart: stale preview and failed privacy guard do not remove or create recovery
+02:50 +467 ~5: D:/Codex/TachiBooks/test/library_cache_maintenance_test.dart: raw references include unknown nested payload, original cover, header and HTML values
+02:50 +468 ~5: D:/Codex/TachiBooks/test/library_cache_maintenance_test.dart: hash GC enumerator only selects unreferenced valid content-addressed files
+02:50 +469 ~5: D:/Codex/TachiBooks/test/library_cache_maintenance_test.dart: native Isar GC retains raw unknown reference and both covers; removes orphan file after recovery
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+02:50 +470 ~5: loading D:/Codex/TachiBooks/test/library_categories_filters_test.dart
+02:51 +470 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: legacy category migration preserves membership and explicit moves remain compatible
+02:51 +471 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: a title belongs to every selected category with independent author groups and search
+02:51 +472 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: three-state filters combine nonsequential read flags, downloaded pages, bookmarks and exact source
+02:51 +473 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: sorting uses actual dates and chapter metadata while unknown dates remain unknown
+02:51 +474 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: category sorting and display/filter settings survive restart and concurrent saves
+02:51 +475 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: new imports receive default categories while repeat imports retain prior membership and timestamps
+02:51 +476 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: scanlator matching uses provided chapter metadata and saved source exclusion retains exact IDs
+02:51 +477 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: filter sheet resets all active constraints and keeps scanner text editable
+02:53 +478 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: malformed saved filter is preserved instead of silently overwritten
+02:53 +479 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: invalid additive category/date/chapter metadata rejects before restore changes data
+02:53 +480 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: multi-category dialog chooses existing and new categories at 320.0
+02:54 +481 ~5: D:/Codex/TachiBooks/test/library_categories_filters_test.dart: multi-category dialog chooses existing and new categories at 430.0
+02:54 +482 ~5: loading D:/Codex/TachiBooks/test/library_category_preference_migration_test.dart
+02:55 +482 ~5: D:/Codex/TachiBooks/test/library_category_preference_migration_test.dart: rename preserves category position, scoped constraints, author scope and unknown fields
+02:55 +483 ~5: D:/Codex/TachiBooks/test/library_category_preference_migration_test.dart: delete removes only category keys and resets constraints naming the deleted category
+02:55 +484 ~5: D:/Codex/TachiBooks/test/library_category_preference_migration_test.dart: failed write at libraryFilterV1 rolls back exact raw prefs and keeps concurrent progress/cache
+02:55 +485 ~5: D:/Codex/TachiBooks/test/library_category_preference_migration_test.dart: failed write at libraryCategoriesV1 rolls back exact raw prefs and keeps concurrent progress/cache
+02:55 +486 ~5: D:/Codex/TachiBooks/test/library_category_preference_migration_test.dart: corrupt filter input refuses migration before any book writes
+02:55 +487 ~5: loading D:/Codex/TachiBooks/test/library_category_refresh_widget_test.dart
+02:56 +487 ~5: D:/Codex/TachiBooks/test/library_category_refresh_widget_test.dart: pulling a short manga shelf refreshes only its remote book at Size(320.0, 568.0)
+02:58 +488 ~5: D:/Codex/TachiBooks/test/library_category_refresh_widget_test.dart: pulling a short manga shelf refreshes only its remote book at Size(430.0, 932.0)
+02:58 +489 ~5: D:/Codex/TachiBooks/test/library_category_refresh_widget_test.dart: pull refresh reports a source failure while updating healthy books
+02:58 +490 ~5: D:/Codex/TachiBooks/test/library_category_refresh_widget_test.dart: an empty library accepts a real pull gesture without source requests at Size(320.0, 568.0)
+02:58 +491 ~5: D:/Codex/TachiBooks/test/library_category_refresh_widget_test.dart: an empty library accepts a real pull gesture without source requests at Size(430.0, 932.0)
+02:59 +492 ~5: D:/Codex/TachiBooks/test/library_category_refresh_widget_test.dart: an empty search result can be pulled without refreshing hidden books
+02:59 +493 ~5: D:/Codex/TachiBooks/test/library_category_refresh_widget_test.dart: the update menu applies both the current shelf and title search
+03:00 +494 ~5: loading D:/Codex/TachiBooks/test/library_category_registry_test.dart
+03:00 +494 ~5: D:/Codex/TachiBooks/test/library_category_registry_test.dart: empty categories, defaults and inclusion policies persist across restart
+03:01 +495 ~5: D:/Codex/TachiBooks/test/library_category_registry_test.dart: exclude policies win over includes without silently enabling automatic downloads
+03:01 +496 ~5: D:/Codex/TachiBooks/test/library_category_registry_test.dart: rename keeps other memberships, current progress, offline content and defaults
+03:01 +497 ~5: D:/Codex/TachiBooks/test/library_category_registry_test.dart: remove retains every title and only moves titles with no other membership to default
+03:01 +498 ~5: D:/Codex/TachiBooks/test/library_category_registry_test.dart: rename started before restore cannot change a replacement title or registry
+03:01 +499 ~5: D:/Codex/TachiBooks/test/library_category_registry_test.dart: reserved duplicate names and invalid registry fail without replacing stored inputs
+03:01 +500 ~5: D:/Codex/TachiBooks/test/library_category_registry_test.dart: empty-category creation and default selection work at 320.0
+03:02 +501 ~5: D:/Codex/TachiBooks/test/library_category_registry_test.dart: empty-category creation and default selection work at 430.0
+03:03 +502 ~5: loading D:/Codex/TachiBooks/test/library_diagnostics_test.dart
+03:03 +502 ~5: D:/Codex/TachiBooks/test/library_diagnostics_test.dart: repair missing-download flags keeps cache/reading metadata and saves recovery
+03:03 +503 ~5: D:/Codex/TachiBooks/test/library_diagnostics_test.dart: an edit or restore after inspection rejects repair without changing data
+03:03 +504 ~5: D:/Codex/TachiBooks/test/library_diagnostics_test.dart: decode scan reports unreadable local images without changing content or requesting remote images
+03:03 +505 ~5: D:/Codex/TachiBooks/test/library_diagnostics_test.dart: unreadable storage returns a safe report and cannot fabricate a snapshot
+03:03 +506 ~5: D:/Codex/TachiBooks/test/library_diagnostics_test.dart: valid decoded offline image is not reported unreadable
+03:03 +507 ~5: D:/Codex/TachiBooks/test/library_diagnostics_test.dart: malformed negative cache index is reported without crashing or modifying storage
+03:03 +508 ~5: loading D:/Codex/TachiBooks/test/library_display_metadata_test.dart
+03:04 +508 ~5: D:/Codex/TachiBooks/test/library_display_metadata_test.dart: display flags retain defaults for old preferences and roundtrip through portable backup
+03:04 +509 ~5: D:/Codex/TachiBooks/test/library_display_metadata_test.dart: source names are optional and preserve exact source IDs
+03:04 +510 ~5: D:/Codex/TachiBooks/test/library_display_metadata_test.dart: metadata and stable chapter resume at Size(320.0, 568.0) in grid
+03:06 +511 ~5: D:/Codex/TachiBooks/test/library_display_metadata_test.dart: metadata and stable chapter resume at Size(320.0, 568.0) in list
+03:06 +512 ~5: D:/Codex/TachiBooks/test/library_display_metadata_test.dart: metadata and stable chapter resume at Size(320.0, 568.0) in coverOnly
+03:06 +513 ~5: D:/Codex/TachiBooks/test/library_display_metadata_test.dart: metadata and stable chapter resume at Size(430.0, 932.0) in grid
+03:06 +514 ~5: D:/Codex/TachiBooks/test/library_display_metadata_test.dart: metadata and stable chapter resume at Size(430.0, 932.0) in list
+03:06 +515 ~5: D:/Codex/TachiBooks/test/library_display_metadata_test.dart: metadata and stable chapter resume at Size(430.0, 932.0) in coverOnly
+03:07 +516 ~5: D:/Codex/TachiBooks/test/library_display_metadata_test.dart: disabled labels remain hidden and selection disables resume
+03:07 +517 ~5: loading D:/Codex/TachiBooks/test/library_filter_layout_test.dart
+03:07 +517 ~5: D:/Codex/TachiBooks/test/library_filter_layout_test.dart: large source/category lists stay behind searchable selectors at Size(320.0, 568.0)
+03:10 +518 ~5: D:/Codex/TachiBooks/test/library_filter_layout_test.dart: large source/category lists stay behind searchable selectors at Size(430.0, 932.0)
+03:10 +519 ~5: D:/Codex/TachiBooks/test/library_filter_layout_test.dart: compact status menus preserve all three states and display groups remain actionable
+03:11 +520 ~5: D:/Codex/TachiBooks/test/library_filter_layout_test.dart: filter layout fits small screens at text scale 1.0
+03:11 +521 ~5: D:/Codex/TachiBooks/test/library_filter_layout_test.dart: filter layout fits small screens at text scale 1.5
+03:12 +522 ~5: loading D:/Codex/TachiBooks/test/library_filter_presets_test.dart
+03:12 +522 ~5: D:/Codex/TachiBooks/test/library_filter_presets_test.dart: named library presets persist independently of per-category sorting and enter validated public backups
+03:12 +523 ~5: D:/Codex/TachiBooks/test/library_filter_presets_test.dart: old filter editor cannot replace imported configuration and malformed presets are retained
+03:12 +524 ~5: loading D:/Codex/TachiBooks/test/library_folders_test.dart
+03:13 +524 ~5: D:/Codex/TachiBooks/test/library_folders_test.dart: category folder overrides retain legacy data and migrate IDs without overwriting orphan assignment
+03:13 +525 ~5: D:/Codex/TachiBooks/test/library_folders_test.dart: same title has independent folders per category and rename rollback preserves scopes
+03:13 +526 ~5: D:/Codex/TachiBooks/test/library_folders_test.dart: automatic folders stay within category; singles and missing authors stay loose
+03:13 +527 ~5: D:/Codex/TachiBooks/test/library_folders_test.dart: manual folders preserve all book metadata and portable configuration; stale restore refused
+03:13 +528 ~5: D:/Codex/TachiBooks/test/library_folders_test.dart: folder configuration rejects corrupt memberships instead of overwriting them
+03:13 +529 ~5: loading D:/Codex/TachiBooks/test/library_folders_widget_test.dart
+03:14 +529 ~5: D:/Codex/TachiBooks/test/library_folders_widget_test.dart: hidden category tabs keep a compact selector; filter category changes navigate instead of intersecting
+03:16 +530 ~5: D:/Codex/TachiBooks/test/library_folders_widget_test.dart: author folders open inside categories without an All tab at 320.0
+03:16 +531 ~5: D:/Codex/TachiBooks/test/library_folders_widget_test.dart: author folders open inside categories without an All tab at 430.0
+03:17 +532 ~5: D:/Codex/TachiBooks/test/library_folders_widget_test.dart: selection creates a folder and dissolves it without changing categories or author
+03:17 +533 ~5: loading D:/Codex/TachiBooks/test/library_grouping_test.dart
+03:18 +533 ~5: D:/Codex/TachiBooks/test/library_grouping_test.dart: old JSON has empty series and additive metadata survives roundtrip
+03:18 +534 ~5: D:/Codex/TachiBooks/test/library_grouping_test.dart: automatic groups deduplicate IDs and use only explicit author/series metadata
+03:18 +535 ~5: D:/Codex/TachiBooks/test/library_grouping_test.dart: bulk groups serialize latest progress/bookmarks/cache and skip removed or duplicate IDs
+03:18 +536 ~5: D:/Codex/TachiBooks/test/library_grouping_test.dart: invalid empty shelf is rejected before any write
+03:18 +537 ~5: loading D:/Codex/TachiBooks/test/library_grouping_widget_test.dart
+03:19 +537 ~5: D:/Codex/TachiBooks/test/library_grouping_widget_test.dart: a group dialog opened before restore cannot regroup a replacement book
+03:21 +538 ~5: D:/Codex/TachiBooks/test/library_grouping_widget_test.dart: multi-select assigns an explicit series without replacing manual shelves at Size(320.0, 568.0)
+03:22 +539 ~5: D:/Codex/TachiBooks/test/library_grouping_widget_test.dart: multi-select assigns an explicit series without replacing manual shelves at Size(430.0, 932.0)
+03:23 +540 ~5: D:/Codex/TachiBooks/test/library_grouping_widget_test.dart: menu selection moves all selected books to a manual shelf without changing their author or series
+03:23 +541 ~5: D:/Codex/TachiBooks/test/library_grouping_widget_test.dart: author grouping, visible-only select-all and cancel leave data intact
+03:24 +542 ~5: loading D:/Codex/TachiBooks/test/library_group_order_test.dart
+03:25 +542 ~5: D:/Codex/TachiBooks/test/library_group_order_test.dart: saved identities retain absent groups and order the new groups last
+03:25 +543 ~5: D:/Codex/TachiBooks/test/library_group_order_test.dart: separate orders survive restart and simultaneous preference writes
+03:25 +544 ~5: D:/Codex/TachiBooks/test/library_group_order_test.dart: malformed stored order is preserved and a save does not silently replace it
+03:25 +545 ~5: D:/Codex/TachiBooks/test/library_group_order_test.dart: drag auto-scrolls a long group list both ways at 320.0
+03:27 +546 ~5: D:/Codex/TachiBooks/test/library_group_order_test.dart: drag both directions saves category order, keeps selection and persists at 320.0
+03:28 +547 ~5: D:/Codex/TachiBooks/test/library_group_order_test.dart: cancel after drag preserves category order at 320.0
+03:28 +548 ~5: D:/Codex/TachiBooks/test/library_group_order_test.dart: drag auto-scrolls a long group list both ways at 430.0
+03:29 +549 ~5: D:/Codex/TachiBooks/test/library_group_order_test.dart: drag both directions saves category order, keeps selection and persists at 430.0
+03:29 +550 ~5: D:/Codex/TachiBooks/test/library_group_order_test.dart: cancel after drag preserves category order at 430.0
+03:29 +551 ~5: loading D:/Codex/TachiBooks/test/library_insert_restore_test.dart
+03:30 +551 ~5: D:/Codex/TachiBooks/test/library_insert_restore_test.dart: source add pending before another add preserves the existing title
+03:30 +552 ~5: D:/Codex/TachiBooks/test/library_insert_restore_test.dart: source add pending before replacement preserves the existing title
+03:30 +553 ~5: D:/Codex/TachiBooks/test/library_insert_restore_test.dart: document import cannot replace or delete a title restored during staging
+03:30 +554 ~5: D:/Codex/TachiBooks/test/library_insert_restore_test.dart: new chapters stay unread when inserted before an inferred-read chapter
+03:30 +555 ~5: D:/Codex/TachiBooks/test/library_insert_restore_test.dart: marking a completed title chapter unread preserves all other read states and resume
+03:30 +556 ~5: D:/Codex/TachiBooks/test/library_insert_restore_test.dart: preference insert keeps the full library unchanged on capacity failure
+03:30 +557 ~5: D:/Codex/TachiBooks/test/library_insert_restore_test.dart: legacy Suwayomi ordinal identities cannot silently remap offline data to new URLs
+03:30 +558 ~5: D:/Codex/TachiBooks/test/library_insert_restore_test.dart: manga resume movement freezes all legacy inferred read states before changing the position
+03:30 +559 ~5: D:/Codex/TachiBooks/test/library_insert_restore_test.dart: native insertion is revision checked across shared handles and commits all chapters together
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+03:31 +560 ~5: loading D:/Codex/TachiBooks/test/library_maintenance_widget_test.dart
+03:31 +560 ~5: D:/Codex/TachiBooks/test/library_maintenance_widget_test.dart: safe repair preview cancel/success with verified outcome at Size(320.0, 568.0)
+03:33 +561 ~5: D:/Codex/TachiBooks/test/library_maintenance_widget_test.dart: recovery confirmation, cancel and reopen are explicit at Size(320.0, 568.0)
+03:33 +562 ~5: D:/Codex/TachiBooks/test/library_maintenance_widget_test.dart: safe repair preview cancel/success with verified outcome at Size(430.0, 932.0)
+03:33 +563 ~5: D:/Codex/TachiBooks/test/library_maintenance_widget_test.dart: recovery confirmation, cancel and reopen are explicit at Size(430.0, 932.0)
+03:34 +564 ~5: loading D:/Codex/TachiBooks/test/library_metadata_batch_test.dart
+03:34 +564 ~5: D:/Codex/TachiBooks/test/library_metadata_batch_test.dart: memory batch metadata validates all titles before commit and preserves latest progress and contents
+03:34 +565 ~5: D:/Codex/TachiBooks/test/library_metadata_batch_test.dart: preferences batch metadata validates all titles before commit and preserves latest progress and contents
+03:34 +566 ~5: D:/Codex/TachiBooks/test/library_metadata_batch_test.dart: native batch metadata validates all titles before commit and preserves latest progress and contents
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+03:35 +567 ~5: loading D:/Codex/TachiBooks/test/library_opaque_navigation_test.dart
+03:36 +567 ~5: D:/Codex/TachiBooks/test/library_opaque_navigation_test.dart: library tile, detail resume and chapter row preserve opaque ID Sách / 100% ? # tiếng Việt 📚
+03:39 +568 ~5: D:/Codex/TachiBooks/test/library_opaque_navigation_test.dart: library tile, detail resume and chapter row preserve opaque ID literal%2Fid?#value
+03:39 +569 ~5: D:/Codex/TachiBooks/test/library_opaque_navigation_test.dart: library tile, detail resume and chapter row preserve opaque ID .
+03:40 +570 ~5: D:/Codex/TachiBooks/test/library_opaque_navigation_test.dart: library tile, detail resume and chapter row preserve opaque ID ..
+03:41 +571 ~5: loading D:/Codex/TachiBooks/test/library_recovery_store_test.dart
+03:41 +571 ~5: D:/Codex/TachiBooks/test/library_recovery_store_test.dart: explicit recovery can supersede damaged selector while preserving it and every old managed generation
+03:42 +572 ~5: D:/Codex/TachiBooks/test/library_recovery_store_test.dart: fresh database is reopened and verified before publication; corrupt originals retained byte-for-byte
+03:42 +573 ~5: D:/Codex/TachiBooks/test/library_recovery_store_test.dart: failure before publication leaves original selection and files intact
+03:42 +574 ~5: D:/Codex/TachiBooks/test/library_recovery_store_test.dart: failed reopen verification and lost privacy guard never publish
+03:42 +575 ~5: D:/Codex/TachiBooks/test/library_recovery_store_test.dart: malformed or escaping location fails closed, never opens default empty data
+03:42 +576 ~5: D:/Codex/TachiBooks/test/library_recovery_store_test.dart: latest valid recovery skips damaged files without deleting them
+03:42 +577 ~5: D:/Codex/TachiBooks/test/library_recovery_store_test.dart: invalid input is refused before staging; active raw data not touched
+03:42 +578 ~5: D:/Codex/TachiBooks/test/library_recovery_store_test.dart: real Isar rebuild survives reopen and preserves offline manga/novel after corrupt original
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+03:42 +579 ~5: loading D:/Codex/TachiBooks/test/library_safe_repair_test.dart
+03:43 +579 ~5: D:/Codex/TachiBooks/test/library_safe_repair_test.dart: safe proposal fixes finite reading/index/offline metadata, preserves contents and recovery, verifies committed image
+03:43 +580 ~5: D:/Codex/TachiBooks/test/library_safe_repair_test.dart: ambiguous index and invalid bookmark are reported, never silently discarded
+03:43 +581 ~5: D:/Codex/TachiBooks/test/library_safe_repair_test.dart: hidden orphan cache blocks repair/export and stays readable by its original key
+03:43 +582 ~5: D:/Codex/TachiBooks/test/library_safe_repair_test.dart: recovery write failure does not change data; postcommit read failure never announces verified success
+03:43 +583 ~5: loading D:/Codex/TachiBooks/test/library_scoped_update_test.dart
+03:44 +583 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: live update progress retains skip reasons, groups failures and retries only failed IDs
+03:44 +584 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: retry result cannot mutate books after restore changed revision
+03:44 +585 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: scoped updates request only captured remote IDs and preserve remapped data
+03:44 +586 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: edits made while chapters load survive the fresh identity-based commit
+03:44 +587 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: overlapping category pulls and updateAll share one in-flight chapter request
+03:44 +588 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: partial source errors retain failed books and still update healthy books
+03:44 +589 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: in-flight update cannot write after deleting a book
+03:44 +590 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: in-flight update cannot write after restoring same IDs
+03:44 +591 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: source identity changes during a request reject its old chapter list
+03:44 +592 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: a stale captured revision starts no requests against the new library
+03:44 +593 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: invalid chapter identities [] keep existing metadata and cache
+03:44 +594 ~5: D:/Codex/TachiBooks/test/library_scoped_update_test.dart: invalid chapter identities [a, a] keep existing metadata and cache
+03:44 +595 ~5: loading D:/Codex/TachiBooks/test/library_search_test.dart
+03:45 +595 ~5: D:/Codex/TachiBooks/test/library_search_test.dart: metadata search supports Vietnamese quoted phrases and field aliases
+03:45 +596 ~5: D:/Codex/TachiBooks/test/library_search_test.dart: AND has priority over OR and grouped negation changes the whole expression
+03:45 +597 ~5: D:/Codex/TachiBooks/test/library_search_test.dart: nonsequential read flags drive read/unread counts and exact int64 source matching
+03:45 +598 ~5: D:/Codex/TachiBooks/test/library_search_test.dart: old JSON defaults and sequential progress remain compatible with field/count queries
+03:45 +599 ~5: D:/Codex/TachiBooks/test/library_search_test.dart: oversized and deeply nested queries are bounded without recursion failures
+03:45 +600 ~5: loading D:/Codex/TachiBooks/test/library_update_events_test.dart
+03:45 +600 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: new chapter events are independent of old unread or release dates
+03:45 +601 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: legacy unread view honors explicit and inferred read flags
+03:45 +602 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: category membership filters events and refresh IDs without local books
+03:45 +603 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: events sort by discovered instant then stable book and chapter order
+03:45 +604 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: reorder preserves first discovery including null for imported chapters
+03:45 +605 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: portable backup preserves discovery timestamps and legacy absence
+03:45 +606 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: invalid discovery data in backup is rejected before modifying library
+03:45 +607 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: refresh stamps only additions and repeat refresh retains the original timestamp
+03:46 +608 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: Isar reorder and reopen preserve discovery dates and matching offline bytes
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+03:46 +609 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: updates category refresh sends only the selected remote book at Size(320.0, 568.0)
+03:47 +610 ~5: D:/Codex/TachiBooks/test/library_update_events_test.dart: updates category refresh sends only the selected remote book at Size(430.0, 932.0)
+03:48 +611 ~5: loading D:/Codex/TachiBooks/test/library_update_notifications_test.dart
+03:48 +611 ~5: D:/Codex/TachiBooks/test/library_update_notifications_test.dart: new chapter notifies exact book once, repeated check with zero new still reports completion; errors report separately
+03:49 +612 ~5: D:/Codex/TachiBooks/test/library_update_notifications_test.dart: concurrent scopes share fetch/commit and only one per-book notice
+03:49 +613 ~5: D:/Codex/TachiBooks/test/library_update_notifications_test.dart: incognito or restore invalidates notices without retrying committed source data
+03:49 +614 ~5: D:/Codex/TachiBooks/test/library_update_notifications_test.dart: privacy changed while platform notification is pending cancels that book notice
+03:49 +615 ~5: D:/Codex/TachiBooks/test/library_update_notifications_test.dart: native contract carries bounded opaque ID/count only and zero-new completion
+03:49 +616 ~5: D:/Codex/TachiBooks/test/library_update_notifications_test.dart: notification links preserve opaque ID and cannot inject reader or repository query
+03:49 +617 ~5: loading D:/Codex/TachiBooks/test/library_update_report_widget_test.dart
+03:50 +617 ~5: D:/Codex/TachiBooks/test/library_update_report_widget_test.dart: update report exposes grouped errors, skip reasons and retry at Size(320.0, 568.0)
+03:51 +618 ~5: D:/Codex/TachiBooks/test/library_update_report_widget_test.dart: update progress presents actual processed count at Size(320.0, 568.0)
+03:51 +619 ~5: D:/Codex/TachiBooks/test/library_update_report_widget_test.dart: update report exposes grouped errors, skip reasons and retry at Size(430.0, 932.0)
+03:51 +620 ~5: D:/Codex/TachiBooks/test/library_update_report_widget_test.dart: update progress presents actual processed count at Size(430.0, 932.0)
+03:51 +621 ~5: loading D:/Codex/TachiBooks/test/library_view_model_test.dart
+03:52 +621 ~5: D:/Codex/TachiBooks/test/library_view_model_test.dart: a stale book cannot read or download a different current source with the same IDs
+03:52 +622 ~5: D:/Codex/TachiBooks/test/library_view_model_test.dart: rejected image status and MIME cancel the open response body before retry
+03:52 +623 ~5: D:/Codex/TachiBooks/test/library_view_model_test.dart: queued metadata and history edits preserve downloaded chapters, progress and bookmarks
+03:52 +624 ~5: D:/Codex/TachiBooks/test/library_view_model_test.dart: reordering updates moves cache, read position and bookmarks by chapter identity
+03:52 +625 ~5: D:/Codex/TachiBooks/test/library_view_model_test.dart: finishing an imported unread chapter marks only that chapter read
+03:52 +626 ~5: D:/Codex/TachiBooks/test/library_view_model_test.dart: web chapter remap rolls back metadata and cache when persistence exceeds capacity
+03:52 +627 ~5: D:/Codex/TachiBooks/test/library_view_model_test.dart: cached novel remains online until embedded images download with their own headers
+03:52 +628 ~5: D:/Codex/TachiBooks/test/library_view_model_test.dart: failed chapter preserves complete pages and retry after reopening fetches only remaining pages
+03:52 +629 ~5: D:/Codex/TachiBooks/test/library_view_model_test.dart: oversized image stops the stream and never marks a partial chapter offline
+03:52 +630 ~5: loading D:/Codex/TachiBooks/test/library_view_session_test.dart
+03:53 +630 ~5: D:/Codex/TachiBooks/test/library_view_session_test.dart: native tab return preserves category, search and actual library scroll at 320.0 (variant: TargetPlatform.iOS)
+03:57 +631 ~5: D:/Codex/TachiBooks/test/library_view_session_test.dart: native tab return preserves category, search and actual library scroll at 430.0 (variant: TargetPlatform.iOS)
+03:58 +632 ~5: loading D:/Codex/TachiBooks/test/local_comic_import_test.dart
+03:59 +632 ~5: D:/Codex/TachiBooks/test/local_comic_import_test.dart: local metadata, cover and chapter folders travel offline to a fresh library
+03:59 +633 ~5: D:/Codex/TachiBooks/test/local_comic_import_test.dart: bad details.json rejects the entire title without partial insertion
+03:59 +634 ~5: D:/Codex/TachiBooks/test/local_comic_import_test.dart: image import retains original bytes and bounded conditional image formats
+03:59 +635 ~5: loading D:/Codex/TachiBooks/test/log_diagnostics_widget_test.dart
+04:00 +635 ~5: D:/Codex/TachiBooks/test/log_diagnostics_widget_test.dart: logs show redacted real errors and sharing/engine/background outcomes at 320.0
+04:01 +636 ~5: D:/Codex/TachiBooks/test/log_diagnostics_widget_test.dart: logs show redacted real errors and sharing/engine/background outcomes at 430.0
+04:02 +637 ~5: D:/Codex/TachiBooks/test/log_diagnostics_widget_test.dart: invalid log bytes are kept until explicit clear confirmation
+04:02 +638 ~5: loading D:/Codex/TachiBooks/test/manga_completion_validation_test.dart
+04:03 +638 ~5: D:/Codex/TachiBooks/test/manga_completion_validation_test.dart: a 1000-page imported vertical reader does not complete a pending or failed final page
+04:07 +639 ~5: D:/Codex/TachiBooks/test/manga_completion_validation_test.dart: a 1000-page legacy vertical reader does not complete a pending or failed final page
+04:09 +640 ~5: D:/Codex/TachiBooks/test/manga_completion_validation_test.dart: scrolling to the end of a failed vertical manga page keeps it unread
+04:09 +641 ~5: D:/Codex/TachiBooks/test/manga_completion_validation_test.dart: a failed legacy image retry cannot adopt a restored same-ID chapter
+Cannot save reading progress: Bad state: Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.
+04:10 +642 ~5: D:/Codex/TachiBooks/test/manga_completion_validation_test.dart: a decoded final vertical page still completes and preserves its end position
+04:10 +643 ~5: loading D:/Codex/TachiBooks/test/migration_multi_source_test.dart
+04:11 +643 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: cancelled migration page cannot close a source from a late result
+04:12 +644 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: mixed migration sources request more only from unfinished sources
+04:12 +645 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: multi-source migration retains explicit page flags without inventing metadata for legacy results or errors
+04:12 +646 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: migration page control honors false and legacy nonempty fallback
+04:12 +647 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: migration page control honors true and legacy nonempty fallback
+04:13 +648 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: migration page control honors null and legacy nonempty fallback
+04:13 +649 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: multi-source search keeps successful sources, deduplicates results and isolates failures
+04:13 +650 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: cancellation suppresses late results and prevents queued source work
+04:13 +651 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: wrong source identity and timeout are reported without accepting unsafe results
+04:13 +652 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: migration shows multi-source progress and cancel is read-only at Size(320.0, 568.0)
+04:13 +653 ~5: D:/Codex/TachiBooks/test/migration_multi_source_test.dart: migration shows multi-source progress and cancel is read-only at Size(430.0, 932.0)
+04:13 +654 ~5: loading D:/Codex/TachiBooks/test/mihon_backup_exporter_test.dart
+04:14 +654 ~5: D:/Codex/TachiBooks/test/mihon_backup_exporter_test.dart: official Mihon fields roundtrip signed64 identities, metadata, chapters, categories and latest history
+04:14 +655 ~5: D:/Codex/TachiBooks/test/mihon_backup_exporter_test.dart: partial unknown page positions, local covers and inexact numbers are warned rather than fabricated
+04:14 +656 ~5: D:/Codex/TachiBooks/test/mihon_backup_exporter_test.dart: local, vBook, unverified numeric references and noncanonical source IDs are explicitly skipped
+04:14 +657 ~5: D:/Codex/TachiBooks/test/mihon_backup_exporter_test.dart: invalid library state and resource limits reject before returning a file
+04:14 +658 ~5: D:/Codex/TachiBooks/test/mihon_backup_exporter_test.dart: writer uses signed64 two-complement wire bytes, packed integers and a shared nested field budget
+04:14 +659 ~5: loading D:/Codex/TachiBooks/test/mihon_export_ui_test.dart
+04:15 +659 ~5: D:/Codex/TachiBooks/test/mihon_export_ui_test.dart: preview precedes file picker and cancellation preserves library/full backup activity at Size(320.0, 568.0)
+04:16 +660 ~5: D:/Codex/TachiBooks/test/mihon_export_ui_test.dart: preview precedes file picker and cancellation preserves library/full backup activity at Size(430.0, 932.0)
+04:16 +661 ~5: D:/Codex/TachiBooks/test/mihon_export_ui_test.dart: Mihon export saved cannot stamp a full backup or mutate source snapshot
+04:17 +662 ~5: D:/Codex/TachiBooks/test/mihon_export_ui_test.dart: Mihon export cancelled cannot stamp a full backup or mutate source snapshot
+04:17 +663 ~5: D:/Codex/TachiBooks/test/mihon_export_ui_test.dart: Mihon export error cannot stamp a full backup or mutate source snapshot
+04:17 +664 ~5: D:/Codex/TachiBooks/test/mihon_export_ui_test.dart: library with only local/vBook entries offers warnings without an empty export
+04:18 +665 ~5: loading D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart
+04:18 +665 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: challenge recovery handles verified without recursive retries
+04:18 +666 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: challenge recovery handles cancelled without recursive retries
+04:18 +667 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: challenge recovery handles unverified without recursive retries
+04:18 +668 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: challenge recovery handles wrong-origin without recursive retries
+04:18 +669 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: challenge recovery handles repeated without recursive retries
+04:18 +670 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: challenge recovery handles cleared without recursive retries
+04:18 +671 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: challenge recovery handles cleared-with-cookies without recursive retries
+04:18 +672 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: late browser epoch cannot publish cookies or replay source
+04:18 +673 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: late browser configuration cannot publish cookies or replay source
+04:18 +674 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: late browser background cannot publish cookies or replay source
+04:18 +675 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: late browser disposed cannot publish cookies or replay source
+04:18 +676 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: late browser reset-user-agents cannot publish cookies or replay source
+04:19 +677 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: background requests never present a verification browser
+04:19 +678 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: queued browser publication rechecks configuration at lease entry
+04:19 +679 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: queued browser publication rechecks background at lease entry
+04:19 +680 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: queued browser publication rechecks disposed at lease entry
+04:19 +681 ~5: D:/Codex/TachiBooks/test/native_cloudflare_session_test.dart: queued browser publication rechecks epoch at lease entry
+04:19 +682 ~5: loading D:/Codex/TachiBooks/test/native_cover_repository_test.dart
+04:19 +682 ~5: D:/Codex/TachiBooks/test/native_cover_repository_test.dart: cover disk cache survives runtime restart, distinguishes sources and invalidates one cover
+04:19 +683 ~5: D:/Codex/TachiBooks/test/native_cover_repository_test.dart: covers started before an incognito transition cannot populate disk cache
+04:19 +684 ~5: D:/Codex/TachiBooks/test/native_cover_repository_test.dart: an uninstalled source may load a public thumbnail but loaded-source failures never bypass its client
+04:19 +685 ~5: D:/Codex/TachiBooks/test/native_cover_repository_test.dart: cache expiry refetches and clearing preserves unrelated files and rejects old writes
+04:19 +686 ~5: D:/Codex/TachiBooks/test/native_cover_repository_test.dart: optional native cover capability preserves companion and old runtimes
+04:19 +687 ~5: D:/Codex/TachiBooks/test/native_cover_repository_test.dart: cover RPC keeps exact source ID, permits relative URLs and legacy refs
+04:19 +688 ~5: D:/Codex/TachiBooks/test/native_cover_repository_test.dart: invalid cover URLs and source IDs fail before JNI or HTTP
+04:19 +689 ~5: D:/Codex/TachiBooks/test/native_cover_repository_test.dart: cover rejects empty, malformed, oversized and non-image native bodies
+04:20 +690 ~5: D:/Codex/TachiBooks/test/native_cover_repository_test.dart: a failed cover does not poison queued cover or chapter image requests
+04:20 +691 ~5: loading D:/Codex/TachiBooks/test/native_image_pipeline_test.dart
+04:20 +691 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: offline download runs each original page through the engine even with identical URLs
+04:21 +692 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: lazy page locators still use each native image ordinal and become real offline bytes
+04:21 +693 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: lazy page download without native engine never sends the locator to HTTP
+04:21 +694 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: unavailable native locator preserves already cached pages for a later retry
+04:21 +695 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: lazy page without native reader shows the engine error instead of a network image
+04:22 +696 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: failed transformation preserves completed pages and retries the missing original index
+04:22 +697 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: restore while a native image request is pending cannot overwrite the replacement library
+04:22 +698 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: page retry fetches only the failed original page and keeps its neighbour
+04:22 +699 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: retry from a reader opened before restore cannot fetch the replacement library
+Cannot save reading progress: Bad state: Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.
+04:22 +700 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: reader renders engine bytes and does not reload them when toggling controls
+04:23 +701 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: long pages keep their full layout while their decoded bitmap and image cache are bounded
+04:23 +702 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: native resume preserves the within-page fraction while neighbour heights load
+04:23 +703 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: a blocked page cannot block seeking a 1000-page native chapter or queue intermediate pages
+04:26 +704 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: browser completion cannot retry a chapter opened after the browser request
+04:26 +705 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: browser completion after restore preserves the replacement library
+Cannot save reading progress: Bad state: Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.
+04:26 +706 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: browser retry reopens the requested failed chapter instead of the previous one
+04:26 +707 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: browser retry keeps the within-page reading position of a failed native image
+04:26 +708 ~5: D:/Codex/TachiBooks/test/native_image_pipeline_test.dart: reader retries failed native pages after completing the source browser
+04:27 +709 ~5: loading D:/Codex/TachiBooks/test/native_runtime_lifetime_test.dart
+04:27 +709 ~5: D:/Codex/TachiBooks/test/native_runtime_lifetime_test.dart: URL routing switches retain both backup runtimes; starts external=false
+04:27 +710 ~5: D:/Codex/TachiBooks/test/native_runtime_lifetime_test.dart: URL routing switches retain both backup runtimes; starts external=true
+04:27 +711 ~5: D:/Codex/TachiBooks/test/native_runtime_lifetime_test.dart: standalone repository retains default ownership and disposes once
+04:27 +712 ~5: loading D:/Codex/TachiBooks/test/native_runtime_timeout_boundary_audit_test.dart
+04:28 +712 ~5: D:/Codex/TachiBooks/test/native_runtime_timeout_boundary_audit_test.dart: reentrant follow-up waits for a retained native call
+04:28 +713 ~5: D:/Codex/TachiBooks/test/native_runtime_timeout_boundary_audit_test.dart: native timeout keeps backup and next mutation blocked until late success
+04:28 +714 ~5: D:/Codex/TachiBooks/test/native_runtime_timeout_boundary_audit_test.dart: native timeout keeps backup and next mutation blocked until late error
+04:28 +715 ~5: loading D:/Codex/TachiBooks/test/native_tabs_test.dart
+04:29 +715 ~5: D:/Codex/TachiBooks/test/native_tabs_test.dart: removing a lower route retains the observer top route for replacement navigation
+04:29 +716 ~5: D:/Codex/TachiBooks/test/native_tabs_test.dart: six native callbacks open actual routes without a Flutter footer (variant: TargetPlatform.iOS)
+04:31 +717 ~5: D:/Codex/TachiBooks/test/native_tabs_test.dart: native bar hides for pushed reader-detail and settings pages and restores selected tab on pop (variant: TargetPlatform.iOS)
+04:32 +718 ~5: D:/Codex/TachiBooks/test/native_tabs_test.dart: appearance changes reconfigure native theme and retain selection and visibility (variant: TargetPlatform.iOS)
+04:33 +719 ~5: loading D:/Codex/TachiBooks/test/native_tachi_repository_test.dart
+04:33 +719 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: reserved lazy-page hosts are native-only without blocking real image URLs
+04:33 +720 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: lazy native page locator is forwarded unchanged to native image RPC with its ordinal
+04:33 +721 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: restored metadata resolution requires all saved chapter URLs and a unique exact-source result: unique
+04:33 +722 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: restored metadata resolution requires all saved chapter URLs and a unique exact-source result: ambiguous
+04:33 +723 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: restored metadata resolution requires all saved chapter URLs and a unique exact-source result: missing
+04:33 +724 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: restored metadata resolution requires all saved chapter URLs and a unique exact-source result: failed-candidate
+04:33 +725 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: native errors preserve bounded exception types and reject provider identifiers
+04:33 +726 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: local APK import stages an immutable copy and forwards confirmed host metadata without HTTP
+04:34 +727 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: local APK invalid/oversized input and unconfirmed engine result cannot report installed
+04:34 +728 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: APK bytes and hash are staged before the host confirms installation
+04:34 +729 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: failed source loading preserves APK bytes and never claims installed
+04:34 +730 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: simultaneous installs of the same APK from separate handles retain one intact staged file
+04:34 +731 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: health, sources and extensions share a single initialization
+04:34 +732 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: installation requires an explicit installed true acknowledgement
+04:34 +733 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: invalid package URL is rejected before initializing or downloading
+04:34 +734 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: HTTP failure and non-APK bytes never invoke install
+04:34 +735 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: APK stream with no declared size is bounded before installation
+04:34 +736 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: truncated staged APK is preserved while reimport supplies verified fresh bytes
+04:34 +737 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: same-length modified staged APK is preserved while reimport supplies verified fresh bytes
+04:34 +738 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: concurrent repair retains distinct immutable inputs until delayed host calls settle
+04:34 +739 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: host checksum rejection after repair stays an error and retains both input files
+04:34 +740 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: source and extension records preserve exact string identities
+04:34 +741 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: numeric JSON source IDs are rejected instead of coercing precision
+04:34 +742 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: Java search items envelope preserves page, source ID and metadata
+04:34 +743 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: detail resolves the original URL without numeric companion IDs
+04:34 +744 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: chapter URL identity survives changing ordinals and never requests by index
+04:34 +745 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: duplicate chapter URL or index is refused
+04:34 +746 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: Java imageHeaders retain per-page Referer, Cookie and overrides
+04:34 +747 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: unresolved legacy numeric book and chapter IDs cannot reach runtime
+04:34 +748 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: restored numeric manga IDs do not block known chapter URLs or source image hooks
+04:34 +749 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: inline image headers override root per-page headers without losing Cookie
+04:34 +750 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: invalid image URLs and non-string image headers are refused
+04:34 +751 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: Java preferences become usable UI props and saves target the exact key
+04:34 +752 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: native initialization failure is translated and a later call can retry
+04:34 +753 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: a displayed preference position cannot be redirected by a changed list
+04:34 +754 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: malformed native response is rejected without inventing a result
+04:34 +755 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: image execution preserves chapter identity and uses decoded engine bytes
+04:34 +756 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: native image errors do not fall back to downloading the raw URL
+04:34 +757 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: source browser resolves the title URL and binds the saved session to its source ID
+04:34 +758 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: cancelled or malformed browser sessions do not replace source cookies
+04:34 +759 ~5: D:/Codex/TachiBooks/test/native_tachi_repository_test.dart: source browser refuses other origins before presenting any native view
+04:34 +760 ~5: loading D:/Codex/TachiBooks/test/native_vbook_repository_test.dart
+04:35 +760 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: install verifies original bytes and stable identity, restart loads scripts without HTTP
+04:35 +761 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: malformed, unsafe, encrypted and incomplete packages retain prior installation
+04:35 +762 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: corrupt persisted ZIP is rejected on restart and repaired by validated reinstall
+04:35 +763 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: failed native registration cannot publish a fake installed extension
+04:35 +764 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: atomic upgrade keeps stable source ID, prior bytes and source storage
+04:35 +765 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: invalid existing index is kept byte-for-byte when publication cannot proceed
+04:35 +766 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: concurrent repository handles publish both installations without losing index entries
+04:35 +767 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: CRC damage, oversized entries and too many ZIP entries are rejected before native calls
+04:35 +768 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: package HTTP redirects are validated and oversized declarations never publish
+04:35 +769 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: search/detail/page/TOC/chapter map exact URLs, preserve ordering and sanitize novel
+04:35 +770 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: comic image request headers and URL identity survive native response mapping
+04:35 +771 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: per-source execution is serialized and localStorage survives restart
+04:35 +772 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: an active script keeps its package snapshot and queued work rejects a changed content kind
+04:36 +773 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: a queued source request reloads an installation published by another handle
+04:36 +774 ~5: D:/Codex/TachiBooks/test/native_vbook_repository_test.dart: native MethodChannel returns structured payload and platform errors remain errors
+04:36 +775 ~5: loading D:/Codex/TachiBooks/test/navigation_preferences_test.dart
+04:36 +775 ~5: D:/Codex/TachiBooks/test/navigation_preferences_test.dart: legacy order and malformed persisted route IDs never change default routes
+04:36 +776 ~5: D:/Codex/TachiBooks/test/navigation_preferences_test.dart: saved tab order, hidden labels and startup route survive restart; stale screen is rejected
+04:36 +777 ~5: D:/Codex/TachiBooks/test/navigation_preferences_test.dart: UIKit slots map back to unchanged route identities and privacy still blocks callbacks
+04:36 +778 ~5: loading D:/Codex/TachiBooks/test/network_tools_test.dart
+04:37 +778 ~5: D:/Codex/TachiBooks/test/network_tools_test.dart: native maintenance preserves contracts, no caller path reaches engine; source and WebKit logout both invoked
+04:37 +779 ~5: D:/Codex/TachiBooks/test/network_tools_test.dart: UA reset reports engine failure and attempts both stores
+04:37 +780 ~5: D:/Codex/TachiBooks/test/network_tools_test.dart: UA reset reports browser failure and attempts both stores
+04:37 +781 ~5: D:/Codex/TachiBooks/test/network_tools_test.dart: UA reset reports both failure and attempts both stores
+04:37 +782 ~5: D:/Codex/TachiBooks/test/network_tools_test.dart: UA reset UI invokes source and WebKit maintenance
+04:39 +783 ~5: D:/Codex/TachiBooks/test/network_tools_test.dart: device tools reject oversized exports and malformed usage, invoke exact allowlisted actions
+04:39 +784 ~5: loading D:/Codex/TachiBooks/test/on_device_source_repository_test.dart
+04:39 +784 ~5: D:/Codex/TachiBooks/test/on_device_source_repository_test.dart: installed Tachi routes every operation locally without companion HTTP
+04:39 +785 ~5: D:/Codex/TachiBooks/test/on_device_source_repository_test.dart: an unavailable native engine fails without silently using a companion
+04:39 +786 ~5: D:/Codex/TachiBooks/test/on_device_source_repository_test.dart: the other engine retains its existing companion route independently
+04:39 +787 ~5: loading D:/Codex/TachiBooks/test/paged_read_completion_test.dart
+04:40 +787 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: leftToRight waits for a real decoded image and never completes a failed page
+04:41 +788 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: leftToRight incognito retains metadata and a restored library rejects the old page
+04:42 +789 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: rightToLeft waits for a real decoded image and never completes a failed page
+04:42 +790 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: rightToLeft incognito retains metadata and a restored library rejects the old page
+04:42 +791 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: verticalPages waits for a real decoded image and never completes a failed page
+04:42 +792 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: verticalPages incognito retains metadata and a restored library rejects the old page
+04:43 +793 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: doublePage waits for a real decoded image and never completes a failed page
+04:43 +794 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: doublePage incognito retains metadata and a restored library rejects the old page
+04:43 +795 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: legacy paged preference uses continuous pages and completes only at the decoded end
+04:44 +796 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: legacy rtl preference uses continuous pages and completes only at the decoded end
+04:44 +797 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: a single-page chapter completes only after its pending image decodes
+04:45 +798 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: a failed last image does not mark an imported unread chapter read
+04:45 +799 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: incognito keeps read flags and all reading metadata through last-page completion
+04:45 +800 ~5: D:/Codex/TachiBooks/test/paged_read_completion_test.dart: an old displayed reader cannot write completion or bookmarks into a restored book
+Cannot save reading progress: Bad state: Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.
+04:45 +801 ~5: loading D:/Codex/TachiBooks/test/privacy_app_lock_test.dart
+04:46 +801 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: disabled default never requests authentication, secret is never in preferences
+04:46 +802 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: enabling and disabling require successful device authentication and persist for restart
+04:46 +803 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: foreground idle locks after actual inactivity and input never unlocks
+04:46 +804 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: turning off idle timeout stays off after restart and preserves unknown fields
+04:46 +805 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: device lacking a passcode remains unlocked before enabling and shows actionable error
+04:46 +806 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: authentication timeout stays locked; late native success cannot unlock it
+04:46 +807 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: three failures throttle immediate retries and a later success clears errors
+04:46 +808 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: real background cancels pending authentication; prompt-only inactive does not
+04:46 +809 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: delay compares elapsed time on resume; backward clock fails closed
+04:46 +810 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: independent screen protection follows always/incognito/off policies
+04:46 +811 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: restored/reloaded policy rejects an authentication result from the old generation
+04:46 +812 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: unknown policy fields survive updates, corrupt input is preserved and cannot be unlocked
+04:47 +813 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: privacy settings expose incognito for new reader sessions at 320.0
+04:48 +814 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: privacy gate blocks content until authenticating and settings fit at 320.0
+04:48 +815 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: privacy settings expose incognito for new reader sessions at 430.0
+04:48 +816 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: privacy gate blocks content until authenticating and settings fit at 430.0
+04:49 +817 ~5: D:/Codex/TachiBooks/test/privacy_app_lock_test.dart: landscape lock scrolls long errors and retry countdown without hiding unlock
+04:49 +818 ~5: loading D:/Codex/TachiBooks/test/privacy_native_boundary_test.dart
+04:50 +818 ~5: D:/Codex/TachiBooks/test/privacy_native_boundary_test.dart: privacy channel sends only nonsecret policy and checks real authentication result
+04:50 +819 ~5: D:/Codex/TachiBooks/test/privacy_native_boundary_test.dart: malformed native capability and nontrue authentication never imply success
+04:50 +820 ~5: loading D:/Codex/TachiBooks/test/privacy_navigation_integration_test.dart
+04:51 +820 ~5: D:/Codex/TachiBooks/test/privacy_navigation_integration_test.dart: real app privacy wiring blocks native navigation and retains route/library bytes after unlock (variant: TargetPlatform.iOS)
+04:53 +821 ~5: loading D:/Codex/TachiBooks/test/reader_advanced_settings_layout_test.dart
+04:53 +821 ~5: D:/Codex/TachiBooks/test/reader_advanced_settings_layout_test.dart: advanced settings wrap long options and persist choices at 320.0 with text scale 1.0
+04:59 +822 ~5: D:/Codex/TachiBooks/test/reader_advanced_settings_layout_test.dart: advanced settings wrap long options and persist choices at 320.0 with text scale 1.5
+05:01 +823 ~5: D:/Codex/TachiBooks/test/reader_advanced_settings_layout_test.dart: advanced settings wrap long options and persist choices at 430.0 with text scale 1.0
+05:03 +824 ~5: D:/Codex/TachiBooks/test/reader_advanced_settings_layout_test.dart: advanced settings wrap long options and persist choices at 430.0 with text scale 1.5
+05:05 +825 ~5: loading D:/Codex/TachiBooks/test/reader_auto_scroll_test.dart
+05:06 +825 ~5: D:/Codex/TachiBooks/test/reader_auto_scroll_test.dart: timed pages use their own viewport readiness and do not need a continuous scroll client
+05:06 +826 ~5: D:/Codex/TachiBooks/test/reader_auto_scroll_test.dart: continuous auto-scroll respects speed, blocked reader, bottom and paused timer
+05:06 +827 ~5: loading D:/Codex/TachiBooks/test/reader_download_restore_race_test.dart
+05:07 +827 ~5: D:/Codex/TachiBooks/test/reader_download_restore_race_test.dart: pending network content cannot overwrite or resurrect a book after replace
+05:07 +828 ~5: D:/Codex/TachiBooks/test/reader_download_restore_race_test.dart: pending network content cannot overwrite or resurrect a book after remove
+05:07 +829 ~5: D:/Codex/TachiBooks/test/reader_download_restore_race_test.dart: two same-book chapter requests reach HTTP concurrently and preserve edits on commit
+05:07 +830 ~5: D:/Codex/TachiBooks/test/reader_download_restore_race_test.dart: invalid empty and wrong-kind chapter content never commits
+05:07 +831 ~5: D:/Codex/TachiBooks/test/reader_download_restore_race_test.dart: native handles share restore revision and stale staged bytes do not touch attachments
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+05:07 +832 ~5: loading D:/Codex/TachiBooks/test/reader_hold_scroll_test.dart
+05:08 +832 ~5: D:/Codex/TachiBooks/test/reader_hold_scroll_test.dart: hold scroll moves viewport, speed changes in steps, release stops
+05:09 +833 ~5: D:/Codex/TachiBooks/test/reader_hold_scroll_test.dart: timed scroll does not skip pages after blocked or suspended frames
+05:09 +834 ~5: loading D:/Codex/TachiBooks/test/reader_image_region_test.dart
+05:10 +834 ~5: D:/Codex/TachiBooks/test/reader_image_region_test.dart: OCR region maps the visible image with letterboxing at Size(320.0, 568.0)
+05:12 +835 ~5: D:/Codex/TachiBooks/test/reader_image_region_test.dart: OCR region maps the visible image with letterboxing at Size(430.0, 932.0)
+05:12 +836 ~5: D:/Codex/TachiBooks/test/reader_image_region_test.dart: invalid image cannot enable OCR and cancellation returns no region
+05:12 +837 ~5: loading D:/Codex/TachiBooks/test/reader_keyboard_controls_test.dart
+05:13 +837 ~5: D:/Codex/TachiBooks/test/reader_keyboard_controls_test.dart: external keys scroll the real viewport, clamp edges, respect loading and require Control to jump chapters
+05:13 +838 ~5: loading D:/Codex/TachiBooks/test/reader_options_test.dart
+05:14 +838 ~5: D:/Codex/TachiBooks/test/reader_options_test.dart: legacy defaults and untrusted numeric preferences are bounded
+05:14 +839 ~5: D:/Codex/TachiBooks/test/reader_options_test.dart: display options roundtrip and bound untrusted restored values
+05:14 +840 ~5: D:/Codex/TachiBooks/test/reader_options_test.dart: concurrent patches retain independent options and restart
+05:14 +841 ~5: D:/Codex/TachiBooks/test/reader_options_test.dart: global reader editor generation refuses a write after configuration restore
+05:14 +842 ~5: D:/Codex/TachiBooks/test/reader_options_test.dart: per-title reader options travel with full backup to new library
+05:14 +843 ~5: D:/Codex/TachiBooks/test/reader_options_test.dart: private setting dialog refuses writes after restore
+05:16 +844 ~5: D:/Codex/TachiBooks/test/reader_options_test.dart: double tap zoom changes image transform and resets
+05:16 +845 ~5: D:/Codex/TachiBooks/test/reader_options_test.dart: reader skip-read navigates by original chapter ID
+05:16 +846 ~5: loading D:/Codex/TachiBooks/test/reader_platform_test.dart
+05:17 +846 ~5: D:/Codex/TachiBooks/test/reader_platform_test.dart: OCR region retains bytes and validates normalized coordinates before native call
+05:17 +847 ~5: D:/Codex/TachiBooks/test/reader_platform_test.dart: image native methods retain original bytes and forward OCR and permission errors
+05:17 +848 ~5: loading D:/Codex/TachiBooks/test/reader_progress_test.dart
+05:18 +848 ~5: D:/Codex/TachiBooks/test/reader_progress_test.dart: a contents sheet opened before restore cannot reopen or change the replacement book
+Cannot save reading progress: Bad state: Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.
+05:19 +849 ~5: D:/Codex/TachiBooks/test/reader_progress_test.dart: continuous manga preserves image-relative position despite legacy mode and theme preferences
+05:20 +850 ~5: D:/Codex/TachiBooks/test/reader_progress_test.dart: novel resumes and saves the same location through font and theme changes and disposal
+05:20 +851 ~5: D:/Codex/TachiBooks/test/reader_progress_test.dart: bookmark list returns to the saved chapter position
+05:21 +852 ~5: loading D:/Codex/TachiBooks/test/reader_system_ui_test.dart
+05:22 +852 ~5: D:/Codex/TachiBooks/test/reader_system_ui_test.dart: reader overlay lease applies options and restores on exit
+05:22 +853 ~5: D:/Codex/TachiBooks/test/reader_system_ui_test.dart: queued apply or release from previous reader cannot overwrite next reader
+05:22 +854 ~5: loading D:/Codex/TachiBooks/test/reader_tap_regions_test.dart
+05:22 +854 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: paged and continuous profiles persist independently with safe legacy defaults
+05:23 +855 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: off covers the viewport exactly once and inversion keeps the menu
+05:23 +856 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: off diagram fits a small viewport with large text
+05:23 +857 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: horizontal covers the viewport exactly once and inversion keeps the menu
+05:23 +858 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: horizontal diagram fits a small viewport with large text
+05:23 +859 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: vertical covers the viewport exactly once and inversion keeps the menu
+05:23 +860 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: vertical diagram fits a small viewport with large text
+05:23 +861 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: edges covers the viewport exactly once and inversion keeps the menu
+05:23 +862 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: edges diagram fits a small viewport with large text
+05:23 +863 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: kindle covers the viewport exactly once and inversion keeps the menu
+05:23 +864 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: kindle diagram fits a small viewport with large text
+05:23 +865 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: lShape covers the viewport exactly once and inversion keeps the menu
+05:23 +866 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: lShape diagram fits a small viewport with large text
+05:23 +867 ~5: D:/Codex/TachiBooks/test/reader_tap_regions_test.dart: unknown profiles and points outside the viewport only toggle controls
+05:23 +868 ~5: loading D:/Codex/TachiBooks/test/reader_ui_test.dart
+05:24 +868 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: reader uses distinct portrait and landscape margins without paging
+05:26 +869 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: quick reader settings describe the current per-title background
+05:26 +870 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: back gesture is blocked while explicit reader back still exits
+05:26 +871 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: continuous full-width pages and reader controls follow Brightness.dark at Size(320.0, 568.0)
+05:27 +872 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: continuous full-width pages and reader controls follow Brightness.light at Size(320.0, 568.0)
+05:27 +873 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: continuous full-width pages and reader controls follow Brightness.dark at Size(430.0, 932.0)
+05:27 +874 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: continuous full-width pages and reader controls follow Brightness.light at Size(430.0, 932.0)
+05:28 +875 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: height keeps complete pages and seeks actual geometry at Size(320.0, 568.0)
+05:28 +876 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: screen keeps complete pages and seeks actual geometry at Size(320.0, 568.0)
+05:28 +877 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: original keeps complete pages and seeks actual geometry at Size(320.0, 568.0)
+05:28 +878 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: height keeps complete pages and seeks actual geometry at Size(430.0, 932.0)
+05:29 +879 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: screen keeps complete pages and seeks actual geometry at Size(430.0, 932.0)
+05:29 +880 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: original keeps complete pages and seeks actual geometry at Size(430.0, 932.0)
+05:29 +881 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: changing image scale preserves the within-page position
+05:29 +882 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: leftToRight uses original page order, seeks, restores and returns to continuous mode
+05:30 +883 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: rightToLeft uses original page order, seeks, restores and returns to continuous mode
+05:30 +884 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: verticalPages uses original page order, seeks, restores and returns to continuous mode
+05:30 +885 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: doublePage uses original page order, seeks, restores and returns to continuous mode
+05:31 +886 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: double page inversion preserves source IDs and the unpaired last page
+05:31 +887 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: chapter boundary stays on this chapter until explicit next and describes the final chapter
+05:31 +888 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: an old chapter boundary cannot open replacement content after restore
+Cannot save reading progress: Bad state: Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.
+05:31 +889 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: horizontal taps scroll the viewport with inverse=false and center toggles chrome
+05:31 +890 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: horizontal taps scroll the viewport with inverse=true and center toggles chrome
+05:32 +891 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: vertical taps scroll the viewport with inverse=false and center toggles chrome
+05:32 +892 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: vertical taps scroll the viewport with inverse=true and center toggles chrome
+05:32 +893 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: edges taps scroll the viewport with inverse=false and center toggles chrome
+05:32 +894 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: edges taps scroll the viewport with inverse=true and center toggles chrome
+05:33 +895 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: kindle taps scroll the viewport with inverse=false and center toggles chrome
+05:33 +896 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: kindle taps scroll the viewport with inverse=true and center toggles chrome
+05:33 +897 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: lShape taps scroll the viewport with inverse=false and center toggles chrome
+05:33 +898 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: lShape taps scroll the viewport with inverse=true and center toggles chrome
+05:33 +899 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: enabled tap zones leave drag, wide-image pan, double tap and pinch available
+05:34 +900 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: auto scroll status pauses and resumes without changing saved options
+05:34 +901 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: auto scrolling waits while settings or nested advanced dialog covers reader
+05:35 +902 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: new novel defaults to the app while explicit page themes remain usable in Brightness.dark
+05:35 +903 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: new novel defaults to the app while explicit page themes remain usable in Brightness.light
+05:35 +904 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: pointer dragging seeks whole unequal-height pages immediately and manual scrolling updates the slider at Size(320.0, 568.0)
+05:36 +905 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: pointer dragging seeks whole unequal-height pages immediately and manual scrolling updates the slider at Size(430.0, 932.0)
+05:36 +906 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: loading and unavailable chapters retain the dark app scaffold
+05:36 +907 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: seeking to the start of a decoded final page in a 1000-page chapter stays unread until its actual end
+05:38 +908 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: reader download uses the shared chapter queue and a stale reader cannot enqueue after restore
+Cannot save reading progress: Bad state: Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.
+05:38 +909 ~5: D:/Codex/TachiBooks/test/reader_ui_test.dart: orientation control sends the requested native preference and resets it on exit
+05:38 +910 ~5: loading D:/Codex/TachiBooks/test/reading_info_extended_widget_test.dart
+05:39 +910 ~5: D:/Codex/TachiBooks/test/reading_info_extended_widget_test.dart: statistics chart and details fit 320px with 150 percent text
+05:41 +911 ~5: D:/Codex/TachiBooks/test/reading_info_extended_widget_test.dart: statistics chart and details fit 430px with 150 percent text
+05:41 +912 ~5: D:/Codex/TachiBooks/test/reading_info_extended_widget_test.dart: user status and rating edits persist; cancel leaves stored rating unchanged
+05:42 +913 ~5: D:/Codex/TachiBooks/test/reading_info_extended_widget_test.dart: an open status choice cannot change library replaced after preview
+05:42 +914 ~5: loading D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart
+05:43 +914 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: explicit reading states remain separate from publication and legacy reading
+05:43 +915 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: verified cache overrides stale flags and weighted counts include all chapters
+05:43 +916 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: same source ID groups across labels and overlapping categories deduplicate
+05:43 +917 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: tracker service records deduplicate per book and preserve opaque unknown bytes
+05:43 +918 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: only explicit finite local ratings are averaged including a real zero rating
+05:43 +919 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: daily times validate calendar and retain genuine durations across year boundary
+05:43 +920 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: recent books use saved dates and never manufacture future reading activity
+05:43 +921 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: statistics provider counts stored offline content, excludes partial remote images without mutation
+05:43 +922 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: status and rating edit latest metadata preserving download/progress and full backup roundtrip
+05:43 +923 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: stale restore and privacy guards prevent editor writes
+05:43 +924 ~5: D:/Codex/TachiBooks/test/reading_statistics_extended_test.dart: legacy backups omit new fields, explicit invalid fields are rejected without changes
+05:43 +925 ~5: loading D:/Codex/TachiBooks/test/reading_statistics_test.dart
+05:44 +925 ~5: D:/Codex/TachiBooks/test/reading_statistics_test.dart: real read flags, offline flags and overlapping categories remain separate
+05:44 +926 ~5: loading D:/Codex/TachiBooks/test/restored_native_reader_test.dart
+05:44 +926 ~5: D:/Codex/TachiBooks/test/restored_native_reader_test.dart: restored TMB reads and downloads its saved source URLs without catalogue warm-up or migration
+05:45 +927 ~5: D:/Codex/TachiBooks/test/restored_native_reader_test.dart: a restored-library replacement rejects late native content before download or cache writes
+05:45 +928 ~5: loading D:/Codex/TachiBooks/test/restored_source_live_test.dart
+05:45 +928 ~5: D:/Codex/TachiBooks/test/restored_source_live_test.dart: restored URL references execute original Komga source and return actual PNG pages
+  Skip: Opt-in real Suwayomi + original Komga APK and authored fixture.
+05:45 +928 ~6: loading D:/Codex/TachiBooks/test/restored_source_reference_test.dart
+05:46 +928 ~6: D:/Codex/TachiBooks/test/restored_source_reference_test.dart: backup URL resolves exact source and maps original chapter URL to runtime index
+05:46 +929 ~6: D:/Codex/TachiBooks/test/restored_source_reference_test.dart: missing restored entry searches original source and rejects same title at another URL
+05:46 +930 ~6: D:/Codex/TachiBooks/test/restored_source_reference_test.dart: search resolves only exact original URL and missing chapter is never replaced by its list position
+05:46 +931 ~6: loading D:/Codex/TachiBooks/test/source_browse_widget_test.dart
+05:47 +931 ~6: D:/Codex/TachiBooks/test/source_browse_widget_test.dart: multiple languages filter installed sources and survive saved changes at Size(320.0, 568.0)
+05:48 +932 ~6: D:/Codex/TachiBooks/test/source_browse_widget_test.dart: one failed engine preserves sources, pinning and recent navigation at Size(320.0, 568.0)
+05:49 +933 ~6: D:/Codex/TachiBooks/test/source_browse_widget_test.dart: multiple languages filter installed sources and survive saved changes at Size(430.0, 932.0)
+05:49 +934 ~6: D:/Codex/TachiBooks/test/source_browse_widget_test.dart: one failed engine preserves sources, pinning and recent navigation at Size(430.0, 932.0)
+05:49 +935 ~6: D:/Codex/TachiBooks/test/source_browse_widget_test.dart: both engines merge and link addition fetches a local repository catalogue
+05:50 +936 ~6: D:/Codex/TachiBooks/test/source_browse_widget_test.dart: repository list and presets work without an engine; install explains the missing engine
+05:51 +937 ~6: D:/Codex/TachiBooks/test/source_browse_widget_test.dart: migration lists only online books and leaves their metadata and cache intact
+05:51 +938 ~6: loading D:/Codex/TachiBooks/test/source_catalogue_features_test.dart
+05:52 +938 ~6: D:/Codex/TachiBooks/test/source_catalogue_features_test.dart: Files APK stream stops at the byte limit and releases the rejected stream
+05:52 +939 ~6: D:/Codex/TachiBooks/test/source_catalogue_features_test.dart: global search retains at most six unique preview books per source
+05:52 +940 ~6: D:/Codex/TachiBooks/test/source_catalogue_features_test.dart: global search publishes independent partial results and limits concurrent sources to three
+05:52 +941 ~6: D:/Codex/TachiBooks/test/source_catalogue_features_test.dart: a superseded query and disposal reject old asynchronous responses
+05:52 +942 ~6: D:/Codex/TachiBooks/test/source_catalogue_features_test.dart: update planning chooses highest numeric release and rejects downgrade, unknown release and foreign IDs
+05:52 +943 ~6: D:/Codex/TachiBooks/test/source_catalogue_features_test.dart: pinned source reorder preserves hidden pins and a concurrent pin toggle
+05:52 +944 ~6: D:/Codex/TachiBooks/test/source_catalogue_features_test.dart: native catalogue mode and package removal forward original IDs without using a companion
+05:52 +945 ~6: D:/Codex/TachiBooks/test/source_catalogue_features_test.dart: chapter metadata preserves dates and fractional numbers, unknown values remain nullable
+05:52 +946 ~6: loading D:/Codex/TachiBooks/test/source_catalogue_widget_test.dart
+05:53 +946 ~6: D:/Codex/TachiBooks/test/source_catalogue_widget_test.dart: nonempty final source page stops pagination from the actual flag
+05:54 +947 ~6: D:/Codex/TachiBooks/test/source_catalogue_widget_test.dart: unsupported latest capability keeps popular without a latest control
+05:54 +948 ~6: D:/Codex/TachiBooks/test/source_catalogue_widget_test.dart: APK selected from Files uses the on-device installer and exposes confirmed package metadata
+05:55 +949 ~6: D:/Codex/TachiBooks/test/source_catalogue_widget_test.dart: cancelled Files selection and rejected installation cannot publish a package
+05:55 +950 ~6: D:/Codex/TachiBooks/test/source_catalogue_widget_test.dart: an older catalogue release does not offer a misleading update
+05:55 +951 ~6: D:/Codex/TachiBooks/test/source_catalogue_widget_test.dart: source popular/list/grid/refresh and existing-library navigation use real callbacks
+05:56 +952 ~6: D:/Codex/TachiBooks/test/source_catalogue_widget_test.dart: global search renders a fast source while another is pending, and opens existing results
+05:56 +953 ~6: D:/Codex/TachiBooks/test/source_catalogue_widget_test.dart: update all is serial, shows queued state, retains failed package and confirms successful version
+05:56 +954 ~6: D:/Codex/TachiBooks/test/source_catalogue_widget_test.dart: uninstall is confirmed and preserves the original library book
+05:57 +955 ~6: loading D:/Codex/TachiBooks/test/source_cover_image_test.dart
+05:57 +955 ~6: D:/Codex/TachiBooks/test/source_cover_image_test.dart: native image cache keys isolate source, book, URL and repository
+05:57 +956 ~6: D:/Codex/TachiBooks/test/source_cover_image_test.dart: clearing cover cache reloads a mounted image without replacing the runtime repository
+05:58 +957 ~6: D:/Codex/TachiBooks/test/source_cover_image_test.dart: catalogue and backdrop share one native fetch and decode
+05:58 +958 ~6: D:/Codex/TachiBooks/test/source_cover_image_test.dart: failed native fetch is evicted so a remount retries
+05:58 +959 ~6: D:/Codex/TachiBooks/test/source_cover_image_test.dart: mounted covers follow a changed runtime routing repository
+05:58 +960 ~6: D:/Codex/TachiBooks/test/source_cover_image_test.dart: native oversized bytes fail before image decoding
+05:58 +961 ~6: D:/Codex/TachiBooks/test/source_cover_image_test.dart: local covers stay stable and never initialize the source repository
+05:58 +962 ~6: D:/Codex/TachiBooks/test/source_cover_image_test.dart: companions retain NetworkImage and invalid URLs do not load
+05:59 +963 ~6: loading D:/Codex/TachiBooks/test/source_filters_test.dart
+05:59 +963 ~6: D:/Codex/TachiBooks/test/source_filters_test.dart: filter roundtrip preserves nested typed state and explicitly unsupported original controls
+05:59 +964 ~6: D:/Codex/TachiBooks/test/source_filters_test.dart: native filter RPC and search apply exact IDs, schema, states and page without fallback
+05:59 +965 ~6: D:/Codex/TachiBooks/test/source_filters_test.dart: filter presets retain separate sources, survive reload and serialized edits, preserve corrupt input
+05:59 +966 ~6: D:/Codex/TachiBooks/test/source_filters_test.dart: editing a saved filter renames atomically without overwriting another preset or reviving a removed one
+05:59 +967 ~6: D:/Codex/TachiBooks/test/source_filters_test.dart: original controls apply filtered search, save/reset/reload/delete presets at Size(320.0, 568.0)
+06:02 +968 ~6: D:/Codex/TachiBooks/test/source_filters_test.dart: original controls apply filtered search, save/reset/reload/delete presets at Size(430.0, 932.0)
+06:03 +969 ~6: D:/Codex/TachiBooks/test/source_filters_test.dart: changed source filter schema resets stale selected conditions and disables stale preset
+06:03 +970 ~6: D:/Codex/TachiBooks/test/source_filters_test.dart: source multi-select preferences preserve selected values, cancel safely and save typed list
+06:04 +971 ~6: loading D:/Codex/TachiBooks/test/source_icon_widget_test.dart
+06:04 +971 ~6: D:/Codex/TachiBooks/test/source_icon_widget_test.dart: network icon failure keeps the 38px source icon and actions usable at 320px
+06:05 +972 ~6: D:/Codex/TachiBooks/test/source_icon_widget_test.dart: sources without a returned icon use a placeholder without a network image
+06:05 +973 ~6: loading D:/Codex/TachiBooks/test/source_languages_settings_widget_test.dart
+06:06 +973 ~6: D:/Codex/TachiBooks/test/source_languages_settings_widget_test.dart: settings language sheet waits for sources and includes repository languages
+06:07 +974 ~6: D:/Codex/TachiBooks/test/source_languages_settings_widget_test.dart: catalogue failure is handled while source loading remains pending
+06:07 +975 ~6: D:/Codex/TachiBooks/test/source_languages_settings_widget_test.dart: landscape empty and long error states scroll without overflow at 150 percent
+06:08 +976 ~6: D:/Codex/TachiBooks/test/source_languages_settings_widget_test.dart: settings language load error retries and keeps the sheet usable
+06:08 +977 ~6: loading D:/Codex/TachiBooks/test/source_languages_test.dart
+06:08 +977 ~6: D:/Codex/TachiBooks/test/source_languages_test.dart: all includes future languages; empty means none; untrusted backup is strict
+06:08 +978 ~6: D:/Codex/TachiBooks/test/source_languages_test.dart: multiple languages persist and stale editor cannot override restored preference
+06:09 +979 ~6: loading D:/Codex/TachiBooks/test/source_migration_configuration_test.dart
+06:09 +979 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: single keep atomically preserves folder assignment without duplicating duration
+06:09 +980 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: single replace atomically preserves folder assignment without duplicating duration
+06:09 +981 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: batch moves each duration once and copies scoped/legacy folders together
+06:09 +982 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: legacy configuration without optional keys stays absent
+06:09 +983 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: production provider invalidates the open folder controller after joint migration
+06:10 +984 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: batch keep copies folders but duration stays only on original books
+06:10 +985 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: batch previews reject intervening configuration edits and same-byte restores
+06:10 +986 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: duration merge overflow rejects without mutating either store
+06:10 +987 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: orphan target duration is preserved by addition but conflicting folder rejects without writes
+06:10 +988 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: time change after preview rejects old joint publication
+06:10 +989 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: folder change after preview rejects old joint publication
+06:10 +990 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: other-pref change after preview rejects old joint publication
+06:10 +991 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: same-byte-restore change after preview rejects old joint publication
+06:10 +992 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: library change after preview rejects old joint publication
+06:10 +993 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: queued preference write wins before publication instead of being lost
+06:10 +994 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: library failure after applying config rolls preferences back and keeps recovery
+06:10 +995 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: preference setter failure rolls both images back without writing new book
+06:10 +996 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: library edit before config apply wins and rolls migration back
+06:10 +997 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: library edit after config apply wins and rolls migration back
+06:10 +998 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: preference edit submitted during joint commit is refused after publication
+06:10 +999 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: journal failure after committed library keeps recovery and reconciles on reopen
+06:10 +1000 ~6: D:/Codex/TachiBooks/test/source_migration_configuration_test.dart: real Isar joint migration retains source cache only in recovery and restores config
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+06:10 +1001 ~6: loading D:/Codex/TachiBooks/test/source_migration_test.dart
+06:11 +1001 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: native migration queued behind a shared-handle same-byte restore refuses stale publication
+IsarCore using libmdbx: v0.13.8-temp-upstream-fix
+06:11 +1002 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: same-byte restore while a publication hook awaits rejects the old write
+06:11 +1003 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: single migration refuses a same-byte restore before the publication guard
+06:11 +1004 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: single migration refuses a same-byte restore after the publication guard
+06:11 +1005 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: bulk migration refuses a same-byte restore before the publication guard
+06:11 +1006 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: bulk migration refuses a same-byte restore after the publication guard
+06:11 +1007 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: matching is one-to-one and refuses duplicate numbers or contradictory titles
+06:11 +1008 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: preview preserves flags/categories/preferences and keeps original offline data by default
+06:11 +1009 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: replace removes old title only after recovery and keeps unrelated book
+06:11 +1010 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: edits and downloads after preview reject entire replacement
+06:11 +1011 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: malformed chapters and existing target never modify library
+06:11 +1012 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: bulk commit is atomic, rejects mixed previews and duplicate target selections
+06:11 +1013 ~6: D:/Codex/TachiBooks/test/source_migration_test.dart: bulk refuses a newly edited library and mismatched preview snapshots
+06:11 +1014 ~6: loading D:/Codex/TachiBooks/test/source_migration_widget_test.dart
+06:12 +1014 ~6: D:/Codex/TachiBooks/test/source_migration_widget_test.dart: (setUpAll)
+06:12 +1014 ~6: D:/Codex/TachiBooks/test/source_migration_widget_test.dart: committed journal failure refreshes library and explains reopening without claiming no change
+06:13 +1015 ~6: D:/Codex/TachiBooks/test/source_migration_widget_test.dart: same-byte restore while reviewing a single migration rejects confirmation
+06:14 +1016 ~6: D:/Codex/TachiBooks/test/source_migration_widget_test.dart: same-byte restore while reviewing a bulk target rejects confirmation
+06:14 +1017 ~6: D:/Codex/TachiBooks/test/source_migration_widget_test.dart: restore while confirming bulk migration invalidates a same-byte preview
+06:14 +1018 ~6: D:/Codex/TachiBooks/test/source_migration_widget_test.dart: bulk migration keeps distant covers lazy for a large library
+06:15 +1019 ~6: D:/Codex/TachiBooks/test/source_migration_widget_test.dart: bulk review selects target without writing, then commits default keep-old action
+06:15 +1020 ~6: D:/Codex/TachiBooks/test/source_migration_widget_test.dart: migration search preview can be cancelled, then explicitly keeps old offline book
+06:15 +1021 ~6: D:/Codex/TachiBooks/test/source_migration_widget_test.dart: (tearDownAll)
+06:15 +1021 ~6: loading D:/Codex/TachiBooks/test/source_preferences_widget_test.dart
+06:16 +1021 ~6: D:/Codex/TachiBooks/test/source_preferences_widget_test.dart: source preference load failure can retry inside the dialog
+06:17 +1022 ~6: D:/Codex/TachiBooks/test/source_preferences_widget_test.dart: source category and unsupported actions remain clear at Size(320.0, 568.0)
+06:17 +1023 ~6: D:/Codex/TachiBooks/test/source_preferences_widget_test.dart: source category and unsupported actions remain clear at Size(430.0, 932.0)
+06:17 +1024 ~6: D:/Codex/TachiBooks/test/source_preferences_widget_test.dart: hidden preferences preserve original positions and password values are obscured
+06:18 +1025 ~6: D:/Codex/TachiBooks/test/source_preferences_widget_test.dart: invalid connection input displays an error and leaves the dialog usable
+06:18 +1026 ~6: loading D:/Codex/TachiBooks/test/source_recents_privacy_test.dart
+06:19 +1026 ~6: D:/Codex/TachiBooks/test/source_recents_privacy_test.dart: private source navigation preserves recents; normal visits serialize without losing entries
+06:19 +1027 ~6: loading D:/Codex/TachiBooks/test/source_repository_test.dart
+06:19 +1027 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: unconfigured runtimes report a per-engine error without HTTP
+06:19 +1028 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: one configured runtime works while the other remains unconfigured
+06:19 +1029 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: preserves large source identities and scopes them by engine
+06:19 +1030 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: optional source icons use returned HTTP URLs and invalid or absent icons fall back
+06:19 +1031 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: uses the Suwayomi quick-search contract and companion thumbnails
+06:19 +1032 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: detail refresh uses onlineFetch and preserves the server source ID
+06:19 +1033 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: uses stable chapter URLs and resolves source-order API indexes
+06:19 +1034 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: vBook source/search/novel chapter use the runtime contract
+06:19 +1035 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: keeps vBook per-image request headers for offline downloads
+06:19 +1036 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: surfaces unsupported vBook runtime capabilities and HTTP status
+06:19 +1037 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: auth errors and malformed JSON do not become empty source lists
+06:19 +1038 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: health uses settings/about and runtime health endpoints
+06:19 +1039 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: source preferences use actual Suwayomi DTO and string values
+06:19 +1040 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: vBook source preferences report unsupported without HTTP
+06:19 +1041 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: installs registered APKs using the package name
+06:19 +1042 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: downloads a direct APK and uploads the multipart file field
+06:19 +1043 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: vBook install and repository addition send original URLs
+06:20 +1044 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: Suwayomi repository addition checks GraphQL errors even on HTTP 200
+06:20 +1045 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: Suwayomi repository addition requires a confirmed mutation payload
+06:20 +1046 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: base URL rejects credentials, queries and unsupported schemes
+06:20 +1047 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: times out with a useful error instead of reporting success
+06:20 +1048 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: large-number JSON scanner leaves strings and normal numbers intact
+06:20 +1049 ~6: D:/Codex/TachiBooks/test/source_repository_test.dart: large-number preprocessing does not make malformed JSON valid
+06:20 +1050 ~6: loading D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart
+06:20 +1050 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: display sheet changes actual library columns at 320.0
+06:22 +1051 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: detail category assignment includes empty categories and can remove the old category at 320.0
+06:23 +1052 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: history search reset and single-item confirmation preserve reading data at 320.0
+06:24 +1053 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: empty DownloadsScreen returns to the library at 320.0
+06:24 +1054 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: empty RecentDownloadsScreen returns to the library at 320.0
+06:24 +1055 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: display sheet changes actual library columns at 430.0
+06:25 +1056 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: detail category assignment includes empty categories and can remove the old category at 430.0
+06:25 +1057 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: history search reset and single-item confirmation preserve reading data at 430.0
+06:25 +1058 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: empty DownloadsScreen returns to the library at 430.0
+06:26 +1059 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: empty RecentDownloadsScreen returns to the library at 430.0
+06:26 +1060 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: library replacement clears a multi-selection even when restored books reuse the same ID
+06:26 +1061 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: library keeps visible books and real progress while a source update is pending
+06:26 +1062 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: HistoryScreen error can retry the actual repository
+06:26 +1063 ~6: D:/Codex/TachiBooks/test/spec_library_activity_gaps_test.dart: RecentDownloadsScreen error can retry the actual repository
+06:26 +1064 ~6: loading D:/Codex/TachiBooks/test/spec_library_states_test.dart
+06:27 +1064 ~6: D:/Codex/TachiBooks/test/spec_library_states_test.dart: empty library offers discovery without hiding import at 320.0
+06:28 +1065 ~6: D:/Codex/TachiBooks/test/spec_library_states_test.dart: search empty state clears the visible query at 320.0
+06:29 +1066 ~6: D:/Codex/TachiBooks/test/spec_library_states_test.dart: filter empty state resets criteria and keeps display preferences at 320.0
+06:29 +1067 ~6: D:/Codex/TachiBooks/test/spec_library_states_test.dart: category inline validation and drag order preserve memberships at 320.0
+06:29 +1068 ~6: D:/Codex/TachiBooks/test/spec_library_states_test.dart: empty library offers discovery without hiding import at 430.0
+06:29 +1069 ~6: D:/Codex/TachiBooks/test/spec_library_states_test.dart: search empty state clears the visible query at 430.0
+06:30 +1070 ~6: D:/Codex/TachiBooks/test/spec_library_states_test.dart: filter empty state resets criteria and keeps display preferences at 430.0
+06:30 +1071 ~6: D:/Codex/TachiBooks/test/spec_library_states_test.dart: category inline validation and drag order preserve memberships at 430.0
+06:30 +1072 ~6: loading D:/Codex/TachiBooks/test/spec_sources_layout_test.dart
+06:31 +1072 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: empty source language filter offers a working reset action
+06:32 +1073 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: empty source list opens the existing extension sub-tab
+06:32 +1074 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: local source opens opaque imported ID sách /%?# kỳ without changing identity
+06:33 +1075 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: local source opens opaque imported ID . without changing identity
+06:33 +1076 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: local source opens opaque imported ID .. without changing identity
+06:33 +1077 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: failed pull refresh retains loaded covers and retry repeats first page
+06:33 +1078 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: discovery uses two source sub-tabs and preserves migration tools at Size(320.0, 568.0) / 150%
+06:34 +1079 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: local source shows real imported chapters and opens existing identity at Size(320.0, 568.0) / 150%
+06:34 +1080 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: migration picks exact old source then covered titles without data mutation at Size(320.0, 568.0) / 150%
+06:34 +1081 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: catalogue failure has error and retry instead of false empty results at Size(320.0, 568.0) / 150%
+06:34 +1082 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: discovery uses two source sub-tabs and preserves migration tools at Size(430.0, 932.0) / 150%
+06:34 +1083 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: local source shows real imported chapters and opens existing identity at Size(430.0, 932.0) / 150%
+06:34 +1084 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: migration picks exact old source then covered titles without data mutation at Size(430.0, 932.0) / 150%
+06:35 +1085 ~6: D:/Codex/TachiBooks/test/spec_sources_layout_test.dart: catalogue failure has error and retry instead of false empty results at Size(430.0, 932.0) / 150%
+06:35 +1086 ~6: loading D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart
+06:35 +1086 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: Suwayomi newest-first TOC becomes chronological next-chapter order with stable URLs
+06:35 +1087 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: vBook chapter order remains the order explicitly returned by the extension
+06:35 +1088 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: new numeric-ref titles retain chapter URLs when remote order and title change
+06:35 +1089 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: a source change is rejected before fetching the chapter list
+06:35 +1090 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: unchanged legacy title and ordinal still execute without changing local refs
+06:35 +1091 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: legacy ordinals never follow an exact title that moved to another index
+06:35 +1092 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: legacy repeated chapter titles are ambiguous even at a matching ordinal
+06:35 +1093 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: a legacy stored index differing from its ref is rejected
+06:35 +1094 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: duplicate URL matches are never selected by their list position
+06:35 +1095 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: duplicate runtime ordinals cannot produce page URLs
+06:35 +1096 ~6: D:/Codex/TachiBooks/test/stable_source_chapter_identity_test.dart: a chapter that changes between TOC and metadata requests is rejected
+06:35 +1097 ~6: loading D:/Codex/TachiBooks/test/storage_maintenance_widget_test.dart
+06:36 +1097 ~6: D:/Codex/TachiBooks/test/storage_maintenance_widget_test.dart: storage display and confirmed transient cache clear fit 320px
+06:38 +1098 ~6: D:/Codex/TachiBooks/test/storage_maintenance_widget_test.dart: storage display and confirmed transient cache clear fit 430px
+06:38 +1099 ~6: loading D:/Codex/TachiBooks/test/sync_auth_test.dart
+06:39 +1099 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: sign in uses auth result without uploading or implicitly enabling sync
+06:39 +1100 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: cancel and configuration error never display a fake signed-in user
+06:39 +1101 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: resume of paused linked session performs no cloud request
+06:39 +1102 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: failed first enabled upload keeps the switch aligned with its saved opt-in
+06:39 +1103 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: repeated foreground resumes respect the automatic one-minute limit
+06:39 +1104 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: a failed automatic request is also throttled while manual retries stay available
+06:39 +1105 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: sign out pauses sync and preserves full library data and baseline
+06:39 +1106 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: provider exception text never leaks into displayed error messages
+06:39 +1107 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: sync catch logs one original Firebase code instead of translated StateError
+06:39 +1108 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: Firestore permission failure keeps the signed-in session and library
+06:39 +1109 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: disabled Google provider and expired cloud auth have distinct remedies
+06:39 +1110 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: malformed persisted link remains intact and blocks automatic relinking
+06:39 +1111 ~6: D:/Codex/TachiBooks/test/sync_auth_test.dart: persisted enabled flag, owner and baseline survive a new store instance
+06:39 +1112 ~6: loading D:/Codex/TachiBooks/test/sync_auto_resume_test.dart
+06:40 +1112 ~6: D:/Codex/TachiBooks/test/sync_auto_resume_test.dart: automatic sync does not capture packages or use cloud while locked
+06:40 +1113 ~6: D:/Codex/TachiBooks/test/sync_auto_resume_test.dart: network restoration retries a failed sync after the shared throttle
+06:40 +1114 ~6: D:/Codex/TachiBooks/test/sync_auto_resume_test.dart: idle foreground check downloads another device edit after fifteen minutes
+06:41 +1115 ~6: D:/Codex/TachiBooks/test/sync_auto_resume_test.dart: disabled sync ignores connectivity and periodic checks
+06:41 +1116 ~6: D:/Codex/TachiBooks/test/sync_auto_resume_test.dart: network loss cancels an already armed periodic sync
+06:41 +1117 ~6: D:/Codex/TachiBooks/test/sync_auto_resume_test.dart: background suspends idle checks and resume preserves throttling
+06:41 +1118 ~6: loading D:/Codex/TachiBooks/test/sync_backup_integration_test.dart
+06:41 +1118 ~6: D:/Codex/TachiBooks/test/sync_backup_integration_test.dart: cloud choice updates existing books and every cache, keeping an exact full recovery backup
+06:41 +1119 ~6: D:/Codex/TachiBooks/test/sync_backup_integration_test.dart: changing cached chapter text alone is detected and uploaded with no metadata-only shortcut
+06:42 +1120 ~6: loading D:/Codex/TachiBooks/test/sync_cloud_validation_test.dart
+06:42 +1120 ~6: D:/Codex/TachiBooks/test/sync_cloud_validation_test.dart: maximum 128 MiB full snapshot fits 256 bounded chunks
+06:42 +1121 ~6: D:/Codex/TachiBooks/test/sync_cloud_validation_test.dart: legacy and incremental heads keep explicit format compatibility
+06:42 +1122 ~6: D:/Codex/TachiBooks/test/sync_cloud_validation_test.dart: oversize, inconsistent count and path-shaped IDs are rejected before allocating payload
+06:42 +1123 ~6: loading D:/Codex/TachiBooks/test/sync_engine_test.dart
+06:43 +1123 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: disabled sync makes no snapshot or network request
+06:43 +1124 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: first upload preserves full cached text and pins account before a failed network request
+06:43 +1125 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: cloud-only edit replaces unchanged local data using saved fingerprint
+06:43 +1126 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: both edits require explicit choice and never merge incompatible metadata/cache
+06:43 +1127 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: initial nonmatching cloud copy also requires choice rather than overwriting either side
+06:43 +1128 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: stale local conflict decision is rejected before cloud or local writes
+06:43 +1129 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: stale cloud conflict decision is rejected before any local replacement
+06:43 +1130 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: repository CAS protects a reader edit between snapshot check and replacement
+06:43 +1131 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: edit while uploading remains dirty and is sent on the next run
+06:43 +1132 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: wrong account cannot read, replace or upload the linked library
+06:43 +1133 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: missing previous cloud baseline cannot silently create a new head
+06:43 +1134 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: invalid cloud payload and changed head during chunk download preserve local data
+06:43 +1135 ~6: D:/Codex/TachiBooks/test/sync_engine_test.dart: pause retains link baseline and discards pending conflict
+06:43 +1136 ~6: loading D:/Codex/TachiBooks/test/sync_extension_retention_test.dart
+06:44 +1136 ~6: D:/Codex/TachiBooks/test/sync_extension_retention_test.dart: partial package omissions retain the present union with a baseline in either direction
+06:44 +1137 ~6: D:/Codex/TachiBooks/test/sync_extension_retention_test.dart: present packages still use baseline versions and explicit divergent choices
+06:44 +1138 ~6: D:/Codex/TachiBooks/test/sync_extension_retention_test.dart: whole configuration omission retains current settings with a baseline while explicit deletion remains supported
+06:44 +1139 ~6: D:/Codex/TachiBooks/test/sync_extension_retention_test.dart: automatic cloud replacement publishes retained packages and omitted settings without next-sync churn
+06:44 +1140 ~6: D:/Codex/TachiBooks/test/sync_extension_retention_test.dart: whole-cloud conflict choice retains local installed packages in the published baseline
+06:44 +1141 ~6: D:/Codex/TachiBooks/test/sync_extension_retention_test.dart: record resolution retains missing packages while preserving independent book edits
+06:44 +1142 ~6: D:/Codex/TachiBooks/test/sync_extension_retention_test.dart: a cloud image containing only package omissions is repaired without unnecessary local replacement
+06:44 +1143 ~6: loading D:/Codex/TachiBooks/test/sync_incremental_test.dart
+06:45 +1143 ~6: D:/Codex/TachiBooks/test/sync_incremental_test.dart: content-addressed roundtrip preserves cached content, covers and public configuration
+06:45 +1144 ~6: D:/Codex/TachiBooks/test/sync_incremental_test.dart: metadata-only reading edit reuses megabytes of offline pages
+06:45 +1145 ~6: D:/Codex/TachiBooks/test/sync_incremental_test.dart: missing and corrupt pieces are rejected before assembling a library
+06:45 +1146 ~6: D:/Codex/TachiBooks/test/sync_incremental_test.dart: manifest paths, impossible lengths and repeated expansion bombs are rejected
+06:45 +1147 ~6: D:/Codex/TachiBooks/test/sync_incremental_test.dart: three-way merge retains independent changes and an unchanged-side deletion
+06:45 +1148 ~6: D:/Codex/TachiBooks/test/sync_incremental_test.dart: same-book edits and edit-versus-delete require explicit record choices
+06:45 +1149 ~6: D:/Codex/TachiBooks/test/sync_incremental_test.dart: without a common baseline merge unions unique books and asks for differing records
+06:45 +1150 ~6: D:/Codex/TachiBooks/test/sync_incremental_test.dart: disk cache is account-isolated and refuses corrupt reuse
+06:45 +1151 ~6: loading D:/Codex/TachiBooks/test/sync_lifecycle_test.dart
+06:46 +1151 ~6: D:/Codex/TachiBooks/test/sync_lifecycle_test.dart: an edit within a minute after launch waits for the throttle and uploads without another event
+06:46 +1152 ~6: D:/Codex/TachiBooks/test/sync_lifecycle_test.dart: a manual sync postpones pending automatic work without dropping a later edit
+06:46 +1153 ~6: D:/Codex/TachiBooks/test/sync_lifecycle_test.dart: enabled foreground changes debounce for six seconds with no idle polling
+06:46 +1154 ~6: D:/Codex/TachiBooks/test/sync_lifecycle_test.dart: background transition cancels pending library sync until foreground resume
+06:46 +1155 ~6: D:/Codex/TachiBooks/test/sync_lifecycle_test.dart: a throttled foreground resume keeps an earlier edit pending until allowed
+06:46 +1156 ~6: D:/Codex/TachiBooks/test/sync_lifecycle_test.dart: signed-in paused link never auto-syncs on launch or library edits
+06:46 +1157 ~6: loading D:/Codex/TachiBooks/test/sync_manifest_cache_test.dart
+06:47 +1157 ~6: D:/Codex/TachiBooks/test/sync_manifest_cache_test.dart: many published manifests stay within four entries and byte budget
+06:47 +1158 ~6: D:/Codex/TachiBooks/test/sync_manifest_cache_test.dart: reads retain recent manifests while oversized entries are not cached
+06:47 +1159 ~6: D:/Codex/TachiBooks/test/sync_manifest_cache_test.dart: cached payload is independent from caller mutations
+06:47 +1160 ~6: loading D:/Codex/TachiBooks/test/sync_merge_legacy_test.dart
+06:48 +1160 ~6: D:/Codex/TachiBooks/test/sync_merge_legacy_test.dart: legacy omitted defaults do not conflict with a remote-only book edit
+06:48 +1161 ~6: D:/Codex/TachiBooks/test/sync_merge_legacy_test.dart: equivalent embedded image encodings preserve bytes without false conflicts
+06:48 +1162 ~6: loading D:/Codex/TachiBooks/test/sync_merge_widget_test.dart
+06:49 +1162 ~6: D:/Codex/TachiBooks/test/sync_merge_widget_test.dart: setting conflict exposes both values before choosing at Size(320.0, 568.0)
+06:50 +1163 ~6: D:/Codex/TachiBooks/test/sync_merge_widget_test.dart: record choices wrap and apply only after confirmation at Size(320.0, 568.0)
+06:50 +1164 ~6: D:/Codex/TachiBooks/test/sync_merge_widget_test.dart: setting conflict exposes both values before choosing at Size(430.0, 932.0)
+06:51 +1165 ~6: D:/Codex/TachiBooks/test/sync_merge_widget_test.dart: record choices wrap and apply only after confirmation at Size(430.0, 932.0)
+06:51 +1166 ~6: loading D:/Codex/TachiBooks/test/sync_record_resolution_test.dart
+06:52 +1166 ~6: D:/Codex/TachiBooks/test/sync_record_resolution_test.dart: real backup merge retains both edited books, media and exact recovery snapshot
+06:52 +1167 ~6: D:/Codex/TachiBooks/test/sync_record_resolution_test.dart: incomplete choice cannot publish and a chosen book keeps its matching cache
+06:52 +1168 ~6: D:/Codex/TachiBooks/test/sync_record_resolution_test.dart: stale local or remote preview does not publish or replace current data
+06:52 +1169 ~6: D:/Codex/TachiBooks/test/sync_record_resolution_test.dart: an edit during cloud publish fails the final local CAS and remains on device
+06:52 +1170 ~6: loading D:/Codex/TachiBooks/test/sync_screen_test.dart
+06:53 +1170 ~6: D:/Codex/TachiBooks/test/sync_screen_test.dart: backup is reachable inside Sync without login at Size(320.0, 568.0)
+06:54 +1171 ~6: D:/Codex/TachiBooks/test/sync_screen_test.dart: backup is reachable inside Sync without login at Size(430.0, 932.0)
+06:54 +1172 ~6: D:/Codex/TachiBooks/test/sync_screen_test.dart: Google config error keeps the account signed out and offline access available
+06:54 +1173 ~6: loading D:/Codex/TachiBooks/test/sync_setting_comparison_widget_test.dart
+06:55 +1173 ~6: D:/Codex/TachiBooks/test/sync_setting_comparison_widget_test.dart: structured settings stay bounded and detailed choices survive cancel at 320px
+06:58 +1174 ~6: D:/Codex/TachiBooks/test/sync_setting_comparison_widget_test.dart: nested public JSON with whitespace opens readable fields
+06:58 +1175 ~6: D:/Codex/TachiBooks/test/sync_setting_comparison_widget_test.dart: detail search stays reachable in landscape with keyboard
+06:58 +1176 ~6: loading D:/Codex/TachiBooks/test/task_lifecycle_test.dart
+06:59 +1176 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: continued task cancellation in foreground stops guarded work and retains the durable queue
+06:59 +1177 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: notifications default off; only explicit toggle asks; permission denial keeps off
+06:59 +1178 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: restored opt-in never requests permission; private sessions and intervening incognito suppress summaries
+06:59 +1179 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: queue sends one terminal numeric summary and suppresses a session that became private
+06:59 +1180 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: finite background lease granted=true preserves queued work and stops active execution
+06:59 +1181 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: finite background lease granted=false preserves queued work and stops active execution
+06:59 +1182 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: lease expiration cannot disclose a session that became private and returned
+06:59 +1183 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: a background lease granted after foreground resume is ended
+06:59 +1184 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: native expiry uses the pre-lease numeric snapshot and suppresses a later private session
+06:59 +1185 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: a scheduled native window resumes the guarded durable queue and stops on expiry
+07:00 +1186 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: scheduled callback in foreground cannot start downloads or acquire a lease
+07:00 +1187 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: scheduled background cannot run source work behind an app lock
+07:00 +1188 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: an update-only native window uses policy without a download queue
+07:00 +1189 ~6: D:/Codex/TachiBooks/test/task_lifecycle_test.dart: an active update acquires a finite lease and cannot finish after expiry/resume
+07:00 +1190 ~6: loading D:/Codex/TachiBooks/test/task_platform_test.dart
+07:00 +1190 ~6: D:/Codex/TachiBooks/test/task_platform_test.dart: native task channel emits expiration and sends numeric summaries only
+07:00 +1191 ~6: D:/Codex/TachiBooks/test/task_platform_test.dart: background capability sends only counts and policy; accepts bounded native tokens
+07:00 +1192 ~6: loading D:/Codex/TachiBooks/test/ui_spec_cover_settings_followup_test.dart
+07:01 +1192 ~6: D:/Codex/TachiBooks/test/ui_spec_cover_settings_followup_test.dart: cover loading and failure keep geometry, title and badges
+07:02 +1193 ~6: D:/Codex/TachiBooks/test/ui_spec_cover_settings_followup_test.dart: local reading status edits real library and resets search at 320.0
+07:03 +1194 ~6: D:/Codex/TachiBooks/test/ui_spec_cover_settings_followup_test.dart: local reading status edits real library and resets search at 430.0
+07:04 +1195 ~6: D:/Codex/TachiBooks/test/ui_spec_cover_settings_followup_test.dart: local reading status edits real library and resets search at 1024.0
+07:05 +1196 ~6: loading D:/Codex/TachiBooks/test/ui_spec_settings_test.dart
+07:05 +1196 ~6: D:/Codex/TachiBooks/test/ui_spec_settings_test.dart: (setUpAll)
+07:05 +1196 ~6: D:/Codex/TachiBooks/test/ui_spec_settings_test.dart: More tools lead to grouped settings at Size(320.0, 568.0) with large text
+07:07 +1197 ~6: D:/Codex/TachiBooks/test/ui_spec_settings_test.dart: More tools lead to grouped settings at Size(430.0, 932.0) with large text
+07:07 +1198 ~6: D:/Codex/TachiBooks/test/ui_spec_settings_test.dart: More tools lead to grouped settings at Size(1024.0, 768.0) with large text
+07:08 +1199 ~6: D:/Codex/TachiBooks/test/ui_spec_settings_test.dart: backup list distinguishes loading from an empty folder
+07:08 +1200 ~6: D:/Codex/TachiBooks/test/ui_spec_settings_test.dart: failed backup listing retries without deleting files
+07:08 +1201 ~6: D:/Codex/TachiBooks/test/ui_spec_settings_test.dart: backup confirmation cannot delete a same-named file after destination changes
+07:09 +1202 ~6: D:/Codex/TachiBooks/test/ui_spec_settings_test.dart: backup deletion requires an explicit second confirmation and Cancel preserves the file
+07:09 +1203 ~6: D:/Codex/TachiBooks/test/ui_spec_settings_test.dart: (tearDownAll)
+07:09 +1203 ~6: loading D:/Codex/TachiBooks/test/ui_spec_sync_status_test.dart
+07:10 +1203 ~6: D:/Codex/TachiBooks/test/ui_spec_sync_status_test.dart: sync status and transfer distinguish running, failure and completion at Size(320.0, 568.0)
+07:11 +1204 ~6: D:/Codex/TachiBooks/test/ui_spec_sync_status_test.dart: sync status and transfer distinguish running, failure and completion at Size(430.0, 932.0)
+07:11 +1205 ~6: loading D:/Codex/TachiBooks/test/vietnamese_presentation_test.dart
+07:11 +1205 ~6: D:/Codex/TachiBooks/test/vietnamese_presentation_test.dart: Vietnamese dates and numbers are display-only
+07:12 +1206 ~6: D:/Codex/TachiBooks/test/vietnamese_presentation_test.dart: localized actionable errors keep instructions and redact URL credentials
+07:12 +1207 ~6: D:/Codex/TachiBooks/test/vietnamese_presentation_test.dart: storage, native and network errors do not expose provider details
+07:12 +1208 ~6: D:/Codex/TachiBooks/test/vietnamese_presentation_test.dart: HTTP errors keep the useful status code with Vietnamese action text
+07:12 +1209 ~6: D:/Codex/TachiBooks/test/vietnamese_presentation_test.dart: native extension RPC errors retain distinct actionable categories
+07:12 +1210 ~6: D:/Codex/TachiBooks/test/vietnamese_presentation_test.dart: platform source errors preserve HTTP status and explicit timeout remedies
+07:12 +1211 ~6: loading D:/Codex/TachiBooks/test/widget_test.dart
+07:12 +1211 ~6: D:/Codex/TachiBooks/test/widget_test.dart: empty library adds authored sample and opens a real offline chapter
+07:15 +1212 ~6: D:/Codex/TachiBooks/test/widget_test.dart: navigation preserves library and exposes both source ecosystems
+07:16 +1213 ~6: All tests passed!

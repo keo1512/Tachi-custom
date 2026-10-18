@@ -29,6 +29,65 @@ void main() {
     PaintingBinding.instance.imageCache.clearLiveImages();
   });
 
+  for (final layout in [
+    'leftToRight',
+    'rightToLeft',
+    'verticalPages',
+    'doublePage',
+  ]) {
+    testWidgets(
+      '$layout waits for a real decoded image and never completes a failed page',
+      (tester) async {
+        final client = _PendingImageClient();
+        debugNetworkImageHttpClientProvider = () => client;
+        final fixture = await _open(
+          tester,
+          const ['https://images.invalid/paged-error.png'],
+          progress: .5,
+          layout: layout,
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(client.requested, true);
+        expect((await fixture.repo.find('paged'))!.chapters.first.read, false);
+        client.response.complete(_ImageResponse(Uint8List(0), statusCode: 503));
+        await _waitForImages(tester);
+        expect(find.text('Không tải được ảnh'), findsOneWidget);
+        expect((await fixture.repo.find('paged'))!.chapters.first.read, false);
+        await _dispose(tester, fixture.container);
+        expect((await fixture.repo.find('paged'))!.chapters.first.read, false);
+      },
+    );
+    testWidgets(
+      '$layout incognito retains metadata and a restored library rejects the old page',
+      (tester) async {
+        final fixture = await _open(
+          tester,
+          await _images(tester, 3),
+          private: true,
+          layout: layout,
+        );
+        await _waitForImages(tester);
+        final original = (await fixture.repo.find('paged'))!.toJson();
+        final view = tester.widget<PageView>(find.byType(PageView));
+        view.controller!.jumpToPage(layout == 'doublePage' ? 1 : 2);
+        await tester.pump(const Duration(milliseconds: 600));
+        await _waitForImages(tester);
+        expect((await fixture.repo.find('paged'))!.toJson(), original);
+        final replacement = (await fixture.repo.find('paged'))!
+            .copyWith(title: 'Sau khôi phục', progress: .1);
+        await fixture.repo.clear();
+        await fixture.repo.save(replacement);
+        await tester.tap(find.byTooltip('Đánh dấu trang'));
+        await tester.pumpAndSettle();
+        expect(
+          (await fixture.repo.find('paged'))!.toJson(),
+          replacement.toJson(),
+        );
+        await _dispose(tester, fixture.container);
+      },
+    );
+  }
+
   for (final mode in ['paged', 'rtl']) {
     testWidgets(
       'legacy $mode preference uses continuous pages and completes only at the decoded end',
@@ -195,12 +254,14 @@ Future<_Fixture> _open(
   WidgetTester tester,
   List<String> images, {
   String mode = 'paged',
+  String layout = 'continuous',
   bool private = false,
   double progress = 0,
   MemoryLibraryRepository? repo,
 }) async {
   SharedPreferences.setMockInitialValues({
     'mangaMode': mode,
+    'readerOptionsV1': jsonEncode({'mangaLayout': layout}),
     'incognitoMode': private,
   });
   final preferences = await SharedPreferences.getInstance();
@@ -249,8 +310,13 @@ Future<_Fixture> _open(
     ),
   );
   await tester.pumpAndSettle();
-  expect(find.byType(PageView), findsNothing);
-  expect(find.byType(SingleChildScrollView), findsOneWidget);
+  expect(
+    find.byType(PageView),
+    layout == 'continuous' ? findsNothing : findsOneWidget,
+  );
+  if (layout == 'continuous') {
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+  }
   return (repo: library, container: container);
 }
 

@@ -3,6 +3,7 @@ import 'package:tachi_books/features/library/application/library_bulk_actions.da
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/domain/library_duplicates.dart';
+import 'package:tachi_books/features/library/domain/reading_statistics.dart';
 
 LibraryBook book(String id) => LibraryBook(
   id: id,
@@ -16,6 +17,29 @@ LibraryBook book(String id) => LibraryBook(
 );
 
 void main() {
+  test('bulk unread clears completed status without changing other explicit reading states', () async {
+    final repo = MemoryLibraryRepository();
+    final states = ['', 'planned', 'reading', 'paused', 'completed'];
+    for (final state in states) {
+      await repo.save(
+        book('b-$state').copyWith(completed: true, readingState: state),
+      );
+    }
+    final outside = book('outside')
+        .copyWith(completed: true, readingState: 'completed');
+    await repo.save(outside);
+    await LibraryBulkActions(repo)
+        .markRead(states.map((state) => 'b-$state'), false, revision: 0);
+    for (final state in states) {
+      final after = (await repo.find('b-$state'))!;
+      expect(after.completed, false);
+      expect(after.readingState, state == 'completed' ? '' : state);
+      expect(readingStateOf(after), isNot('completed'));
+      expect(after.bookmarks, book('fixture').bookmarks);
+      expect(after.categories, ['A', 'B']);
+    }
+    expect((await repo.find('outside'))!.toJson(), outside.toJson());
+  });
   test('bulk read uses current metadata and preserves cache, bookmarks, categories and history', () async {
     final repo = MemoryLibraryRepository(),
         service = LibraryBulkActions(MemoryLibraryRepository());

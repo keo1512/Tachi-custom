@@ -1,0 +1,43 @@
+{
+  "referenceInputs": [
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\tinh nang phai co.md",
+      "sha256": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c",
+      "bytes": 43832,
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md",
+      "sha256": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083",
+      "bytes": 62663,
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md",
+      "sha256": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0",
+      "bytes": 162280,
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\Tachimanga iOS Mod IPA No Jailbreak Cheats 5.0 Hacked IPA by iOSGods.com.ipa",
+      "sha256": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+      "bytes": 128494339,
+      "unchanged": true,
+      "entries": 566,
+      "zipCrc": "all members passed"
+    }
+  ],
+  "existingBuild11": {
+    "path": "C:\\Users\\Nosgnoh\\Downloads\\TachiBooks-build11.ipa",
+    "sha256": "d32645766ee4c352edc6215e793ace4794a6716c39944ae071ca8e73e6b8afd0",
+    "zipCrc": "all members passed",
+    "containsCurrentEdits": false
+  },
+  "readOnly": true,
+  "executedOriginalApp": false,
+  "newIPAPackaged": false,
+  "notes": [
+    "Original binary/three documents verified unchanged; reference class disassembly/markers remain static evidence.",
+    "Build11 predates implementation; Windows and fixture tests do not verify current iPhone behavior."
+  ]
+}

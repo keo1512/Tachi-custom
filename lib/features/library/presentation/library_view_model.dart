@@ -20,6 +20,7 @@ import '../../sources/data/source_repository.dart';
 import '../../sources/application/native_runtime_provider.dart';
 import '../../sources/data/on_device_source_repository.dart';
 import '../../sources/domain/catalogue.dart';
+import '../../sources/domain/native_page_locator.dart';
 import '../../downloads/presentation/download_deletion_controller.dart';
 import 'library_category_controller.dart';
 import 'library_preference_writes.dart';
@@ -150,6 +151,9 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
         description: description,
         favorite: favorite,
         completed: completed,
+        readingState: completed == false && book.readingState == 'completed'
+            ? ''
+            : null,
         collection: collection,
         author: author,
         series: series,
@@ -234,7 +238,19 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
       for (final id in ids.toSet()) {
         await _mutateBook(
           id,
-          (book) => book.copyWith(clearLastRead: true),
+          (book) => book.lastRead == null
+              ? book
+              : book.copyWith(
+                  // Older libraries infer nullable read flags from lastRead.
+                  // Freeze that meaning before removing only the history time.
+                  chapters: [
+                    for (final (index, chapter) in book.chapters.indexed)
+                      chapter.read == null
+                          ? chapter.copyWith(read: chapterIsRead(book, index))
+                          : chapter,
+                  ],
+                  clearLastRead: true,
+                ),
           expectedRevision: revision,
         );
       }
@@ -313,6 +329,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
       return book.copyWith(
         chapters: chapters,
         completed: read ? book.completed : false,
+        readingState: !read && book.readingState == 'completed' ? '' : null,
       );
     }, expectedRevision: revision);
     if (read && updated != null && ref.mounted) {
@@ -423,6 +440,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
             ),
         ],
         completed: read ? book.completed : false,
+        readingState: !read && book.readingState == 'completed' ? '' : null,
       );
     }, expectedRevision: revision);
     if (read && updated != null && ref.mounted) {
@@ -467,6 +485,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
             ),
         ],
         completed: read ? book.completed : false,
+        readingState: !read && book.readingState == 'completed' ? '' : null,
       );
       updated.add(LibraryChapterDeletion(next, ids));
       return next;
@@ -495,6 +514,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
         currentChapter: 0,
         progress: 0,
         completed: false,
+        readingState: book.readingState == 'completed' ? '' : null,
         clearLastRead: true,
       ),
       expectedRevision: expectedRevision,
@@ -854,6 +874,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
         return saved[key] =
             'data:${image.mimeType};base64,${base64Encode(image.bytes)}';
       }
+      rejectNativePageHttpFallback(url);
       final response = await client
           .send(
             http.Request('GET', uri)..headers.addAll(content.headersFor(url)),
@@ -892,6 +913,9 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     final images = <String>[];
     final document = html.parseFragment(content.html);
     try {
+      if (content.images.isNotEmpty) {
+        onPageProgress?.call(0, content.images.length);
+      }
       for (var page = 0; page < content.images.length; page++) {
         images.add(await downloadImage(content.images[page], page: page));
         continueRequest();

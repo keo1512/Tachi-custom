@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tachi_books/core/theme/app_theme.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
+import 'package:tachi_books/features/library/domain/library_reading.dart';
 import 'package:tachi_books/features/library/presentation/activity_screens.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
@@ -13,6 +14,89 @@ import 'package:tachi_books/features/settings/settings_controller.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  for (final scope in const [
+    ['legacy'],
+    ['legacy', 'mixed', 'already-empty', 'missing'],
+  ]) {
+    test(
+      'clearing $scope preserves inferred and explicit chapter reading',
+      () async {
+        final repository = MemoryLibraryRepository();
+        final legacy = LibraryBook(
+          id: 'legacy',
+          title: 'Thư viện cũ',
+          engine: 'local',
+          currentChapter: 2,
+          progress: .8,
+          lastRead: DateTime(2026, 10, 17),
+          bookmarks: const ['1:0.5000'],
+          notes: 'Giữ ghi chú',
+          chapters: const [
+            BookChapter(id: 'a', title: 'A', index: 0, downloaded: true),
+            BookChapter(id: 'b', title: 'B', index: 1),
+            BookChapter(id: 'c', title: 'C', index: 2),
+          ],
+        );
+        final mixed = legacy.copyWith(
+          id: 'mixed',
+          chapters: const [
+            BookChapter(id: 'a', title: 'A', index: 0, read: false),
+            BookChapter(id: 'b', title: 'B', index: 1),
+            BookChapter(id: 'c', title: 'C', index: 2, read: true),
+          ],
+        );
+        final empty = legacy.copyWith(id: 'already-empty', clearLastRead: true);
+        final outside = legacy.copyWith(id: 'outside');
+        for (final book in [legacy, mixed, empty, outside]) {
+          await repository.save(book);
+        }
+        final content = ReaderContent(
+          kind: 'novel',
+          html: '<p>Nội dung cũ</p>',
+        );
+        await repository.saveChapter('legacy', 0, content);
+        final preferences = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [
+            libraryRepositoryProvider.overrideWithValue(repository),
+            preferencesProvider.overrideWithValue(preferences),
+          ],
+        );
+        addTearDown(container.dispose);
+        await container.read(libraryProvider.future);
+        final vm = container.read(libraryProvider.notifier);
+        await vm.clearHistory(scope);
+        for (final book in [legacy, mixed, empty, outside]) {
+          final after = (await repository.find(book.id))!;
+          if (!scope.contains(book.id) || book.lastRead == null) {
+            expect(after.toJson(), book.toJson());
+            continue;
+          }
+          expect(after.lastRead, isNull);
+          expect(readChapterCount(after), readChapterCount(book));
+          expect(after.currentChapter, book.currentChapter);
+          expect(after.progress, book.progress);
+          expect(after.bookmarks, book.bookmarks);
+          expect(after.notes, book.notes);
+          expect(after.engine, book.engine);
+          expect(after.sourceId, book.sourceId);
+          expect(after.sourceRef, book.sourceRef);
+          for (final (index, chapter) in book.chapters.indexed) {
+            expect(chapterIsRead(after, index), chapterIsRead(book, index));
+            expect(after.chapters[index].downloaded, chapter.downloaded);
+            if (chapter.read != null) {
+              expect(after.chapters[index].read, chapter.read);
+            }
+          }
+        }
+        expect((await repository.readChapter('legacy', 0))!.html, content.html);
+        final first = (await repository.snapshot()).fingerprint;
+        await vm.clearHistory(scope);
+        expect((await repository.snapshot()).fingerprint, first);
+      },
+    );
+  }
 
   for (final width in [320.0, 430.0]) {
     testWidgets(

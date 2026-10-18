@@ -1,0 +1,996 @@
+{
+  "schemaVersion": 1,
+  "dateLocal": "2026-10-18",
+  "scope": "Root source review complement to backend26sections; test names are links, final execution belongs to consolidated audit",
+  "subsectionCount": 45,
+  "sections": [
+    {
+      "group": 6,
+      "subsection": "6.1",
+      "heading": "Chế độ đọc",
+      "sourceReview": "Continuous vertical manga default and per-title options; paged RTL/LTR/vertical modes and automatic tag-based webtoon selection absent.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 6,
+      "subsection": "6.2",
+      "heading": "Chế độ hai trang",
+      "sourceReview": "Two-page pairing/order/wide-page exclusion/first-page offset absent; no double-page model or renderer. Original AOT contains double_page_reader_mode_v2.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 6,
+      "subsection": "6.3",
+      "heading": "Phóng to và thu nhỏ",
+      "sourceReview": "Pinch/double-tap/pan and width/height/screen/original geometry have consumers and tests; bounded decode/window preserves full layout. Crop/magnifier absent.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 6,
+      "subsection": "6.4",
+      "heading": "Tự động cuộn",
+      "sourceReview": "Continuous and timed auto-scroll have consumers; modal/route/lifecycle/loading/error guards pause movement. Test real-clock/fake-timer mismatch repaired by injected test clock.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 6,
+      "subsection": "6.5",
+      "heading": "Nhấn giữ để cuộn",
+      "sourceReview": "Hold pointer gesture changes speed and releases scroll hold; follows same viewport and lifecycle. Native physical touch smoothness unmeasured.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 6,
+      "subsection": "6.6",
+      "heading": "Vùng chạm điều hướng",
+      "sourceReview": "Off/horizontal/vertical/inverse tap zones implemented without swallowing zoom/pan; extra Kindle/L/edge and mode-specific profiles absent.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 6,
+      "subsection": "6.7",
+      "heading": "Điều khiển trang và chương",
+      "sourceReview": "Chapter/page identity, geometry seek, progress/read completion, orientation/system UI/wake/back-swipe and retry retain generation/revision guards; last-chapter separator/notice absent.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 6,
+      "subsection": "6.8",
+      "heading": "Màu sắc và hiển thị",
+      "sourceReview": "Merged global/per-book colors/margins/spacing/orientation reflected in render. Quick/advanced background labels corrected; latest book provider already passed to settings before this fix.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 6,
+      "subsection": "6.9",
+      "heading": "Thao tác với ảnh",
+      "sourceReview": "Image save/copy/share/cover paths preserve bytes; native image/permission bounds and retry/error paths exist. Photo/share device behavior unverified.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 6,
+      "subsection": "6.10",
+      "heading": "Nhận dạng văn bản OCR",
+      "sourceReview": "Vision whole-page OCR and selectable result/translation bridge exist; region-selection bounding boxes/crop input absent. Native recognition/languages/permission unverified.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 6,
+      "subsection": "6.11",
+      "heading": "Chuột và bàn phím",
+      "sourceReview": "Keyboard shortcuts and mouse wheel scroll continuous viewport with guards; actual peripherals/window behavior not tested on iPad/iPhone.",
+      "errorRecoveryReview": "Retry pins chapter identity, within-page location and library revision; invalid image/native locator failures cannot claim complete offline content.",
+      "sources": [
+        "lib/features/reader/presentation/reader_screen.dart",
+        "lib/features/reader/domain/reader_options.dart",
+        "lib/features/reader/presentation/reader_auto_scroll.dart",
+        "lib/features/reader/presentation/reader_keyboard_controls.dart",
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_auto_scroll_test.dart",
+        "test/reader_platform_test.dart",
+        "test/native_image_pipeline_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 7,
+      "subsection": "7.1",
+      "heading": "Tải chương",
+      "sourceReview": "Download reuses actual saved image bytes and source page hooks; partial cache survives errors, bounded image/chapter sizes and CAS prevent stale publication. No HTTP Range or page-parallel executor.",
+      "errorRecoveryReview": "Failed jobs remain visible after bounded attempts; restore/source change rejects late writes, storage errors pause queue, interrupted requests do not free slots early.",
+      "sources": [
+        "lib/features/downloads/presentation/download_queue_controller.dart",
+        "lib/features/downloads/domain/download_job.dart",
+        "lib/features/library/presentation/library_view_model.dart",
+        "ios/Runner/TaskPlatformBridge.swift"
+      ],
+      "tests": [
+        "test/download_queue_test.dart",
+        "test/download_job_pause_test.dart",
+        "test/download_queue_management_test.dart",
+        "test/download_deletion_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 7,
+      "subsection": "7.2",
+      "heading": "Hàng chờ tải xuống",
+      "sourceReview": "Stable job IDs deduplicate queue; bounded total/per-source concurrency, reorder/prioritize/pause/retry and persistence guards. Active logical pause retains physical request slot until settle; no page/byte Flutter progress model.",
+      "errorRecoveryReview": "Failed jobs remain visible after bounded attempts; restore/source change rejects late writes, storage errors pause queue, interrupted requests do not free slots early.",
+      "sources": [
+        "lib/features/downloads/presentation/download_queue_controller.dart",
+        "lib/features/downloads/domain/download_job.dart",
+        "lib/features/library/presentation/library_view_model.dart",
+        "ios/Runner/TaskPlatformBridge.swift"
+      ],
+      "tests": [
+        "test/download_queue_test.dart",
+        "test/download_job_pause_test.dart",
+        "test/download_queue_management_test.dart",
+        "test/download_deletion_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 7,
+      "subsection": "7.3",
+      "heading": "Tải xuống trong nền",
+      "sourceReview": "Finite leases/BGProcessing/ContinuedProcessing wiring uses existing app engine; expiration/cancellation retain queue. Physical iOS grant/suspension/force-kill not tested.",
+      "errorRecoveryReview": "Failed jobs remain visible after bounded attempts; restore/source change rejects late writes, storage errors pause queue, interrupted requests do not free slots early.",
+      "sources": [
+        "lib/features/downloads/presentation/download_queue_controller.dart",
+        "lib/features/downloads/domain/download_job.dart",
+        "lib/features/library/presentation/library_view_model.dart",
+        "ios/Runner/TaskPlatformBridge.swift"
+      ],
+      "tests": [
+        "test/download_queue_test.dart",
+        "test/download_job_pause_test.dart",
+        "test/download_queue_management_test.dart",
+        "test/download_deletion_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 7,
+      "subsection": "7.4",
+      "heading": "Quản lý chương đã tải",
+      "sourceReview": "Downloaded/cache distinctions and guarded manual/automatic deletion preserve local originals/bookmarks; badges alone do not validate decodability. Offline list lacks per-book size aggregation.",
+      "errorRecoveryReview": "Failed jobs remain visible after bounded attempts; restore/source change rejects late writes, storage errors pause queue, interrupted requests do not free slots early.",
+      "sources": [
+        "lib/features/downloads/presentation/download_queue_controller.dart",
+        "lib/features/downloads/domain/download_job.dart",
+        "lib/features/library/presentation/library_view_model.dart",
+        "ios/Runner/TaskPlatformBridge.swift"
+      ],
+      "tests": [
+        "test/download_queue_test.dart",
+        "test/download_job_pause_test.dart",
+        "test/download_queue_management_test.dart",
+        "test/download_deletion_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 7,
+      "subsection": "7.5",
+      "heading": "Tự động tải",
+      "sourceReview": "New-chapter policies feed shared durable queue and privacy/revision checks. Actual background automatic delivery unverified.",
+      "errorRecoveryReview": "Failed jobs remain visible after bounded attempts; restore/source change rejects late writes, storage errors pause queue, interrupted requests do not free slots early.",
+      "sources": [
+        "lib/features/downloads/presentation/download_queue_controller.dart",
+        "lib/features/downloads/domain/download_job.dart",
+        "lib/features/library/presentation/library_view_model.dart",
+        "ios/Runner/TaskPlatformBridge.swift"
+      ],
+      "tests": [
+        "test/download_queue_test.dart",
+        "test/download_job_pause_test.dart",
+        "test/download_queue_management_test.dart",
+        "test/download_deletion_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 11,
+      "subsection": "11.1",
+      "heading": "Định dạng hình ảnh",
+      "sourceReview": "JPEG/PNG/WebP/GIF/HEIF/AVIF/JXL extensions/mime accepted. Extension recognition does not prove decoder support, particularly conditional JXL; native codec matrix pending.",
+      "errorRecoveryReview": "Parse/size/path/entry errors precede publication; repeated content-addressed import is idempotent; saved offline copy remains if original disappears, native grant requires reselection on new device.",
+      "sources": [
+        "lib/features/library/data/document_importer.dart",
+        "lib/features/library/data/folder_comic_importer.dart",
+        "lib/features/library/data/local_comic_metadata.dart",
+        "ios/Runner/LocalComicFilesBridge.swift"
+      ],
+      "tests": [
+        "test/document_importer_test.dart",
+        "test/folder_comic_import_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 11,
+      "subsection": "11.2",
+      "heading": "Định dạng đóng gói",
+      "sourceReview": "TXT/EPUB/ZIP/CBZ stage in memory; RAR/CBR native extractor has errors/bounds; DRM, encrypted/multivolume RAR unsupported. Existing originals are never modified.",
+      "errorRecoveryReview": "Parse/size/path/entry errors precede publication; repeated content-addressed import is idempotent; saved offline copy remains if original disappears, native grant requires reselection on new device.",
+      "sources": [
+        "lib/features/library/data/document_importer.dart",
+        "lib/features/library/data/folder_comic_importer.dart",
+        "lib/features/library/data/local_comic_metadata.dart",
+        "ios/Runner/LocalComicFilesBridge.swift"
+      ],
+      "tests": [
+        "test/document_importer_test.dart",
+        "test/folder_comic_import_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 11,
+      "subsection": "11.3",
+      "heading": "Quản lý truyện cục bộ",
+      "sourceReview": "Folder relative paths/stable IDs/natural order/cover/details metadata and explicit reconnect avoid title guessing; scan CAS protects replaced library and native folder grant stays device-local.",
+      "errorRecoveryReview": "Parse/size/path/entry errors precede publication; repeated content-addressed import is idempotent; saved offline copy remains if original disappears, native grant requires reselection on new device.",
+      "sources": [
+        "lib/features/library/data/document_importer.dart",
+        "lib/features/library/data/folder_comic_importer.dart",
+        "lib/features/library/data/local_comic_metadata.dart",
+        "ios/Runner/LocalComicFilesBridge.swift"
+      ],
+      "tests": [
+        "test/document_importer_test.dart",
+        "test/folder_comic_import_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 13,
+      "subsection": "13.1",
+      "heading": "Sao lưu",
+      "sourceReview": "Bounded full snapshot export/manual/auto store with checksum/flush/publish before retention; external Files folder only manages its private subfolder.",
+      "errorRecoveryReview": "Stale preview rejects, old bytes/recovery preserved, auto retention happens after verified new file; committed extension plan is retriable rather than discarded.",
+      "sources": [
+        "lib/features/library/data/backup_service.dart",
+        "lib/features/library/data/backup_validation.dart",
+        "lib/features/library/data/automatic_backup_store.dart",
+        "lib/features/library/data/external_automatic_backup_store.dart",
+        "lib/features/library/data/backup_compatibility/backup_reader.dart"
+      ],
+      "tests": [
+        "test/backup_service_test.dart",
+        "test/automatic_backup_test.dart",
+        "test/backup_preview_widget_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 13,
+      "subsection": "13.2",
+      "heading": "Nội dung sao lưu",
+      "sourceReview": "Books/media/config/public extension packages compatible through existing schema; cookies/secrets/absolute folder grants excluded. No invented media when external backup omits it.",
+      "errorRecoveryReview": "Stale preview rejects, old bytes/recovery preserved, auto retention happens after verified new file; committed extension plan is retriable rather than discarded.",
+      "sources": [
+        "lib/features/library/data/backup_service.dart",
+        "lib/features/library/data/backup_validation.dart",
+        "lib/features/library/data/automatic_backup_store.dart",
+        "lib/features/library/data/external_automatic_backup_store.dart",
+        "lib/features/library/data/backup_compatibility/backup_reader.dart"
+      ],
+      "tests": [
+        "test/backup_service_test.dart",
+        "test/automatic_backup_test.dart",
+        "test/backup_preview_widget_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 13,
+      "subsection": "13.3",
+      "heading": "Khôi phục",
+      "sourceReview": "Validate/preview/fingerprint CAS/recovery before atomic library+config replacement; retain extension recovery plan when library commit completed but engine restore fails. Stale repository edit across restore fixed in controller.",
+      "errorRecoveryReview": "Stale preview rejects, old bytes/recovery preserved, auto retention happens after verified new file; committed extension plan is retriable rather than discarded.",
+      "sources": [
+        "lib/features/library/data/backup_service.dart",
+        "lib/features/library/data/backup_validation.dart",
+        "lib/features/library/data/automatic_backup_store.dart",
+        "lib/features/library/data/external_automatic_backup_store.dart",
+        "lib/features/library/data/backup_compatibility/backup_reader.dart"
+      ],
+      "tests": [
+        "test/backup_service_test.dart",
+        "test/automatic_backup_test.dart",
+        "test/backup_preview_widget_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 13,
+      "subsection": "13.4",
+      "heading": "Tương thích bản sao lưu",
+      "sourceReview": "Native JSONv1, Tachimanga511/type0 ZIP and Mihon/Tachiyomi gzip protobuf detected by bytes; opaque tracker/memo preserved. Other TMB versions and real vBook backup unverified.",
+      "errorRecoveryReview": "Stale preview rejects, old bytes/recovery preserved, auto retention happens after verified new file; committed extension plan is retriable rather than discarded.",
+      "sources": [
+        "lib/features/library/data/backup_service.dart",
+        "lib/features/library/data/backup_validation.dart",
+        "lib/features/library/data/automatic_backup_store.dart",
+        "lib/features/library/data/external_automatic_backup_store.dart",
+        "lib/features/library/data/backup_compatibility/backup_reader.dart"
+      ],
+      "tests": [
+        "test/backup_service_test.dart",
+        "test/automatic_backup_test.dart",
+        "test/backup_preview_widget_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 15,
+      "subsection": "15.1",
+      "heading": "Giao diện",
+      "sourceReview": "System/light/dark themes and responsive UI implemented; custom accent/theme picker absent, no alternate-icon substitution inferred from theme.",
+      "errorRecoveryReview": "Malformed preference values clamp/fallback or report errors according to existing contracts; stale navigation writes cannot replace restored configuration.",
+      "sources": [
+        "lib/features/settings/navigation_preferences.dart",
+        "lib/features/settings/presentation/app_settings_screens.dart",
+        "lib/core/theme/app_theme.dart"
+      ],
+      "tests": [
+        "test/navigation_preferences_test.dart",
+        "test/adaptive_navigation_test.dart",
+        "test/ui_spec_settings_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 15,
+      "subsection": "15.2",
+      "heading": "Biểu tượng ứng dụng",
+      "sourceReview": "No alternate app icon picker or CFBundleAlternateIcons implementation; missing feature, no dummy control accepted.",
+      "errorRecoveryReview": "Malformed preference values clamp/fallback or report errors according to existing contracts; stale navigation writes cannot replace restored configuration.",
+      "sources": [
+        "lib/features/settings/navigation_preferences.dart",
+        "lib/features/settings/presentation/app_settings_screens.dart",
+        "lib/core/theme/app_theme.dart"
+      ],
+      "tests": [
+        "test/navigation_preferences_test.dart",
+        "test/adaptive_navigation_test.dart",
+        "test/ui_spec_settings_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 15,
+      "subsection": "15.3",
+      "heading": "Thanh điều hướng",
+      "sourceReview": "Six native UIKit tab identities and configurable ordering/labels/start/restore retain generation guards; 5-tab wireframe overridden by user.",
+      "errorRecoveryReview": "Malformed preference values clamp/fallback or report errors according to existing contracts; stale navigation writes cannot replace restored configuration.",
+      "sources": [
+        "lib/features/settings/navigation_preferences.dart",
+        "lib/features/settings/presentation/app_settings_screens.dart",
+        "lib/core/theme/app_theme.dart"
+      ],
+      "tests": [
+        "test/navigation_preferences_test.dart",
+        "test/adaptive_navigation_test.dart",
+        "test/ui_spec_settings_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 15,
+      "subsection": "15.4",
+      "heading": "Ngôn ngữ",
+      "sourceReview": "Vietnamese-only interface per user; source/content languages remain selectable. OS localization list vi does not prove every possible provider error is translated.",
+      "errorRecoveryReview": "Malformed preference values clamp/fallback or report errors according to existing contracts; stale navigation writes cannot replace restored configuration.",
+      "sources": [
+        "lib/features/settings/navigation_preferences.dart",
+        "lib/features/settings/presentation/app_settings_screens.dart",
+        "lib/core/theme/app_theme.dart"
+      ],
+      "tests": [
+        "test/navigation_preferences_test.dart",
+        "test/adaptive_navigation_test.dart",
+        "test/ui_spec_settings_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 15,
+      "subsection": "15.5",
+      "heading": "Định dạng hiển thị",
+      "sourceReview": "Existing presentation/format controls retained; original runtime formatting/pixel layout is unverified beyond current widget tests.",
+      "errorRecoveryReview": "Malformed preference values clamp/fallback or report errors according to existing contracts; stale navigation writes cannot replace restored configuration.",
+      "sources": [
+        "lib/features/settings/navigation_preferences.dart",
+        "lib/features/settings/presentation/app_settings_screens.dart",
+        "lib/core/theme/app_theme.dart"
+      ],
+      "tests": [
+        "test/navigation_preferences_test.dart",
+        "test/adaptive_navigation_test.dart",
+        "test/ui_spec_settings_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 16,
+      "subsection": "16.1",
+      "heading": "Khóa ứng dụng",
+      "sourceReview": "Device authentication/idle delay/retry/generation/input+accessibility block implemented; corrupted privacy config preserved and locks closed. Independent application PIN absent.",
+      "errorRecoveryReview": "Authentication cancellation/background/late responses cannot unlock new session; invalid configuration remains visible for explicit repair.",
+      "sources": [
+        "lib/features/privacy/application/app_lock_controller.dart",
+        "lib/features/privacy/presentation/privacy_gate.dart",
+        "lib/features/privacy/domain/privacy_preferences.dart",
+        "ios/Runner/PrivacyPlatformBridge.swift"
+      ],
+      "tests": [
+        "test/privacy_app_lock_test.dart",
+        "test/privacy_native_boundary_test.dart",
+        "test/incognito_reader_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 16,
+      "subsection": "16.2",
+      "heading": "Chế độ ẩn danh",
+      "sourceReview": "Reader session pins incognito policy for activity/time and delayed writes; existing state not deleted. Restore/settings revision invalidates stale recording.",
+      "errorRecoveryReview": "Authentication cancellation/background/late responses cannot unlock new session; invalid configuration remains visible for explicit repair.",
+      "sources": [
+        "lib/features/privacy/application/app_lock_controller.dart",
+        "lib/features/privacy/presentation/privacy_gate.dart",
+        "lib/features/privacy/domain/privacy_preferences.dart",
+        "ios/Runner/PrivacyPlatformBridge.swift"
+      ],
+      "tests": [
+        "test/privacy_app_lock_test.dart",
+        "test/privacy_native_boundary_test.dart",
+        "test/incognito_reader_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 16,
+      "subsection": "16.3",
+      "heading": "Bảo vệ nội dung",
+      "sourceReview": "Flutter gate and UIKit hiding plus native screen-cover wiring exist; actual AppSwitcher/recording/biometric behavior needs device proof, not general screenshot-prevention claim.",
+      "errorRecoveryReview": "Authentication cancellation/background/late responses cannot unlock new session; invalid configuration remains visible for explicit repair.",
+      "sources": [
+        "lib/features/privacy/application/app_lock_controller.dart",
+        "lib/features/privacy/presentation/privacy_gate.dart",
+        "lib/features/privacy/domain/privacy_preferences.dart",
+        "ios/Runner/PrivacyPlatformBridge.swift"
+      ],
+      "tests": [
+        "test/privacy_app_lock_test.dart",
+        "test/privacy_native_boundary_test.dart",
+        "test/incognito_reader_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 17,
+      "subsection": "17.1",
+      "heading": "Bộ nhớ và cache",
+      "sourceReview": "Usage/cache/source/browser maintenance and explicit guarded deletion/recovery exist; package/cache/recovery/cloud GC not universally implemented. Native usage numbers unverified on device.",
+      "errorRecoveryReview": "Transient clear/repair operations guard active work, restore revision and privacy; malformed bytes retained until explicit action, global clear may surface partial native failure.",
+      "sources": [
+        "lib/core/platform/device_tools.dart",
+        "lib/features/sources/application/source_maintenance.dart",
+        "lib/features/settings/presentation/storage_maintenance_screen.dart",
+        "ios/Runner/DeviceToolsBridge.swift",
+        "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.m"
+      ],
+      "tests": [
+        "test/storage_maintenance_widget_test.dart",
+        "test/library_safe_repair_test.dart",
+        "test/log_diagnostics_widget_test.dart",
+        "test/network_tools_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 17,
+      "subsection": "17.2",
+      "heading": "WebView và mạng",
+      "sourceReview": "Browser navigation/snapshot cookie/UA and host HTTP persistence implemented; global clear calls Java then DeviceTools/WK. Opening WK does not seed Java cookies; bidirectional sync/Cloudflare not accepted.",
+      "errorRecoveryReview": "Transient clear/repair operations guard active work, restore revision and privacy; malformed bytes retained until explicit action, global clear may surface partial native failure.",
+      "sources": [
+        "lib/core/platform/device_tools.dart",
+        "lib/features/sources/application/source_maintenance.dart",
+        "lib/features/settings/presentation/storage_maintenance_screen.dart",
+        "ios/Runner/DeviceToolsBridge.swift",
+        "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.m"
+      ],
+      "tests": [
+        "test/storage_maintenance_widget_test.dart",
+        "test/library_safe_repair_test.dart",
+        "test/log_diagnostics_widget_test.dart",
+        "test/network_tools_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 17,
+      "subsection": "17.3",
+      "heading": "Cơ sở dữ liệu",
+      "sourceReview": "Diagnostics uses actual image decode/cache data and preview repair with recovery/CAS; no claim to recover every damaged Isar/database or repair native filesystem automatically.",
+      "errorRecoveryReview": "Transient clear/repair operations guard active work, restore revision and privacy; malformed bytes retained until explicit action, global clear may surface partial native failure.",
+      "sources": [
+        "lib/core/platform/device_tools.dart",
+        "lib/features/sources/application/source_maintenance.dart",
+        "lib/features/settings/presentation/storage_maintenance_screen.dart",
+        "ios/Runner/DeviceToolsBridge.swift",
+        "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.m"
+      ],
+      "tests": [
+        "test/storage_maintenance_widget_test.dart",
+        "test/library_safe_repair_test.dart",
+        "test/log_diagnostics_widget_test.dart",
+        "test/network_tools_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 17,
+      "subsection": "17.4",
+      "heading": "Nhật ký và chẩn đoán",
+      "sourceReview": "Redacted bounded diagnostics/export/retry hooks and background status exist; no credentials/source payload printed in proofs. Native share/delivery pending.",
+      "errorRecoveryReview": "Transient clear/repair operations guard active work, restore revision and privacy; malformed bytes retained until explicit action, global clear may surface partial native failure.",
+      "sources": [
+        "lib/core/platform/device_tools.dart",
+        "lib/features/sources/application/source_maintenance.dart",
+        "lib/features/settings/presentation/storage_maintenance_screen.dart",
+        "ios/Runner/DeviceToolsBridge.swift",
+        "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.m"
+      ],
+      "tests": [
+        "test/storage_maintenance_widget_test.dart",
+        "test/library_safe_repair_test.dart",
+        "test/log_diagnostics_widget_test.dart",
+        "test/network_tools_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 17,
+      "subsection": "17.5",
+      "heading": "Thông tin ứng dụng",
+      "sourceReview": "Help/version/license screens describe current features, distinguish native/live limits; changelog not required when project does not provide it.",
+      "errorRecoveryReview": "Transient clear/repair operations guard active work, restore revision and privacy; malformed bytes retained until explicit action, global clear may surface partial native failure.",
+      "sources": [
+        "lib/core/platform/device_tools.dart",
+        "lib/features/sources/application/source_maintenance.dart",
+        "lib/features/settings/presentation/storage_maintenance_screen.dart",
+        "ios/Runner/DeviceToolsBridge.swift",
+        "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.m"
+      ],
+      "tests": [
+        "test/storage_maintenance_widget_test.dart",
+        "test/library_safe_repair_test.dart",
+        "test/log_diagnostics_widget_test.dart",
+        "test/network_tools_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 18,
+      "subsection": "18.1",
+      "heading": "Tài khoản đồng bộ",
+      "sourceReview": "Existing Google session/Firebase owner pin/account management preserved per user; email/password account system not added. Actual Google sign-in/recovery on device pending.",
+      "errorRecoveryReview": "Local snapshot preserved on network/hash/owner/conflict errors; partial upload does not move head; failed extension recovery blocks publishing incomplete runtime state.",
+      "sources": [
+        "lib/features/sync/application/sync_controller.dart",
+        "lib/features/sync/application/sync_lifecycle.dart",
+        "lib/features/sync/domain/sync_engine.dart",
+        "lib/features/sync/data/firestore_sync_remote.dart",
+        "lib/features/sync/data/backup_sync_local.dart"
+      ],
+      "tests": [
+        "test/sync_engine_test.dart",
+        "test/sync_auth_test.dart",
+        "test/sync_incremental_test.dart",
+        "test/sync_backup_integration_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 18,
+      "subsection": "18.2",
+      "heading": "Dữ liệu đồng bộ",
+      "sourceReview": "Native full snapshot includes supported library/media/config/packages with additive retention; imported opaque tracker data not live tracker credentials. Cross-device folder grants remain device-specific.",
+      "errorRecoveryReview": "Local snapshot preserved on network/hash/owner/conflict errors; partial upload does not move head; failed extension recovery blocks publishing incomplete runtime state.",
+      "sources": [
+        "lib/features/sync/application/sync_controller.dart",
+        "lib/features/sync/application/sync_lifecycle.dart",
+        "lib/features/sync/domain/sync_engine.dart",
+        "lib/features/sync/data/firestore_sync_remote.dart",
+        "lib/features/sync/data/backup_sync_local.dart"
+      ],
+      "tests": [
+        "test/sync_engine_test.dart",
+        "test/sync_auth_test.dart",
+        "test/sync_incremental_test.dart",
+        "test/sync_backup_integration_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 18,
+      "subsection": "18.3",
+      "heading": "Hoạt động đồng bộ",
+      "sourceReview": "Chunk hashes/immutable blobs/head CAS/publish-before-replace, conflict preview+record merge, stale decisions rejected; foreground dirty/network/periodic throttle. Firestore emulator15tests skipped and production two-device sync unverified.",
+      "errorRecoveryReview": "Local snapshot preserved on network/hash/owner/conflict errors; partial upload does not move head; failed extension recovery blocks publishing incomplete runtime state.",
+      "sources": [
+        "lib/features/sync/application/sync_controller.dart",
+        "lib/features/sync/application/sync_lifecycle.dart",
+        "lib/features/sync/domain/sync_engine.dart",
+        "lib/features/sync/data/firestore_sync_remote.dart",
+        "lib/features/sync/data/backup_sync_local.dart"
+      ],
+      "tests": [
+        "test/sync_engine_test.dart",
+        "test/sync_auth_test.dart",
+        "test/sync_incremental_test.dart",
+        "test/sync_backup_integration_test.dart"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 19,
+      "subsection": "19.1",
+      "heading": "Thiết bị và màn hình",
+      "sourceReview": "iPhone+iPad targets/orientations/layout/native tabs declared and host responsive widgets tested; current source not compiled on Windows for native runtime.",
+      "errorRecoveryReview": "Permission/unsupported version/native capability failures have channels and error paths; full iOS compile/package and physical iPhone/iPad acceptance remain separate evidence gates.",
+      "sources": [
+        "ios/Runner/Info.plist",
+        "ios/Runner/AppDelegate.swift",
+        "ios/Runner/TaskPlatformBridge.swift",
+        "ios/Runner/DeepLinkPlatformBridge.swift",
+        "lib/features/deep_links/domain/app_deep_link.dart",
+        "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.m"
+      ],
+      "tests": [
+        "test/reader_platform_test.dart",
+        "test/task_platform_test.dart",
+        "test/deep_link_reader_handoff_test.dart",
+        "ios/RunnerTests/RunnerTests.swift"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 19,
+      "subsection": "19.2",
+      "heading": "Xác thực và lưu trữ",
+      "sourceReview": "Files picker/security-scoped bookmarks/FaceID/device auth/Photos bridges exist; universal source-credential Keychain storage absent or incomplete. Native grants/codec/TouchID not physically tested.",
+      "errorRecoveryReview": "Permission/unsupported version/native capability failures have channels and error paths; full iOS compile/package and physical iPhone/iPad acceptance remain separate evidence gates.",
+      "sources": [
+        "ios/Runner/Info.plist",
+        "ios/Runner/AppDelegate.swift",
+        "ios/Runner/TaskPlatformBridge.swift",
+        "ios/Runner/DeepLinkPlatformBridge.swift",
+        "lib/features/deep_links/domain/app_deep_link.dart",
+        "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.m"
+      ],
+      "tests": [
+        "test/reader_platform_test.dart",
+        "test/task_platform_test.dart",
+        "test/deep_link_reader_handoff_test.dart",
+        "ios/RunnerTests/RunnerTests.swift"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 19,
+      "subsection": "19.3",
+      "heading": "Chia sẻ và xử lý nội dung",
+      "sourceReview": "Share/Vision/Translation and bounded tachibooks scheme inbox/opaque IDs/locked route handoff exist; matching registered scheme verified. URL website is not silently treated as an installed title.",
+      "errorRecoveryReview": "Permission/unsupported version/native capability failures have channels and error paths; full iOS compile/package and physical iPhone/iPad acceptance remain separate evidence gates.",
+      "sources": [
+        "ios/Runner/Info.plist",
+        "ios/Runner/AppDelegate.swift",
+        "ios/Runner/TaskPlatformBridge.swift",
+        "ios/Runner/DeepLinkPlatformBridge.swift",
+        "lib/features/deep_links/domain/app_deep_link.dart",
+        "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.m"
+      ],
+      "tests": [
+        "test/reader_platform_test.dart",
+        "test/task_platform_test.dart",
+        "test/deep_link_reader_handoff_test.dart",
+        "ios/RunnerTests/RunnerTests.swift"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 19,
+      "subsection": "19.4",
+      "heading": "Thông báo và tác vụ nền",
+      "sourceReview": "Notification/download/update/background Swift paths keep expiration/cancel/engine lifecycle; actual delivery/grant/long background execution pending, no force-kill guarantee.",
+      "errorRecoveryReview": "Permission/unsupported version/native capability failures have channels and error paths; full iOS compile/package and physical iPhone/iPad acceptance remain separate evidence gates.",
+      "sources": [
+        "ios/Runner/Info.plist",
+        "ios/Runner/AppDelegate.swift",
+        "ios/Runner/TaskPlatformBridge.swift",
+        "ios/Runner/DeepLinkPlatformBridge.swift",
+        "lib/features/deep_links/domain/app_deep_link.dart",
+        "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.m"
+      ],
+      "tests": [
+        "test/reader_platform_test.dart",
+        "test/task_platform_test.dart",
+        "test/deep_link_reader_handoff_test.dart",
+        "ios/RunnerTests/RunnerTests.swift"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 19,
+      "subsection": "19.5",
+      "heading": "Điều khiển ngoại vi",
+      "sourceReview": "Touch/wheel/keyboard handlers have source consumers; physical peripherals and gesture arbitration not proven by channel tests.",
+      "errorRecoveryReview": "Permission/unsupported version/native capability failures have channels and error paths; full iOS compile/package and physical iPhone/iPad acceptance remain separate evidence gates.",
+      "sources": [
+        "ios/Runner/Info.plist",
+        "ios/Runner/AppDelegate.swift",
+        "ios/Runner/TaskPlatformBridge.swift",
+        "ios/Runner/DeepLinkPlatformBridge.swift",
+        "lib/features/deep_links/domain/app_deep_link.dart",
+        "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.m"
+      ],
+      "tests": [
+        "test/reader_platform_test.dart",
+        "test/task_platform_test.dart",
+        "test/deep_link_reader_handoff_test.dart",
+        "ios/RunnerTests/RunnerTests.swift"
+      ],
+      "runtimeAcceptance": false
+    },
+    {
+      "group": 19,
+      "subsection": "19.6",
+      "heading": "Tính năng bổ sung dành cho iPad",
+      "sourceReview": "Responsive large-screen code exists; two-page/ApplePencil/DoubleTap advanced controls absent. Historical hosted XCTest does not prove JVM, which rejects simulator execution.",
+      "errorRecoveryReview": "Permission/unsupported version/native capability failures have channels and error paths; full iOS compile/package and physical iPhone/iPad acceptance remain separate evidence gates.",
+      "sources": [
+        "ios/Runner/Info.plist",
+        "ios/Runner/AppDelegate.swift",
+        "ios/Runner/TaskPlatformBridge.swift",
+        "ios/Runner/DeepLinkPlatformBridge.swift",
+        "lib/features/deep_links/domain/app_deep_link.dart",
+        "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.m"
+      ],
+      "tests": [
+        "test/reader_platform_test.dart",
+        "test/task_platform_test.dart",
+        "test/deep_link_reader_handoff_test.dart",
+        "ios/RunnerTests/RunnerTests.swift"
+      ],
+      "runtimeAcceptance": false
+    }
+  ],
+  "fileSha256": {
+    "lib/features/reader/presentation/reader_screen.dart": "2355826a2bcc61b2d955adf58faaff710b67053a29896fa01350e4ea7a894a95",
+    "lib/features/reader/domain/reader_options.dart": "e4384895985eea4ef66b472465f349e1acc44c1e900dc09dd259c6d85465dac3",
+    "lib/features/reader/presentation/reader_auto_scroll.dart": "c917299d769c5709c439fa47d56d64d71edc5d095d90e52dbedad55190c5514a",
+    "lib/features/reader/presentation/reader_keyboard_controls.dart": "ee3340b86b084f7a6695efc7c5086d0e5c88866279db72a2e7c553c9055beee9",
+    "ios/Runner/AppDelegate.swift": "afd497346cba9367c132b1401d28ffefb92dfc4aacedb667c9030bd7847d823b",
+    "test/reader_ui_test.dart": "a2de9beeaaa3eb097026ba2d5c6627c3c48afdb91fcc91564bf0cc83c8fd99a4",
+    "test/reader_auto_scroll_test.dart": "99d20936fac8d088299ae3ff771885c8d0eb67cd9217c218976a6bca5688bb9e",
+    "test/reader_platform_test.dart": "c598d4fe84aabe7554bdf3fd32e3019b2820a7a444fecc8e2dd7b77c01533b65",
+    "test/native_image_pipeline_test.dart": "9f57e14f5be6516ccaf06e621db26ac15e59daf8ab48fc111b189e573f14e4ad",
+    "lib/features/downloads/presentation/download_queue_controller.dart": "de806a42f2daba4f6e6a658c6353728ffa904c58187af1891c1e8fe283f74bfc",
+    "lib/features/downloads/domain/download_job.dart": "d8f8a9c20832df88e54ce75b3a1620c13a4bcab36158e8f34d2fd465e92c7319",
+    "lib/features/library/presentation/library_view_model.dart": "145a8f60d75a6116da2dede0dcec172a3e92930f70e12207d18a4f0a697c8cf4",
+    "ios/Runner/TaskPlatformBridge.swift": "b1615305b73bc9994a4d9de5765693b7ecbe5718d345ff2b4d69d58fea18668c",
+    "test/download_queue_test.dart": "46725e74c84c7a63d54ca00a6cdd7cd8bfe5ea85cb30ce1d77d2d7e3c5d1be1b",
+    "test/download_job_pause_test.dart": "49589a7d12f089810647d01592ea2d3bf4a2f8c028d1fb7fba431878ef73d2d3",
+    "test/download_queue_management_test.dart": "688ff769462436abd527d0adc7db4be03b3dfe95812c3a1763a399829de5ac56",
+    "test/download_deletion_test.dart": "1df4c5c3cc930ff8c9a5eac32478884bdcfa4fa48291514501d559791eac3be5",
+    "lib/features/library/data/document_importer.dart": "efbaae7b1aa139f05a4eab65cb7ce03d9f4d4f7f6e1af7838976bfc20a23326e",
+    "lib/features/library/data/folder_comic_importer.dart": "3c709c674fee371eaa1b84aa104fcf715abb157beba654e6eb8cf28c0d6b49f3",
+    "lib/features/library/data/local_comic_metadata.dart": "b24fe074ab58ecc2cc6a724d688d723f46635fb2256cd78447ae3a54db57ac87",
+    "ios/Runner/LocalComicFilesBridge.swift": "5d41d35edaf2c2beac9bf710b509735ac18b20117241076804ac2c94cc58f61a",
+    "test/document_importer_test.dart": "006cb2aef6a35131ba7e2e4e5838977b4702c21e7b02325ed2756bcb92c06dea",
+    "test/folder_comic_import_test.dart": "b48d871a629000e8b2a1b9298030cfb4e39b9fbf4b8d69e2edaaf4ef1e811e82",
+    "lib/features/library/data/backup_service.dart": "c72ae7bcca6ba6b23b7bc218f0be3b9d8a74968edec7ad889fa19978f0dd14bf",
+    "lib/features/library/data/backup_validation.dart": "3cd347ac8f4f6e25b4879e4f271479f08345a82c06be8790ed01dfd9c6160c15",
+    "lib/features/library/data/automatic_backup_store.dart": "19232d457ca7c27201369cf7fc8977daddf6a1968811b2728658b98c55ba5fd7",
+    "lib/features/library/data/external_automatic_backup_store.dart": "84e9a918fd0b5e0876376914c95ac078b2dec49dac38f1060949fcaa0f1c2425",
+    "lib/features/library/data/backup_compatibility/backup_reader.dart": "7e0b40d71d8a79d0317d43a673da8fe05674757ffa3d9db40e5692c021cecd82",
+    "test/backup_service_test.dart": "f5f6680a7517e3cf505ccca790e39ede8304b436fca486924ee4250904335000",
+    "test/automatic_backup_test.dart": "9277145e3f7dabcee74dbef17e2aec9c771828c8e278f3ae2b911b67ca5c54c4",
+    "test/backup_preview_widget_test.dart": "60084cccce7a446ef7bad6a62ea10eff1fa95a64f7554bed99e7eee41cf4e306",
+    "lib/features/settings/navigation_preferences.dart": "59910b701984e0942a5c2bf29212dcf21e719813f7733fe8f9ac32d93c8d59d6",
+    "lib/features/settings/presentation/app_settings_screens.dart": "759924c7bdfac00f81ffedc167332b1e3fa603650e6e010208c41dcd63825165",
+    "lib/core/theme/app_theme.dart": "c3a88c6ae6c9a074e46a243dd3ac74a2784ed1e1036acdedbf249429a1e5dc6b",
+    "test/navigation_preferences_test.dart": "bbc642f2e697df3b4e659f759038afaa288e3edf5a1076ae9d8db33ef693d57b",
+    "test/adaptive_navigation_test.dart": "fd7048c50ab6d857b486d1d0e345ceafa239d91c60b2c2f9c5272ed7dbfe6769",
+    "test/ui_spec_settings_test.dart": "3eaafb352c50c0e5fd3ba9dcf4b9f7c3c4666ad66a555b966d174c7d88a589b6",
+    "lib/features/privacy/application/app_lock_controller.dart": "9afb587e8dd3f63e3d6d3033e4a0d4c72761aed5865f56a8bdf99f14e9dce7ab",
+    "lib/features/privacy/presentation/privacy_gate.dart": "a66e578b3bcc3430e62127a99cac7b85f7a8548eac16038143531c7e380ccaf0",
+    "lib/features/privacy/domain/privacy_preferences.dart": "b2a3bc50fe49944200e00cf85b0bfcd79dd378745d545ff55abcf10e195a2e87",
+    "ios/Runner/PrivacyPlatformBridge.swift": "3d59d3f5d554df5501e9f7ebf4dde904409dd7df1fee1704e7fc7a6f91c4ad89",
+    "test/privacy_app_lock_test.dart": "172247b0dbb2e88e778f04a7ccff7d5d720502429c7bda7ba4ddd093ef819c3f",
+    "test/privacy_native_boundary_test.dart": "f6886422a6e8cbd06289ab5126311a9af2fbec5a14fed79e5675b4676e8f5e0d",
+    "test/incognito_reader_test.dart": "0ac68225b2b3b673ab7e76dce00ac92a626002ad90bc88cb105b7919cc72ec5c",
+    "lib/core/platform/device_tools.dart": "0b0cf781d1d39bc952199fa7b698be00222c004155843476fe11cca7a8e5c828",
+    "lib/features/sources/application/source_maintenance.dart": "0c88fb8a53457575bd13d0aad7b048773b826f2bbf9a7475d5f1ad371b88d922",
+    "lib/features/settings/presentation/storage_maintenance_screen.dart": "3f7789d83a4ce89947bfe04ae4dfe9db085161b5e5da4f7788e9c59d23ec6b1f",
+    "ios/Runner/DeviceToolsBridge.swift": "be501f098a6e88fb66b78fdadd16139e75a44d5ce6ad30ae1b5f5659a7450b3e",
+    "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.m": "ae5e23f15493e982754ab3e50a30c26e53cd6dbc5aa3704ae7fbaf7355148840",
+    "test/storage_maintenance_widget_test.dart": "a6076c1f9c8a086604bff8bbce9c2d40f5f8095076e74f0f9e96bd6aa1dde299",
+    "test/library_safe_repair_test.dart": "c4b7a46a4f97f56b47a034856b36fbcb9e7ffa124ec0407001f29addfe771afd",
+    "test/log_diagnostics_widget_test.dart": "44b25a03c4bffa8c36c89f6547d53d7af8c70d253642c5615e63107adf51c4f6",
+    "test/network_tools_test.dart": "05bc55c3a16b666ec42bba7b8a3d6a242cc1537b80dc68363e09232ee7d11022",
+    "lib/features/sync/application/sync_controller.dart": "83a20a962c951f5e6d1bad171463ffa3400af02a81d3f5fdfa38cd961a8e8198",
+    "lib/features/sync/application/sync_lifecycle.dart": "2b83c9e5ac5eb383e27ed121757af28dad98737a6b6ec059c21f6c968d3e4c50",
+    "lib/features/sync/domain/sync_engine.dart": "37423044b244cabfb5ec10710ed513c17a769b0030d8260639d0b2c0fae84e51",
+    "lib/features/sync/data/firestore_sync_remote.dart": "2d4271e62b862081067401520b49b2c5e77e0779612507e68e535c2b222320af",
+    "lib/features/sync/data/backup_sync_local.dart": "274c82126c5f214b7a7b709ed56f1b5608eed0927dc275c8c49e383c42c37d54",
+    "test/sync_engine_test.dart": "a9a55b0093b59ffdfb7e9d35eaf59456ddb28f9e0226636ff9041e8d34336675",
+    "test/sync_auth_test.dart": "42d9bb845f22737565f5acd164370cf440db69d97d4acd0013b84cd1f93649a6",
+    "test/sync_incremental_test.dart": "b794ba97ef7056e1220b8b7a5c86069d0abc18e69d28911742a64d1150c98c9d",
+    "test/sync_backup_integration_test.dart": "692631d9e160bbf6caa6f7a4604ba6d789030dd8bd164552c498076de548c44a",
+    "ios/Runner/Info.plist": "2159a14554434b438516d05d62ec2098360f6693441444fee7b34dddaa8c694d",
+    "ios/Runner/DeepLinkPlatformBridge.swift": "79e323bb9b6defd7a5aaea782713bf7cad635b0bdd99716405a03cf2509754e2",
+    "lib/features/deep_links/domain/app_deep_link.dart": "bedae0d675deaba4b99ad41ec760922a3acf49dd90e4ef0f5d5f7c43cd1b6221",
+    "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.m": "83e520911631bd359206a95c033864a32b3d506b3bec3ca82810b71032a9aabb",
+    "test/task_platform_test.dart": "dadf69a23cb0c405656fe55c15fae7dfa24d1b811ee73756e86752022d530374",
+    "test/deep_link_reader_handoff_test.dart": "9e03ed27aab6f992ff6ff87e605abdb86f518a3e2431bf6961e3084490b4c2ac",
+    "ios/RunnerTests/RunnerTests.swift": "a27efbcdac293414b7becb2aeb77568e29b651ce539eb63dc5c19483860e0159"
+  },
+  "reference": {
+    "path": "C:\\Users\\Nosgnoh\\Downloads\\tinh nang phai co.md",
+    "sha256": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c"
+  },
+  "limits": "Source and boundary checks; no exhaustive branch/combination or original iOS runtime/visual parity claim. External tracker group12 excluded by user."
+}

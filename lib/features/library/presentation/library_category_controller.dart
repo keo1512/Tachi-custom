@@ -10,6 +10,7 @@ import 'library_preference_writes.dart';
 import 'library_category_preference_migration.dart';
 import 'library_filter_controller.dart';
 import 'library_group_order_controller.dart';
+import 'library_folders_controller.dart';
 
 final libraryCategoriesProvider =
     NotifierProvider<LibraryCategoryController, LibraryCategoryRegistry>(
@@ -124,6 +125,7 @@ class LibraryCategoryController extends Notifier<LibraryCategoryRegistry> {
       if (ref.mounted) {
         ref.invalidate(libraryFilterProvider);
         ref.invalidate(libraryGroupOrderProvider);
+        ref.invalidate(libraryFoldersProvider);
         state = _read();
         await ref.read(libraryProvider.notifier).refresh();
       }

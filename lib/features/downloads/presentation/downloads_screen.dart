@@ -81,6 +81,10 @@ class DownloadsScreen extends ConsumerWidget {
           task.status == DownloadJobStatus.paused,
     );
     final controller = ref.read(downloadQueueProvider.notifier);
+    final progress = {
+      for (final task in queue.tasks)
+        task.identity: controller.pageProgressFor(task.identity),
+    };
     final colors = Theme.of(context).colorScheme;
     final buttonStyle = FilledButton.styleFrom(
       backgroundColor: const Color(0xFFAFC4FF),
@@ -118,324 +122,362 @@ class DownloadsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          ListTile(
-            minTileHeight: 60,
-            leading: const Icon(CupertinoIcons.arrow_down_to_line, size: 24),
-            title: const Text(
-              'Gần đây đã tải xuống',
-              style: TextStyle(fontSize: 15),
-            ),
-            trailing: Icon(
-              CupertinoIcons.chevron_right,
-              size: 20,
-              color: colors.onSurfaceVariant,
-            ),
-            onTap: () => Navigator.of(context).push(
-              CupertinoPageRoute<void>(
-                builder: (_) => const RecentDownloadsScreen(),
-              ),
-            ),
-          ),
-          const Divider(height: 1, thickness: 1),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 12, 10, 8),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      style: buttonStyle,
-                      onPressed:
-                          queue.storageError != null ||
-                              (!queue.running && !runnable)
-                          ? null
-                          : () {
-                              if (queue.running) {
-                                controller.pause();
-                              } else {
-                                perform(context, controller.resumeAll);
-                              }
-                            },
-                      icon: Icon(
-                        queue.running
-                            ? CupertinoIcons.pause_fill
-                            : CupertinoIcons.play_fill,
-                        size: 16,
+      body: LayoutBuilder(
+        builder: (context, bounds) => Column(
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: bounds.maxHeight * .4),
+              child: SingleChildScrollView(
+                key: const ValueKey('downloads-header'),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      minTileHeight: 60,
+                      leading: const Icon(
+                        CupertinoIcons.arrow_down_to_line,
+                        size: 24,
                       ),
-                      label: Text(queue.running ? 'Tạm dừng' : 'Tiếp tục'),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: FilledButton.icon(
-                      style: buttonStyle,
-                      onPressed: () => concurrency(context, ref),
-                      icon: const Icon(CupertinoIcons.bolt_fill, size: 17),
-                      label: Text('Tải xuống đồng thời:\n$count'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (queue.tasks.isNotEmpty) const DownloadQueueBulkActions(),
-          if (queue.storageError != null)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                queue.storageError!,
-                style: TextStyle(color: colors.error, fontSize: 13),
-              ),
-            ),
-          if (queue.pauseReason != null)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                queue.pauseReason!,
-                style: const TextStyle(fontSize: 13),
-              ),
-            ),
-          Expanded(
-            child: queue.tasks.isEmpty
-                ? Center(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('Σ(ಠ_ಠ)', style: TextStyle(fontSize: 40)),
-                          const SizedBox(height: 24),
-                          const Text(
-                            'Không có tải xuống',
-                            style: TextStyle(fontSize: 15),
-                          ),
-                          TextButton(
-                            onPressed: () => context.go('/'),
-                            child: const Text('Chọn truyện trong thư viện'),
-                          ),
-                        ],
+                      title: const Text(
+                        'Gần đây đã tải xuống',
+                        style: TextStyle(fontSize: 15),
+                      ),
+                      trailing: Icon(
+                        CupertinoIcons.chevron_right,
+                        size: 20,
+                        color: colors.onSurfaceVariant,
+                      ),
+                      onTap: () => Navigator.of(context).push(
+                        CupertinoPageRoute<void>(
+                          builder: (_) => const RecentDownloadsScreen(),
+                        ),
                       ),
                     ),
-                  )
-                : ReorderableListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    buildDefaultDragHandles: false,
-                    itemCount: bookIds.length,
-                    onReorderItem: (oldIndex, newIndex) {
-                      final reordered = [...bookIds];
-                      final moved = reordered.removeAt(oldIndex);
-                      reordered.insert(newIndex, moved);
-                      final destination = newIndex + 1 < reordered.length
-                          ? reordered[newIndex + 1]
-                          : null;
-                      perform(
-                        context,
-                        () => controller.moveBookBefore(moved, destination),
-                      );
-                    },
-                    itemBuilder: (context, index) {
-                      final bookId = bookIds[index];
-                      final tasks = queue.tasks
-                          .where((task) => task.bookId == bookId)
-                          .toList();
-                      final found = books.where((book) => book.id == bookId);
-                      final book = found.isEmpty ? null : found.first;
-                      final revision = ref
-                          .read(libraryRepositoryProvider)
-                          .replacementRevision;
-                      final active = tasks
-                          .where(
-                            (task) => task.status == DownloadJobStatus.active,
-                          )
-                          .length;
-                      final failed = tasks
-                          .where(
-                            (task) => task.status == DownloadJobStatus.failed,
-                          )
-                          .length;
-                      final paused = tasks
-                          .where(
-                            (task) => task.status == DownloadJobStatus.paused,
-                          )
-                          .length;
-                      return ExpansionTile(
-                        key: ValueKey('download-book-$bookId'),
-                        leading: book == null
-                            ? const Icon(CupertinoIcons.book)
-                            : ActivityBookCover(
-                                book,
-                                coverImage: libraryCoverImage(ref, book),
-                              ),
-                        title: Text(
-                          book?.title ?? 'Sách không còn trong thư viện',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 15),
-                        ),
-                        subtitle: Text(
-                          '${tasks.length} chương · $active đang tải${paused == 0 ? '' : ' · $paused tạm dừng'}${failed == 0 ? '' : ' · $failed lỗi'}',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
+                    const Divider(height: 1, thickness: 1),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 12, 10, 8),
+                      child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            PopupMenuButton<String>(
-                              tooltip: 'Tùy chọn tải ${book?.title ?? bookId}',
-                              onSelected: (action) {
-                                switch (action) {
-                                  case 'now':
-                                    perform(
-                                      context,
-                                      () => controller.downloadBookNow(bookId),
-                                    );
-                                  case 'cancel':
-                                    perform(
-                                      context,
-                                      () => controller.cancelBook(bookId),
-                                    );
-                                  case 'next':
-                                    enqueueNextDownloads(
-                                      context,
-                                      ref,
-                                      book!,
-                                      expectedRevision: revision,
-                                    );
-                                }
-                              },
-                              itemBuilder: (_) => [
-                                const PopupMenuItem(
-                                  value: 'now',
-                                  child: Text('Tải ngay'),
+                            Expanded(
+                              child: FilledButton.icon(
+                                style: buttonStyle,
+                                onPressed:
+                                    queue.storageError != null ||
+                                        (!queue.running && !runnable)
+                                    ? null
+                                    : () {
+                                        if (queue.running) {
+                                          controller.pause();
+                                        } else {
+                                          perform(
+                                            context,
+                                            controller.resumeAll,
+                                          );
+                                        }
+                                      },
+                                icon: Icon(
+                                  queue.running
+                                      ? CupertinoIcons.pause_fill
+                                      : CupertinoIcons.play_fill,
+                                  size: 16,
                                 ),
-                                if (book != null && book.engine != 'local')
-                                  const PopupMenuItem(
-                                    value: 'next',
-                                    child: Text('Tải chương tiếp theo'),
-                                  ),
-                                const PopupMenuItem(
-                                  value: 'cancel',
-                                  child: Text('Hủy tải truyện'),
+                                label: Text(
+                                  queue.running ? 'Tạm dừng' : 'Tiếp tục',
                                 ),
-                              ],
+                              ),
                             ),
-                            ReorderableDragStartListener(
-                              key: ValueKey('download-drag-$bookId'),
-                              index: index,
-                              child: const SizedBox(
-                                width: 32,
-                                height: 48,
-                                child: ColoredBox(
-                                  color: Colors.transparent,
-                                  child: Icon(
-                                    CupertinoIcons.line_horizontal_3,
-                                    size: 20,
-                                  ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: FilledButton.icon(
+                                style: buttonStyle,
+                                onPressed: () => concurrency(context, ref),
+                                icon: const Icon(
+                                  CupertinoIcons.bolt_fill,
+                                  size: 17,
                                 ),
+                                label: Text('Tải xuống đồng thời:\n$count'),
                               ),
                             ),
                           ],
                         ),
-                        children: [
-                          for (final task in tasks)
-                            ListTile(
-                              title: Text(
-                                book?.chapters
-                                        .where(
-                                          (chapter) =>
-                                              chapter.id == task.chapterId,
-                                        )
-                                        .firstOrNull
-                                        ?.title ??
-                                    'Chương không còn trong mục lục',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(switch (task.status) {
-                                    DownloadJobStatus.pending => 'Chờ tải',
-                                    DownloadJobStatus.active => 'Đang tải',
-                                    DownloadJobStatus.paused => 'Đã tạm dừng',
-                                    DownloadJobStatus.failed =>
-                                      'Lỗi: ${userFacingError(task.error ?? 'Lỗi tải nguồn')}',
-                                  }),
-                                  if (task.status == DownloadJobStatus.active)
-                                    const Padding(
-                                      padding: EdgeInsets.only(top: 6),
-                                      child: LinearProgressIndicator(
-                                        semanticsLabel: 'Đang tải chương',
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              leading: task.status == DownloadJobStatus.active
-                                  ? const CupertinoActivityIndicator()
-                                  : Icon(
-                                      task.status == DownloadJobStatus.failed
-                                          ? CupertinoIcons
-                                                .exclamationmark_circle
-                                          : task.status ==
-                                                DownloadJobStatus.paused
-                                          ? CupertinoIcons.pause_circle
-                                          : CupertinoIcons.clock,
-                                      size: 20,
-                                    ),
-                              trailing: PopupMenuButton<String>(
-                                tooltip: 'Tùy chọn chương ${task.chapterId}',
-                                onSelected: (action) => perform(
-                                  context,
-                                  () => switch (action) {
-                                    'pause' => controller.pauseJob(
-                                      task.identity,
-                                    ),
-                                    'resume' => controller.resumeJob(
-                                      task.identity,
-                                    ),
-                                    'now' => controller.downloadNow(
-                                      task.identity,
-                                    ),
-                                    _ => controller.cancel(task.identity),
-                                  },
+                      ),
+                    ),
+                    if (queue.storageError != null)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          queue.storageError!,
+                          style: TextStyle(color: colors.error, fontSize: 13),
+                        ),
+                      ),
+                    if (queue.pauseReason != null)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          queue.pauseReason!,
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if (queue.tasks.isNotEmpty) const DownloadQueueBulkActions(),
+            Expanded(
+              child: queue.tasks.isEmpty
+                  ? Center(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Σ(ಠ_ಠ)',
+                              style: TextStyle(fontSize: 40),
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'Không có tải xuống',
+                              style: TextStyle(fontSize: 15),
+                            ),
+                            TextButton(
+                              onPressed: () => context.go('/'),
+                              child: const Text('Chọn truyện trong thư viện'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : ReorderableListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      buildDefaultDragHandles: false,
+                      itemCount: bookIds.length,
+                      onReorderItem: (oldIndex, newIndex) {
+                        final reordered = [...bookIds];
+                        final moved = reordered.removeAt(oldIndex);
+                        reordered.insert(newIndex, moved);
+                        final destination = newIndex + 1 < reordered.length
+                            ? reordered[newIndex + 1]
+                            : null;
+                        perform(
+                          context,
+                          () => controller.moveBookBefore(moved, destination),
+                        );
+                      },
+                      itemBuilder: (context, index) {
+                        final bookId = bookIds[index];
+                        final tasks = queue.tasks
+                            .where((task) => task.bookId == bookId)
+                            .toList();
+                        final found = books.where((book) => book.id == bookId);
+                        final book = found.isEmpty ? null : found.first;
+                        final revision = ref
+                            .read(libraryRepositoryProvider)
+                            .replacementRevision;
+                        final active = tasks
+                            .where(
+                              (task) => task.status == DownloadJobStatus.active,
+                            )
+                            .length;
+                        final failed = tasks
+                            .where(
+                              (task) => task.status == DownloadJobStatus.failed,
+                            )
+                            .length;
+                        final paused = tasks
+                            .where(
+                              (task) => task.status == DownloadJobStatus.paused,
+                            )
+                            .length;
+                        return ExpansionTile(
+                          key: ValueKey('download-book-$bookId'),
+                          leading: book == null
+                              ? const Icon(CupertinoIcons.book)
+                              : ActivityBookCover(
+                                  book,
+                                  coverImage: libraryCoverImage(ref, book),
                                 ),
+                          title: Text(
+                            book?.title ?? 'Sách không còn trong thư viện',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 15),
+                          ),
+                          subtitle: Text(
+                            '${tasks.length} chương · $active đang tải${paused == 0 ? '' : ' · $paused tạm dừng'}${failed == 0 ? '' : ' · $failed lỗi'}',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              PopupMenuButton<String>(
+                                tooltip:
+                                    'Tùy chọn tải ${book?.title ?? bookId}',
+                                onSelected: (action) {
+                                  switch (action) {
+                                    case 'now':
+                                      perform(
+                                        context,
+                                        () =>
+                                            controller.downloadBookNow(bookId),
+                                      );
+                                    case 'cancel':
+                                      perform(
+                                        context,
+                                        () => controller.cancelBook(bookId),
+                                      );
+                                    case 'next':
+                                      enqueueNextDownloads(
+                                        context,
+                                        ref,
+                                        book!,
+                                        expectedRevision: revision,
+                                      );
+                                  }
+                                },
                                 itemBuilder: (_) => [
-                                  if (task.status == DownloadJobStatus.active ||
-                                      task.status == DownloadJobStatus.pending)
+                                  const PopupMenuItem(
+                                    value: 'now',
+                                    child: Text('Tải ngay'),
+                                  ),
+                                  if (book != null && book.engine != 'local')
                                     const PopupMenuItem(
-                                      value: 'pause',
-                                      child: Text('Tạm dừng chương'),
-                                    ),
-                                  if (task.status == DownloadJobStatus.paused)
-                                    const PopupMenuItem(
-                                      value: 'resume',
-                                      child: Text('Tiếp tục chương'),
-                                    ),
-                                  if (task.status == DownloadJobStatus.failed)
-                                    const PopupMenuItem(
-                                      value: 'now',
-                                      child: Text('Thử lại chương'),
-                                    ),
-                                  if (task.status != DownloadJobStatus.failed)
-                                    const PopupMenuItem(
-                                      value: 'now',
-                                      child: Text('Tải chương ngay'),
+                                      value: 'next',
+                                      child: Text('Tải chương tiếp theo'),
                                     ),
                                   const PopupMenuItem(
                                     value: 'cancel',
-                                    child: Text('Hủy tải chương'),
+                                    child: Text('Hủy tải truyện'),
                                   ),
                                 ],
                               ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-          ),
-        ],
+                              ReorderableDragStartListener(
+                                key: ValueKey('download-drag-$bookId'),
+                                index: index,
+                                child: const SizedBox(
+                                  width: 32,
+                                  height: 48,
+                                  child: ColoredBox(
+                                    color: Colors.transparent,
+                                    child: Icon(
+                                      CupertinoIcons.line_horizontal_3,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          children: [
+                            for (final task in tasks)
+                              ListTile(
+                                title: Text(
+                                  book?.chapters
+                                          .where(
+                                            (chapter) =>
+                                                chapter.id == task.chapterId,
+                                          )
+                                          .firstOrNull
+                                          ?.title ??
+                                      'Chương không còn trong mục lục',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(switch (task.status) {
+                                      DownloadJobStatus.pending => 'Chờ tải',
+                                      DownloadJobStatus.active =>
+                                        switch (progress[task.identity]) {
+                                          final DownloadPageProgress value =>
+                                            'Đang tải • ${value.completed}/${value.total} trang',
+                                          null => 'Đang tải',
+                                        },
+                                      DownloadJobStatus.paused => 'Đã tạm dừng',
+                                      DownloadJobStatus.failed =>
+                                        'Lỗi: ${userFacingError(task.error ?? 'Lỗi tải nguồn')}',
+                                    }),
+                                    if (task.status == DownloadJobStatus.active)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: LinearProgressIndicator(
+                                          value:
+                                              progress[task.identity]?.fraction,
+                                          semanticsLabel: 'Đang tải chương',
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                leading: task.status == DownloadJobStatus.active
+                                    ? const CupertinoActivityIndicator()
+                                    : Icon(
+                                        task.status == DownloadJobStatus.failed
+                                            ? CupertinoIcons
+                                                  .exclamationmark_circle
+                                            : task.status ==
+                                                  DownloadJobStatus.paused
+                                            ? CupertinoIcons.pause_circle
+                                            : CupertinoIcons.clock,
+                                        size: 20,
+                                      ),
+                                trailing: PopupMenuButton<String>(
+                                  tooltip: 'Tùy chọn chương ${task.chapterId}',
+                                  onSelected: (action) => perform(
+                                    context,
+                                    () => switch (action) {
+                                      'pause' => controller.pauseJob(
+                                        task.identity,
+                                      ),
+                                      'resume' => controller.resumeJob(
+                                        task.identity,
+                                      ),
+                                      'now' => controller.downloadNow(
+                                        task.identity,
+                                      ),
+                                      _ => controller.cancel(task.identity),
+                                    },
+                                  ),
+                                  itemBuilder: (_) => [
+                                    if (task.status ==
+                                            DownloadJobStatus.active ||
+                                        task.status ==
+                                            DownloadJobStatus.pending)
+                                      const PopupMenuItem(
+                                        value: 'pause',
+                                        child: Text('Tạm dừng chương'),
+                                      ),
+                                    if (task.status == DownloadJobStatus.paused)
+                                      const PopupMenuItem(
+                                        value: 'resume',
+                                        child: Text('Tiếp tục chương'),
+                                      ),
+                                    if (task.status == DownloadJobStatus.failed)
+                                      const PopupMenuItem(
+                                        value: 'now',
+                                        child: Text('Thử lại chương'),
+                                      ),
+                                    if (task.status != DownloadJobStatus.failed)
+                                      const PopupMenuItem(
+                                        value: 'now',
+                                        child: Text('Tải chương ngay'),
+                                      ),
+                                    const PopupMenuItem(
+                                      value: 'cancel',
+                                      child: Text('Hủy tải chương'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

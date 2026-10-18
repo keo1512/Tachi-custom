@@ -537,22 +537,24 @@ class _BrowseState extends ConsumerState<BrowseScreen> {
     ];
   }
 
-  Widget sourceRow(CatalogueSource source, Set<String> pinned) =>
-      SourceBrowseRow(
-        source: source,
-        pinned: pinned.contains(source.identity),
-        onOpen: () => openSource(source),
-        onPin: () => perform(
-          context,
-          () => ref
-              .read(settingsProvider.notifier)
-              .toggleSourcePin(source.identity),
-        ),
-        onInfo: () => showSourceInfo(context, source),
-        onPreferences: source.engine == SourceEngine.tachimanga
-            ? () => showSourcePreferences(context, source)
-            : null,
-      );
+  Widget sourceRow(
+    CatalogueSource source,
+    Set<String> pinned,
+  ) => SourceBrowseRow(
+    source: source,
+    pinned: pinned.contains(source.identity),
+    onOpen: () => openSource(source),
+    onPin: () => perform(
+      context,
+      () =>
+          ref.read(settingsProvider.notifier).toggleSourcePin(source.identity),
+    ),
+    onInfo: () => showSourceInfo(context, source),
+    onPreferences:
+        source.engine == SourceEngine.tachimanga && source.configurable != false
+        ? () => showSourcePreferences(context, source)
+        : null,
+  );
 
   Widget sourceList() {
     final settings = ref.watch(settingsProvider);

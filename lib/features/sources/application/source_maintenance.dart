@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/platform/device_tools.dart';
 import '../domain/native_source_engine.dart';
+import '../domain/catalogue.dart';
 import 'native_runtime_provider.dart';
 
 final sourceMaintenanceProvider = Provider<SourceMaintenance>(
@@ -45,5 +46,35 @@ class SourceMaintenance {
   Future<void> clearWebData() async {
     await clearCookies();
     await device.clearWebData();
+  }
+
+  Future<void> resetUserAgents() async {
+    var engineFailed = false, browserFailed = false;
+    for (final engine in runtimes) {
+      if (engine is NativeUserAgentResetEngine) {
+        try {
+          await (engine as NativeUserAgentResetEngine).resetUserAgents();
+        } catch (_) {
+          engineFailed = true;
+        }
+      }
+    }
+    // Try both stores even if one fails, and report partial completion so a
+    // remaining override cannot silently look like a successful reset.
+    try {
+      await device.resetUserAgents();
+    } catch (_) {
+      browserFailed = true;
+    }
+    if (engineFailed || browserFailed) {
+      throw ApiException(
+        engineFailed && browserFailed
+            ? 'Chưa đặt lại được User-Agent của engine và trình duyệt. Hãy thử lại.'
+            : engineFailed
+            ? 'Đã đặt lại trình duyệt nhưng chưa đặt lại User-Agent của engine. Hãy thử lại.'
+            : 'Đã đặt lại engine nhưng chưa đặt lại User-Agent của trình duyệt. Hãy thử lại.',
+        code: 'USER_AGENT_RESET_INCOMPLETE',
+      );
+    }
   }
 }

@@ -3,6 +3,37 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tachi_books/features/reader/presentation/reader_auto_scroll.dart';
 
 void main() {
+  test('timed pages use their own viewport readiness and do not need a continuous scroll client', () {
+    final scroll = ScrollController();
+    var now = DateTime(2026, 10, 18), ready = true, pages = 0;
+    final auto = ReaderAutoScroll(
+      scroll,
+      canScroll: () => true,
+      pageReady: () => ready,
+      clock: () => now,
+      onNextPage: () => pages++,
+    );
+    auto.startTimed(2);
+    for (var i = 0; i < 21; i++) {
+      now = now.add(const Duration(milliseconds: 100));
+      auto.tick();
+    }
+    expect(pages, 1);
+    ready = false;
+    for (var i = 0; i < 25; i++) {
+      now = now.add(const Duration(milliseconds: 100));
+      auto.tick();
+    }
+    expect(pages, 1);
+    ready = true;
+    for (var i = 0; i < 21; i++) {
+      now = now.add(const Duration(milliseconds: 100));
+      auto.tick();
+    }
+    expect(pages, 2);
+    auto.dispose();
+    scroll.dispose();
+  });
   testWidgets(
     'continuous auto-scroll respects speed, blocked reader, bottom and paused timer',
     (tester) async {

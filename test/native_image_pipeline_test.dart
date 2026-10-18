@@ -20,6 +20,8 @@ import 'package:tachi_books/features/sources/data/source_repository.dart';
 import 'package:tachi_books/features/sources/domain/catalogue.dart';
 
 const _url = 'https://fixture.invalid/encrypted-page';
+const _lazyPage =
+    'https://page.tachibooks.invalid/0000000000000000000000000000000000000000000000000000000000000000';
 const _png =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
@@ -46,23 +48,39 @@ class _ImageSource extends SourceRepository {
   bool failSecond = false;
   int browserCalls = 0;
   Completer<void>? blocked;
+  Completer<void>? browserGate;
   int count = 2;
+  String imageUrl = _url;
+  bool nativeLoader = true;
+  String? failingChapter;
+  final chapterRequests = <String>[];
   @override
-  bool usesNativeImageLoader(CatalogueBook book) => true;
+  bool usesNativeImageLoader(CatalogueBook book) => nativeLoader;
   @override
   bool canOpenNativeWebsite(CatalogueBook book) => true;
   @override
   Future<void> openWebsite(CatalogueBook book) async {
     browserCalls++;
+    if (browserGate != null) await browserGate!.future;
     failSecond = false;
+    failingChapter = null;
   }
 
   @override
   Future<ChapterContent> chapter(
     CatalogueBook book,
     CatalogueChapter chapter,
-  ) async =>
-      ChapterContent(kind: ContentKind.manga, images: List.filled(count, _url));
+  ) async {
+    chapterRequests.add(chapter.ref);
+    if (chapter.ref == failingChapter) {
+      throw const ApiException('Source requires browser');
+    }
+    return ChapterContent(
+      kind: ContentKind.manga,
+      images: List.filled(count, imageUrl),
+    );
+  }
+
   @override
   Future<SourceImageData> fetchImage(
     CatalogueBook book,
@@ -71,9 +89,9 @@ class _ImageSource extends SourceRepository {
     String url,
   ) async {
     expect(book.sourceId, '9223372036854775806');
-    expect(chapter.ref, '/chapter');
-    expect(chapter.index, 7);
-    expect(url, _url);
+    expect(chapter.ref, isIn(['/chapter', '/chapter-two']));
+    expect(chapter.index, chapter.ref == '/chapter' ? 7 : 8);
+    expect(url, imageUrl);
     pages.add(page);
     if (blocked != null) await blocked!.future;
     if (page == 1 && failSecond) {
@@ -98,11 +116,12 @@ void main() {
   });
 
   Future<(ProviderContainer, MemoryLibraryRepository, LibraryBook)> setup(
-    _ImageSource source,
-  ) async {
+    _ImageSource source, {
+    LibraryBook? inputBook,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final repo = MemoryLibraryRepository();
-    final book = _book();
+    final book = inputBook ?? _book();
     await repo.save(book);
     final container = ProviderContainer(
       overrides: [
@@ -126,10 +145,17 @@ void main() {
     final source = _ImageSource();
     final (container, repo, book) = await setup(source);
     addTearDown(container.dispose);
+    final progress = <(int, int)>[];
     final result = await container
         .read(libraryProvider.notifier)
-        .getContent(book, 0, download: true);
+        .getContent(
+          book,
+          0,
+          download: true,
+          onPageProgress: (done, total) => progress.add((done, total)),
+        );
     expect(source.pages, [0, 1]);
+    expect(progress, [(0, 2), (1, 2), (2, 2)]);
     expect(
       result.images.every((url) => url.startsWith('data:image/png;base64,')),
       true,
@@ -143,6 +169,106 @@ void main() {
         .getContent(stored, 0, download: true);
     expect(source.pages, isEmpty);
   });
+
+  test('lazy page locators still use each native image ordinal and become real offline bytes', () async {
+    final source = _ImageSource()..imageUrl = _lazyPage;
+    final (container, repo, book) = await setup(source);
+    addTearDown(container.dispose);
+    final result = await container
+        .read(libraryProvider.notifier)
+        .getContent(book, 0, download: true);
+    expect(source.pages, [0, 1]);
+    expect(
+      result.images.every((url) => url.startsWith('data:image/png;base64,')),
+      true,
+    );
+    expect((await repo.find(book.id))!.chapters.single.downloaded, true);
+  });
+
+  test(
+    'lazy page download without native engine never sends the locator to HTTP',
+    () async {
+      final source = _ImageSource()
+        ..imageUrl = _lazyPage
+        ..nativeLoader = false;
+      final (container, repo, book) = await setup(source);
+      addTearDown(container.dispose);
+      await expectLater(
+        container
+            .read(libraryProvider.notifier)
+            .getContent(book, 0, download: true),
+        throwsA(
+          isA<ApiException>().having(
+            (error) => error.code,
+            'code',
+            'NATIVE_PAGE_RUNTIME_REQUIRED',
+          ),
+        ),
+      );
+      expect(source.pages, isEmpty);
+      expect((await repo.find(book.id))!.chapters.single.downloaded, false);
+    },
+  );
+
+  test('unavailable native locator preserves already cached pages for a later retry', () async {
+    final source = _ImageSource()
+      ..imageUrl = _lazyPage
+      ..nativeLoader = false;
+    final (container, repo, book) = await setup(source);
+    addTearDown(container.dispose);
+    final partial = ReaderContent(
+      kind: 'manga',
+      images: ['data:image/png;base64,$_png', _lazyPage],
+    );
+    await repo.saveChapter(book.id, 0, partial);
+    await expectLater(
+      container
+          .read(libraryProvider.notifier)
+          .getContent(book, 0, download: true),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.code,
+          'code',
+          'NATIVE_PAGE_RUNTIME_REQUIRED',
+        ),
+      ),
+    );
+    expect(
+      (await repo.openChapter(book.id, '/chapter'))!.content!.images,
+      partial.images,
+    );
+    expect((await repo.find(book.id))!.chapters.single.downloaded, false);
+    expect(source.pages, isEmpty);
+  });
+
+  testWidgets(
+    'lazy page without native reader shows the engine error instead of a network image',
+    (tester) async {
+      final source = _ImageSource()
+        ..imageUrl = _lazyPage
+        ..nativeLoader = false;
+      final (container, _, book) = await setup(source);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(home: ReaderScreen(id: book.id)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(Image), findsNothing);
+      expect(
+        find.textContaining(
+          'Trang này cần engine nguồn chạy trực tiếp trên thiết bị.',
+        ),
+        findsNWidgets(2),
+      );
+      expect(source.pages, isEmpty);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      container.dispose();
+    },
+  );
 
   test('failed transformation preserves completed pages and retries the missing original index', () async {
     final source = _ImageSource()..failSecond = true;
@@ -478,6 +604,163 @@ void main() {
         3,
       );
       expect(find.byType(Image), findsNWidgets(3));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      container.dispose();
+    },
+  );
+
+  testWidgets(
+    'browser completion cannot retry a chapter opened after the browser request',
+    (tester) async {
+      final source = _ImageSource()
+        ..failSecond = true
+        ..browserGate = Completer<void>();
+      final input = _book().copyWith(
+        chapters: const [
+          BookChapter(
+            id: '/chapter',
+            title: 'Original chapter',
+            index: 7,
+            read: false,
+          ),
+          BookChapter(
+            id: '/chapter-two',
+            title: 'Next chapter',
+            index: 8,
+            read: false,
+          ),
+        ],
+      );
+      final (container, repo, book) = await setup(source, inputBook: input);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(home: ReaderScreen(id: book.id)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Xem trang web'));
+      await tester.pump();
+      expect(source.browserCalls, 1);
+      await tester.tap(find.byTooltip('Chương tiếp theo'));
+      await tester.pumpAndSettle();
+      expect(source.chapterRequests, ['/chapter', '/chapter-two']);
+      source.browserGate!.complete();
+      await tester.pumpAndSettle();
+      expect(source.chapterRequests, ['/chapter', '/chapter-two']);
+      expect((await repo.find(book.id))!.currentChapter, 1);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      container.dispose();
+    },
+  );
+
+  testWidgets(
+    'browser completion after restore preserves the replacement library',
+    (tester) async {
+      final source = _ImageSource()
+        ..failSecond = true
+        ..browserGate = Completer<void>();
+      final (container, repo, book) = await setup(source);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(home: ReaderScreen(id: book.id)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Xem trang web'));
+      await tester.pump();
+      await repo.replaceSnapshot(
+        LibrarySnapshot([
+          LibrarySnapshotEntry(
+            book.copyWith(title: 'Replacement', progress: .35),
+            {},
+          ),
+        ]),
+        expectedFingerprint: (await repo.snapshot()).fingerprint,
+      );
+      final replacement = (await repo.snapshot()).encode();
+      final requests = [...source.chapterRequests];
+      source.browserGate!.complete();
+      await tester.pumpAndSettle();
+      expect(source.chapterRequests, requests);
+      expect((await repo.snapshot()).encode(), replacement);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      container.dispose();
+    },
+  );
+
+  testWidgets(
+    'browser retry reopens the requested failed chapter instead of the previous one',
+    (tester) async {
+      final source = _ImageSource()..failingChapter = '/chapter-two';
+      final input = _book().copyWith(
+        chapters: const [
+          BookChapter(
+            id: '/chapter',
+            title: 'Original chapter',
+            index: 7,
+            read: false,
+          ),
+          BookChapter(
+            id: '/chapter-two',
+            title: 'Next chapter',
+            index: 8,
+            read: false,
+          ),
+        ],
+      );
+      final (container, _, book) = await setup(source, inputBook: input);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(home: ReaderScreen(id: book.id)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Chương tiếp theo'));
+      await tester.pumpAndSettle();
+      expect(source.chapterRequests, ['/chapter', '/chapter-two']);
+      expect(find.text('Chưa mở được chương'), findsOneWidget);
+      await tester.tap(find.byTooltip('Xem trang web'));
+      await tester.pumpAndSettle();
+      expect(source.chapterRequests.last, '/chapter-two');
+      expect(find.text('Chưa mở được chương'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      container.dispose();
+    },
+  );
+
+  testWidgets(
+    'browser retry keeps the within-page reading position of a failed native image',
+    (tester) async {
+      final source = _ImageSource()
+        ..count = 8
+        ..failSecond = true;
+      final input = _book().copyWith(progress: .45, currentChapter: 0);
+      final (container, repo, book) = await setup(source, inputBook: input);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(home: ReaderScreen(id: book.id)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final before = (await repo.find(book.id))!.progress;
+      expect(before, closeTo(.45, .001));
+      expect(find.text('Không tải được ảnh'), findsOneWidget);
+      await tester.tap(find.byTooltip('Xem trang web'));
+      await tester.pumpAndSettle();
+      expect((await repo.find(book.id))!.progress, closeTo(before, .001));
+      expect(find.text('Không tải được ảnh'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

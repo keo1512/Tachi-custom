@@ -1,6 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final readerAutoScrollClockProvider = Provider<DateTime Function()>(
+  (ref) => DateTime.now,
+);
 
 /// A scroll offset changes continuously; it never substitutes page-button taps.
 class ReaderAutoScroll {
@@ -9,11 +14,13 @@ class ReaderAutoScroll {
     required this.canScroll,
     DateTime Function()? clock,
     this.onNextPage,
+    this.pageReady,
   }) : clock = clock ?? DateTime.now;
   final ScrollController scroll;
   final bool Function() canScroll;
   final DateTime Function() clock;
   final VoidCallback? onNextPage;
+  final bool Function()? pageReady;
   Timer? _timer;
   DateTime? _last;
   double speed = 40;
@@ -44,8 +51,10 @@ class ReaderAutoScroll {
     _last = now;
     if (previous == null ||
         !canScroll() ||
-        !scroll.hasClients ||
-        scroll.position.isScrollingNotifier.value) {
+        (_pageSeconds != null && pageReady != null
+            ? !pageReady!()
+            : !scroll.hasClients ||
+                  scroll.position.isScrollingNotifier.value)) {
       _pageElapsed = 0;
       return;
     }

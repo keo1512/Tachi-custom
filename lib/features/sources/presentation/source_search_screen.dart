@@ -157,18 +157,16 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
               page: targetPage,
             );
       if (!mounted || current != request) return;
+      final additions = results
+          .where((book) => !books.any((old) => old.identity == book.identity))
+          .toList();
       setState(() {
-        books = more
-            ? [
-                ...books,
-                ...results.where(
-                  (book) => !books.any((old) => old.identity == book.identity),
-                ),
-              ]
-            : results;
+        books = more ? [...books, ...additions] : results;
         submittedQuery = query;
         page = targetPage;
-        hasMore = results.isNotEmpty;
+        hasMore = results is CataloguePage
+            ? results.hasNextPage
+            : results.isNotEmpty && (!more || additions.isNotEmpty);
         busy = false;
       });
     } catch (e) {
@@ -328,27 +326,32 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
             .supportsCatalogueBrowsing(widget.source.engine))
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: CupertinoSlidingSegmentedControl<String>(
-              groupValue: mode?.name,
-              children: const {
-                'popular': Text('Phổ biến'),
-                'latest': Text('Mới nhất'),
-              },
-              onValueChanged: (value) {
-                if (value == null) return;
-                setState(() {
-                  mode = value == 'popular'
-                      ? SourceBrowseMode.popular
-                      : value == 'latest'
-                      ? SourceBrowseMode.latest
-                      : null;
-                  request++;
-                  busy = false;
-                  books = [];
-                });
-                search();
-              },
-            ),
+            child: widget.source.supportsLatest == false
+                ? const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Phổ biến'),
+                  )
+                : CupertinoSlidingSegmentedControl<String>(
+                    groupValue: mode?.name,
+                    children: const {
+                      'popular': Text('Phổ biến'),
+                      'latest': Text('Mới nhất'),
+                    },
+                    onValueChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        mode = value == 'popular'
+                            ? SourceBrowseMode.popular
+                            : value == 'latest'
+                            ? SourceBrowseMode.latest
+                            : null;
+                        request++;
+                        busy = false;
+                        books = [];
+                      });
+                      search();
+                    },
+                  ),
           ),
         const Divider(height: 1),
         if (busy) const LinearProgressIndicator(minHeight: 2),

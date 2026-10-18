@@ -6,10 +6,25 @@ import '../../library/data/library_repository.dart';
 import '../../library/data/library_mutation.dart';
 import '../../library/data/library_snapshot.dart';
 import '../../library/data/backup_validation.dart';
+import '../../library/data/backup_configuration.dart';
+import '../../library/data/coordinated_preferences.dart';
 import '../../library/domain/chapter_list_options.dart';
+import '../../library/domain/book_reading_times.dart';
+import '../../library/domain/book_daily_reading_times.dart';
 import '../../library/domain/library_book.dart';
+import '../../library/domain/library_folders.dart';
 import '../../library/domain/library_reading.dart';
 import 'catalogue.dart';
+
+/// The atomic library commit succeeded, but its configuration journal still
+/// needs startup reconciliation. Callers must not offer a fresh migration as
+/// though the old book were unchanged.
+class SourceMigrationRecoveryRequired extends StateError {
+  SourceMigrationRecoveryRequired()
+    : super(
+        'Đã chuyển truyện và giữ bản phục hồi. Cần mở lại ứng dụng để hoàn tất kiểm tra thiết lập; không chuyển lại cùng kết quả.',
+      );
+}
 
 /// A reviewed, immutable proposal. No cache is copied between source identities.
 class SourceMigrationPreview {
@@ -19,11 +34,15 @@ class SourceMigrationPreview {
     required this.replacement,
     required Map<int, int> matches,
     required this.unmatchedBookmarks,
+    this.configurationGeneration,
+    this.libraryRevision,
   }) : matches = Map.unmodifiable(matches),
        beforeFingerprint = before.fingerprint;
   final LibrarySnapshot before;
   final String beforeFingerprint;
   final LibraryBook original, replacement;
+  // Fingerprints alone cannot detect a restore that writes identical bytes.
+  final int? configurationGeneration, libraryRevision;
 
   /// Original chapter index -> replacement chapter index.
   final Map<int, int> matches;
@@ -36,7 +55,9 @@ class SourceMigrationPreview {
 
   /// Bulk review retains one hydrated backup image, not one copy per title.
   SourceMigrationPreview sharingSnapshot(SourceMigrationPreview other) {
-    if (other.beforeFingerprint != beforeFingerprint) {
+    if (other.beforeFingerprint != beforeFingerprint ||
+        other.configurationGeneration != configurationGeneration ||
+        other.libraryRevision != libraryRevision) {
       throw StateError(
         'Thư viện đã thay đổi trong lúc chọn kết quả. Bỏ chọn để tạo lại bản xem trước trước khi chuyển.',
       );
@@ -47,13 +68,45 @@ class SourceMigrationPreview {
       replacement: replacement,
       matches: matches,
       unmatchedBookmarks: unmatchedBookmarks,
+      configurationGeneration: configurationGeneration,
+      libraryRevision: libraryRevision,
     );
   }
 }
 
 class SourceMigration {
-  SourceMigration(this.repository);
+  SourceMigration(
+    this.repository, {
+    this.configuration,
+    this.onConfigurationChanged,
+  });
   final LibraryRepository repository;
+  final AppConfigurationStore? configuration;
+  final void Function()? onConfigurationChanged;
+
+  Future<({LibrarySnapshot image, int? generation, int? revision})>
+  _capture() async {
+    final store = configuration;
+    if (store == null) {
+      return (
+        image: await repository.snapshot(),
+        generation: null,
+        revision: null,
+      );
+    }
+    return store.exclusive(() async {
+      final revision = repository.replacementRevision;
+      final generation = store.preferences.mutationGeneration;
+      final settings = store.capture();
+      final books = await repository.snapshot();
+      checkLibraryRevision(repository.replacementRevision, revision);
+      return (
+        image: LibrarySnapshot(books.entries, configuration: settings),
+        generation: generation,
+        revision: revision,
+      );
+    });
+  }
 
   Future<SourceMigrationPreview> preview(
     String originalId,
@@ -61,7 +114,8 @@ class SourceMigration {
     List<CatalogueChapter> incoming, {
     String sourceName = '',
   }) async {
-    final before = await repository.snapshot();
+    final captured = await _capture();
+    final before = captured.image;
     final old = before.entries
         .where((e) => e.book.id == originalId)
         .firstOrNull
@@ -165,6 +219,8 @@ class SourceMigration {
       replacement: replacement,
       matches: matches,
       unmatchedBookmarks: unmatchedBookmarks,
+      configurationGeneration: captured.generation,
+      libraryRevision: captured.revision,
     );
     // Reuse full backup validation, including IDs, numbers, media and indices.
     BackupValidator(repository)
@@ -182,7 +238,7 @@ class SourceMigration {
     BackupValidator(repository).validateSnapshot(incoming.encode());
     // Repository performs atomic fingerprint CAS and saves the hydrated recovery
     // image before writing. Edits/downloads since preview reject the entire commit.
-    await _publish(incoming, preview.before, expectedRevision);
+    await _publish(incoming, preview, expectedRevision);
     return preview.replacement;
   }
 
@@ -199,7 +255,10 @@ class SourceMigration {
     final fingerprint = previews.first.beforeFingerprint;
     final oldIds = <String>{}, newIds = <String>{};
     for (final preview in previews) {
-      if (preview.beforeFingerprint != fingerprint) {
+      if (preview.beforeFingerprint != fingerprint ||
+          preview.configurationGeneration !=
+              previews.first.configurationGeneration ||
+          preview.libraryRevision != previews.first.libraryRevision) {
         throw StateError(
           'Thư viện đã thay đổi giữa các lượt xem trước. Hãy chọn lại kết quả để bảo toàn dữ liệu mới.',
         );
@@ -211,31 +270,103 @@ class SourceMigration {
         );
       }
     }
-    final incoming = LibrarySnapshot([
-      for (final entry in before.entries)
-        if (!replaceOld || !oldIds.contains(entry.book.id)) entry,
-      for (final preview in previews)
-        LibrarySnapshotEntry(preview.replacement, const {}),
-    ]);
+    final incoming = LibrarySnapshot(
+      [
+        for (final entry in before.entries)
+          if (!replaceOld || !oldIds.contains(entry.book.id)) entry,
+        for (final preview in previews)
+          LibrarySnapshotEntry(preview.replacement, const {}),
+      ],
+      configuration: _migrateConfiguration(before.configuration, {
+        for (final preview in previews)
+          preview.original.id: preview.replacement.id,
+      }, replaceOld: replaceOld),
+    );
     BackupValidator(repository).validateSnapshot(incoming.encode());
-    await _publish(incoming, before, expectedRevision);
+    await _publish(incoming, previews.first, expectedRevision);
     return [for (final preview in previews) preview.replacement];
   }
 
   Future<void> _publish(
     LibrarySnapshot incoming,
-    LibrarySnapshot before,
+    SourceMigrationPreview preview,
     int? expectedRevision,
-  ) {
+  ) async {
+    final before = preview.before;
+    final store = configuration;
+    if (store != null) {
+      if (before.configuration == null ||
+          incoming.configuration == null ||
+          preview.configurationGeneration == null ||
+          preview.libraryRevision == null) {
+        throw StateError(
+          'Cần xem trước lại để giữ thiết lập khi chuyển nguồn.',
+        );
+      }
+      final revision = expectedRevision ?? preview.libraryRevision!;
+      var committed = false;
+      try {
+        await store.exclusive(() async {
+          checkLibraryRevision(repository.replacementRevision, revision);
+          checkLibraryRevision(
+            repository.replacementRevision,
+            preview.libraryRevision,
+          );
+          if (store.preferences.mutationGeneration !=
+              preview.configurationGeneration) {
+            throw StateError(
+              'Thiết lập đã khôi phục. Hãy xem trước chuyển nguồn lại.',
+            );
+          }
+          final oldLibrary = LibrarySnapshot(before.entries);
+          final nextLibrary = LibrarySnapshot(incoming.entries);
+          await store.preferences.restoreLocked(
+            incoming: incoming.configuration!,
+            expectedFingerprint: before.configuration!.fingerprint,
+            oldLibraryFingerprint: oldLibrary.fingerprint,
+            newLibraryFingerprint: nextLibrary.fingerprint,
+            commit: (beforeCommit) async {
+              await repository.replaceSnapshotWithConfiguration(
+                nextLibrary,
+                expectedFingerprint: oldLibrary.fingerprint,
+                recovery: before.encode(),
+                beforeCommit: () async {
+                  checkLibraryRevision(
+                    repository.replacementRevision,
+                    revision,
+                  );
+                  await beforeCommit();
+                },
+              );
+              committed = true;
+            },
+          );
+        });
+      } catch (error, stack) {
+        if (committed) {
+          Error.throwWithStackTrace(SourceMigrationRecoveryRequired(), stack);
+        }
+        rethrow;
+      } finally {
+        // Journal cleanup can fail after the atomic library commit. Open views
+        // must still stop showing the old folder/time configuration in that case.
+        if (committed) onConfigurationChanged?.call();
+      }
+      return;
+    }
+    if (before.configuration != null) {
+      throw StateError('Cần bộ nhớ thiết lập để hoàn tất chuyển nguồn này.');
+    }
     if (expectedRevision == null) {
-      return repository.replaceSnapshot(
+      await repository.replaceSnapshot(
         incoming,
         expectedFingerprint: before.fingerprint,
       );
+      return;
     }
     // The existing joint-restore hook runs inside the repository's publication
     // boundary, after queued writes and staging. No configuration is changed.
-    return repository.replaceSnapshotWithConfiguration(
+    await repository.replaceSnapshotWithConfiguration(
       incoming,
       expectedFingerprint: before.fingerprint,
       recovery: before.encode(),
@@ -247,11 +378,63 @@ class SourceMigration {
   }
 
   LibrarySnapshot _snapshot(SourceMigrationPreview preview, bool replaceOld) =>
-      LibrarySnapshot([
-        for (final entry in preview.before.entries)
-          if (!replaceOld || entry.book.id != preview.original.id) entry,
-        LibrarySnapshotEntry(preview.replacement, const {}),
-      ]);
+      LibrarySnapshot(
+        [
+          for (final entry in preview.before.entries)
+            if (!replaceOld || entry.book.id != preview.original.id) entry,
+          LibrarySnapshotEntry(preview.replacement, const {}),
+        ],
+        configuration: _migrateConfiguration(preview.before.configuration, {
+          preview.original.id: preview.replacement.id,
+        }, replaceOld: replaceOld),
+      );
+
+  BackupConfiguration? _migrateConfiguration(
+    BackupConfiguration? before,
+    Map<String, String> identities, {
+    required bool replaceOld,
+  }) {
+    if (before == null) return null;
+    final values = {...before.values};
+    if (replaceOld && values.containsKey(BookReadingTimes.preferenceKey)) {
+      final original = BookReadingTimes.decode(
+        values[BookReadingTimes.preferenceKey] as String,
+      );
+      final times = {...original.seconds};
+      for (final entry in identities.entries) {
+        final seconds = original.seconds[entry.key];
+        if (seconds == null) continue;
+        // Historical time on a previously removed target remains real time.
+        // Move the old ID once, preserving the total even when keeping other IDs.
+        times[entry.value] = (times[entry.value] ?? 0) + seconds;
+        times.remove(entry.key);
+      }
+      values[BookReadingTimes.preferenceKey] = BookReadingTimes.decode(
+        BookReadingTimes(times).encode(),
+      ).encode();
+    }
+    if (values.containsKey(BookDailyReadingTimes.preferenceKey)) {
+      values[BookDailyReadingTimes.preferenceKey] =
+          BookDailyReadingTimes.decode(
+            values[BookDailyReadingTimes.preferenceKey] as String,
+          ).migrateBookIds(identities, replaceOld: replaceOld).encode();
+    }
+    if (values.containsKey(LibraryFolders.preferenceKey) ||
+        values.containsKey(LibraryFolders.categoryPreferenceKey)) {
+      final folders = LibraryFolders.decodeWithCategories(
+        values[LibraryFolders.preferenceKey] as String?,
+        values[LibraryFolders.categoryPreferenceKey] as String?,
+      ).migrateBookIds(identities, replaceOld: replaceOld);
+      if (values.containsKey(LibraryFolders.preferenceKey)) {
+        values[LibraryFolders.preferenceKey] = folders.encode();
+      }
+      if (values.containsKey(LibraryFolders.categoryPreferenceKey)) {
+        values[LibraryFolders.categoryPreferenceKey] = folders
+            .encodeCategories();
+      }
+    }
+    return BackupConfiguration.fromJson({'version': 1, 'preferences': values});
+  }
 }
 
 /// Numbers must be unique on BOTH sources. Exact normalized titles are a

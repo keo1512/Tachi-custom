@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:typed_data';
 
 enum SourceEngine { tachimanga, vbook }
@@ -15,6 +16,8 @@ class CatalogueSource {
     required this.kind,
     required this.engine,
     this.iconUrl = '',
+    this.supportsLatest,
+    this.configurable,
   });
 
   // Source IDs remain strings: Tachiyomi IDs can exceed JavaScript's safe range.
@@ -25,8 +28,29 @@ class CatalogueSource {
   final String iconUrl;
   final ContentKind kind;
   final SourceEngine engine;
+  // Null preserves older companion/runtime responses that omit capabilities.
+  final bool? supportsLatest;
+  final bool? configurable;
 
   String get identity => '${engine.name}:$id';
+}
+
+/// A normal List with the source's explicit pagination result. Existing engines
+/// and callers can retain their List contract while screens stop at the actual
+/// final page, including a nonempty final page.
+class CataloguePage extends ListBase<CatalogueBook> {
+  CataloguePage(Iterable<CatalogueBook> books, {required this.hasNextPage})
+    : _books = List.of(books);
+  final List<CatalogueBook> _books;
+  final bool hasNextPage;
+  @override
+  int get length => _books.length;
+  @override
+  set length(int value) => _books.length = value;
+  @override
+  CatalogueBook operator [](int index) => _books[index];
+  @override
+  void operator []=(int index, CatalogueBook value) => _books[index] = value;
 }
 
 class CatalogueBook {

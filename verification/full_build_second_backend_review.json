@@ -1,0 +1,1192 @@
+{
+  "schema_version": 1,
+  "review": "full_build_second_backend_review",
+  "date_local": "2026-10-18",
+  "scope_groups": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    8,
+    9,
+    10,
+    14
+  ],
+  "subsection_count": 26,
+  "baseline": {
+    "repo": "keo1512/Tachi-custom",
+    "head": "5906375e0039f99fe67f1d7232376c43dfe95cea",
+    "working_tree": "uncommitted current local source; file hashes added below",
+    "host_sha256": "305c8fc442e33fd7cf1af6c785e526b36928eb5d6508fc80c5590262e3aa5081",
+    "host_source_fingerprint": "d2434cae84b32ae9b4ce1b4a6fda277a1858fa0cc359afdbc389ae8ad4d642b8",
+    "ipa11_contains_new_fixes": false
+  },
+  "fixed_findings": [
+    {
+      "id": "H1",
+      "priority": "P1",
+      "trigger": "Legacy read=null chapters + lastRead and sequential progress; clear history",
+      "before": "read count2 ->0",
+      "after": "count2 ->2; explicit flags/empty history/cache/bookmarks/progress unchanged",
+      "source": "lib/features/library/presentation/library_view_model.dart:232",
+      "before_log": ".tools/audit_history_legacy_test.log",
+      "after_log": ".tools/audit_history_after.log"
+    },
+    {
+      "id": "E4",
+      "priority": "P2",
+      "trigger": "Own Dart staging/{sha}.apk corrupt; reimport intact same APK",
+      "before": "PACKAGE_CORRUPT before host invocation",
+      "after": "bounded regular exact-hash reuse or fresh verified separate path; old bytes not overwritten; host error still error",
+      "source": "lib/features/sources/data/native_tachi_repository.dart:441",
+      "before_log": ".tools/audit_dart_staging_test.log",
+      "after_log": ".tools/audit_dart_staging_after.log",
+      "tradeoff": "Repair inputs retained; no new package GC"
+    },
+    {
+      "id": "S1",
+      "priority": "P2",
+      "trigger": "Explicit readingState=completed then uncomplete/reset/unread",
+      "before": "completed=false but effective state/detail/stats still completed",
+      "after": "Only conflicting completed string cleared; planned/reading/paused preserved",
+      "source": "lib/features/library/presentation/library_view_model.dart:154",
+      "before_log": ".tools/audit_status_migration_test.log",
+      "after_log": ".tools/audit_status_migration_after.log"
+    },
+    {
+      "id": "M1",
+      "priority": "P2",
+      "trigger": "Nonempty final CataloguePage in migration; mixed final A and unfinished B",
+      "before": "metadata dropped and final A queried again",
+      "after": "Metadata retained, final source removed from page participants; new query resets eligibility; canceled/late response cannot alter it",
+      "source": "lib/features/sources/presentation/source_migration_screen.dart:90",
+      "before_logs": [
+        ".tools/audit_status_migration_test.log",
+        ".tools/audit_migration_mixed_before.log"
+      ],
+      "after_logs": [
+        ".tools/audit_status_migration_after.log",
+        ".tools/audit_migration_mixed_after.log"
+      ]
+    },
+    {
+      "id": "E5",
+      "priority": "P1",
+      "trigger": "Ordinary add starts HTTP; backup restore publishes restored.test and invalidates controller; old HTTP completes",
+      "before": "restored.test overwritten by old.test+pending.test in persisted preferences and UI, no error. Explicit caller-generation guard control rejects safely.",
+      "after": "Mandatory default generation guard on controller queue/save/state publication preserves restored list for delayed add/rename/remove/refresh success/error; fresh operations succeed.",
+      "source": "lib/features/sources/presentation/extension_catalogue_controller.dart:28",
+      "before_log": ".tools/audit_repo_restore_test.log",
+      "after_log": ".tools/audit_repo_restore_after.log",
+      "proof": "verification/full_build_second_repo_restore_probe.json"
+    }
+  ],
+  "focused_execution": [
+    {
+      "result": "29pass/0fail",
+      "log": ".tools/audit_history_after.log",
+      "scope": "ignored legacy before-proof plus history_selection/library_view_model/spec_library_activity_gaps"
+    },
+    {
+      "result": "46pass/0fail",
+      "log": ".tools/audit_dart_staging_after.log",
+      "scope": "native_tachi_repository/native_runtime_timeout_boundary_audit/extension_mutation_queue"
+    },
+    {
+      "result": "60pass/0fail",
+      "log": ".tools/audit_status_migration_after.log",
+      "scope": "ignored status+finalpage before proofs plus book_detail_reading_state/library_bulk_actions/migration_multi_source/source_migration_widget; before mixed-source extension"
+    },
+    {
+      "result": "17pass/0fail",
+      "log": ".tools/audit_migration_mixed_after.log",
+      "scope": "mixed-source/canceled-late regression and existing migration multi-source/widget"
+    },
+    {
+      "result": "36pass/0fail",
+      "log": ".tools/audit_repo_restore_after.log",
+      "scope": "extension_catalogue_controller_test/extension_repository_widget_test/deep_link_test; 9 new restore regressions, normal same-generation and stale deep-link controls"
+    }
+  ],
+  "sections": [
+    {
+      "group": 1,
+      "subsection": "1.1",
+      "feature_lines": "7-38",
+      "ui_subsections": [
+        "3.1",
+        "3.2",
+        "3.6"
+      ],
+      "mechanism_sections": [
+        "4",
+        "5",
+        "6"
+      ],
+      "production_source": [
+        "lib/features/library/presentation/library_screen.dart:99",
+        "lib/features/library/presentation/library_view_model.dart:633",
+        "lib/features/library/presentation/library_view_session.dart"
+      ],
+      "success_path": "Stable source identity insertion, duplicates/resume/visible selection; latest book/revision checked.",
+      "error_path": "Missing book/source failure before insertion keeps library unchanged; stale restore rejects mutations.",
+      "recovery_path": "View session/PageStorage retain navigation; hydrated removal recovery and CAS preserve data.",
+      "related_tests": [
+        "test/library_insert_restore_test.dart",
+        "test/library_view_session_test.dart",
+        "test/library_opaque_navigation_test.dart",
+        "test/spec_library_states_test.dart"
+      ],
+      "original_ipa_evidence": "MangaTable/CategoryManga classes and library UI identifier bytes.",
+      "limits": "Catalogue item tap calls addCatalogueBookWithCategories before detail. No independent detail preview outside library. Device/pixel parity unproved."
+    },
+    {
+      "group": 1,
+      "subsection": "1.2",
+      "feature_lines": "39-52",
+      "ui_subsections": [
+        "3.2",
+        "3.4"
+      ],
+      "mechanism_sections": [
+        "5"
+      ],
+      "production_source": [
+        "lib/features/library/presentation/library_book_tile.dart",
+        "lib/features/library/presentation/library_book_metadata.dart",
+        "lib/features/library/presentation/library_filter_sheet.dart"
+      ],
+      "success_path": "List/compact/comfortable grid, configurable columns, metadata and resume badges.",
+      "error_path": "Cover failure holds placeholder geometry; malformed display preferences remain stored and refuse destructive save.",
+      "recovery_path": "Cover cache/revision reconnects visible widgets; per-category sort retains global display settings.",
+      "related_tests": [
+        "test/library_display_metadata_test.dart",
+        "test/library_filter_layout_test.dart",
+        "test/source_cover_image_test.dart"
+      ],
+      "original_ipa_evidence": "library_manga_display identifier.",
+      "limits": "Download badges use metadata flags; statistics verifies actual cache. No native layout/smoothness measurement."
+    },
+    {
+      "group": 1,
+      "subsection": "1.3",
+      "feature_lines": "53-65",
+      "ui_subsections": [
+        "3.4"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/library/presentation/library_filter_sheet.dart:210",
+        "lib/features/library/presentation/library_filter_controller.dart:34"
+      ],
+      "success_path": "Comparators/reversed order change display only; scoped category preferences persist.",
+      "error_path": "Invalid presets/sorts preserve raw preference and fail save; restore generation rejects open-sheet write.",
+      "recovery_path": "Category rename migrates scoped key and rolls back on failure.",
+      "related_tests": [
+        "test/library_categories_filters_test.dart",
+        "test/library_filter_presets_test.dart",
+        "test/library_category_preference_migration_test.dart"
+      ],
+      "original_ipa_evidence": "library_manga_sort_tile identifier.",
+      "limits": "Tracker scoring excluded by user. Original comparator tie semantics unverified."
+    },
+    {
+      "group": 1,
+      "subsection": "1.4",
+      "feature_lines": "66-87",
+      "ui_subsections": [
+        "3.4",
+        "3.6"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/library/presentation/library_filter_sheet.dart:185",
+        "lib/features/library/presentation/library_filter_controller.dart:119",
+        "lib/features/library/presentation/library_screen.dart:504"
+      ],
+      "success_path": "Tri-state AND filters, source include/exclude, scanlator, category selection, named presets.",
+      "error_path": "Empty search/filter reset; typed preference bounds and stale generation guards.",
+      "recovery_path": "Category filter navigates category instead of intersecting two category scopes; reset never mutates books.",
+      "related_tests": [
+        "test/library_categories_filters_test.dart",
+        "test/library_filter_presets_test.dart",
+        "test/library_filter_layout_test.dart"
+      ],
+      "original_ipa_evidence": "library_manga_filter/library_source_filter_dialog identifiers.",
+      "limits": "Tracker filters excluded. Download flag alone does not prove offline bytes."
+    },
+    {
+      "group": 1,
+      "subsection": "1.5",
+      "feature_lines": "88-96",
+      "ui_subsections": [
+        "3.5"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/library/presentation/library_screen.dart:150",
+        "lib/features/library/application/library_bulk_actions.dart",
+        "lib/features/library/presentation/library_view_model.dart:181"
+      ],
+      "success_path": "Selected IDs patch latest rows; bulk category/read/favorite/download/update/migrate paths.",
+      "error_path": "Empty selection disabled; restore revision clears stale selection; removal preview CAS detects later edits.",
+      "recovery_path": "Hydrated recovery before destructive atomic removal; fixed explicit-completed conflict on bulk unread.",
+      "related_tests": [
+        "test/library_bulk_actions_test.dart",
+        "test/library_bulk_download_widget_test.dart",
+        "test/library_grouping_widget_test.dart"
+      ],
+      "original_ipa_evidence": "Library action identifiers only.",
+      "limits": "groupBooks sequentially patches IDs; destructive removal has atomic recovery. Native side effects require device proof."
+    },
+    {
+      "group": 2,
+      "subsection": "2",
+      "feature_lines": "97-122",
+      "ui_subsections": [
+        "3.3",
+        "4.1",
+        "4.2",
+        "4.3",
+        "4.4"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/library/presentation/library_category_controller.dart:70",
+        "lib/features/library/presentation/library_categories_screen.dart:19",
+        "lib/features/library/presentation/library_category_preference_migration.dart",
+        "lib/features/library/presentation/library_group_order_controller.dart"
+      ],
+      "success_path": "CRUD/defaults/order/policies/multi-membership; selected custom category per user request.",
+      "error_path": "Blank/reserved/duplicate names rejected; exclusion wins; expected revision checked.",
+      "recovery_path": "Rename/remove migrate sort/order and repair only affected membership in latest rows after failure; progress/cache retained.",
+      "related_tests": [
+        "test/library_category_registry_test.dart",
+        "test/library_category_preference_migration_test.dart",
+        "test/library_add_categories_test.dart",
+        "test/library_category_refresh_widget_test.dart"
+      ],
+      "original_ipa_evidence": "Category/CategoryManga/CategoryTable/CategoryMetaTable classes.",
+      "limits": "All tab explicitly removed. Folder membership is globally keyed by book ID, and rename/remove collects all books sharing the folder label across categories; independent per-category folder assignment is not stored."
+    },
+    {
+      "group": 3,
+      "subsection": "3.1",
+      "feature_lines": "123-144",
+      "ui_subsections": [
+        "5.1",
+        "5.2"
+      ],
+      "mechanism_sections": [
+        "3"
+      ],
+      "production_source": [
+        "lib/features/sources/presentation/browse_screen.dart:62",
+        "lib/features/sources/presentation/source_languages_controller.dart",
+        "lib/features/sources/presentation/browse_widgets.dart"
+      ],
+      "success_path": "Per-engine source list, languages, pins/recents, names/icons, search/preferences/website.",
+      "error_path": "Generation rejects old response; engine errors isolated and preserve other results; unsupported options hidden.",
+      "recovery_path": "Refresh/reinstall reloads sources without changing library identities.",
+      "related_tests": [
+        "test/source_browse_widget_test.dart",
+        "test/source_languages_test.dart",
+        "test/source_languages_settings_widget_test.dart",
+        "test/source_recents_privacy_test.dart"
+      ],
+      "original_ipa_evidence": "HttpSource/SourceFactory and Extension bytecode.",
+      "limits": "Cookie/UA proved host-side only; source account/browser capabilities vary by extension."
+    },
+    {
+      "group": 3,
+      "subsection": "3.2",
+      "feature_lines": "145-156",
+      "ui_subsections": [
+        "5.5"
+      ],
+      "mechanism_sections": [
+        "4",
+        "5"
+      ],
+      "production_source": [
+        "lib/features/sources/presentation/source_search_screen.dart:139",
+        "lib/features/sources/data/native_tachi_repository.dart:490"
+      ],
+      "success_path": "Actual popular/latest hook, explicit hasNextPage, contextual covers, list/grid and add.",
+      "error_path": "Errors retain results/retry failed page; late request rejected; latest hidden when unsupported.",
+      "recovery_path": "Nonempty final page stops load-more; legacy List fallback remains supported.",
+      "related_tests": [
+        "test/source_catalogue_widget_test.dart",
+        "test/source_catalogue_features_test.dart",
+        "test/source_cover_image_test.dart"
+      ],
+      "original_ipa_evidence": "MangasPage.hasNextPage and HttpSource direct disassembly.",
+      "limits": "No website/iPhone matrix; new item detail currently inserts into library first."
+    },
+    {
+      "group": 3,
+      "subsection": "3.3",
+      "feature_lines": "157-173",
+      "ui_subsections": [
+        "5.7"
+      ],
+      "mechanism_sections": [
+        "4"
+      ],
+      "production_source": [
+        "lib/features/sources/presentation/global_search_controller.dart:22",
+        "lib/features/sources/presentation/global_search_screen.dart:44",
+        "lib/features/sources/application/migration_search.dart:29"
+      ],
+      "success_path": "Bounded3-source fanout; results/error per source; source chooser and title/author long-press search.",
+      "error_path": "New generation/disposal rejects old callbacks; timeout/cancel and error isolation in migration.",
+      "recovery_path": "Per-source global retry and source view for additional results.",
+      "related_tests": [
+        "test/source_catalogue_widget_test.dart",
+        "test/source_catalogue_features_test.dart",
+        "test/migration_multi_source_test.dart"
+      ],
+      "original_ipa_evidence": "global_search identifier and original source search contract.",
+      "limits": "Global summary limits6/source then opens source view. Title/author search semantics depend extension."
+    },
+    {
+      "group": 3,
+      "subsection": "3.4",
+      "feature_lines": "174-191",
+      "ui_subsections": [
+        "5.6"
+      ],
+      "mechanism_sections": [
+        "4"
+      ],
+      "production_source": [
+        "lib/features/sources/domain/source_filters.dart",
+        "lib/features/sources/presentation/source_filter_sheet.dart",
+        "lib/features/sources/presentation/source_filter_presets.dart"
+      ],
+      "success_path": "Typed text/select/checkbox/tri-state/sort/group values keep source paths/defaults.",
+      "error_path": "Wrong key/schema/type rejected; unsupported controls disabled/explained.",
+      "recovery_path": "Reset/save/reapply typed presets; search error retains input.",
+      "related_tests": [
+        "test/source_filters_test.dart",
+        "test/source_catalogue_features_test.dart"
+      ],
+      "original_ipa_evidence": "Original HttpSource filter/search APIs.",
+      "limits": "Not every extension-defined Android widget/preference is supported."
+    },
+    {
+      "group": 4,
+      "subsection": "4.1",
+      "feature_lines": "192-206",
+      "ui_subsections": [
+        "5.3",
+        "5.4"
+      ],
+      "mechanism_sections": [
+        "2.1"
+      ],
+      "production_source": [
+        "lib/features/sources/data/extension_index.dart",
+        "lib/features/sources/presentation/extension_catalogue_controller.dart:24",
+        "lib/features/sources/presentation/extension_repository_screen.dart"
+      ],
+      "success_path": "Normalize/dedup URL, labels/index/portable preference; serialized edits.",
+      "error_path": "Invalid URL/index before save; partial refresh retains failed repository entries. Mandatory invocation-generation guard now rejects add/edit/remove/refresh started before configuration restore, even when optional caller guard returns true.",
+      "recovery_path": "Fresh controller reloads saved repositories; failed add releases edit queue; malformed raw preserved. Verified actual BackupService callback invalidation alone was insufficient; controller now protects durable restored list and UI state and permits fresh post-restore work.",
+      "related_tests": [
+        "test/extension_index_test.dart",
+        "test/extension_catalogue_controller_test.dart",
+        "test/extension_repository_widget_test.dart"
+      ],
+      "original_ipa_evidence": "Original Extension repository and PackageTools evidence.",
+      "limits": "No original runtime/UI equivalence proved. Ordinary repository race was reproduced and fixed in E5; no schema or public API change."
+    },
+    {
+      "group": 4,
+      "subsection": "4.2",
+      "feature_lines": "207-227",
+      "ui_subsections": [
+        "5.3",
+        "5.4"
+      ],
+      "mechanism_sections": [
+        "2",
+        "3.3"
+      ],
+      "production_source": [
+        "lib/features/sources/data/native_tachi_repository.dart:321",
+        "lib/features/sources/presentation/browse_screen.dart:177",
+        "tools/native_extension_engine/java/dev/tachibooks/engine/ExtensionRegistry.java"
+      ],
+      "success_path": "Files immutable copy or streamed bounded APK; actual loaded package metadata/factory IDs required.",
+      "error_path": "Manifest/hash/library1.3-1.6/source classes validated; failure/unconfirmed result never reports installed.",
+      "recovery_path": "Host cache and Dart staging repair fresh verified candidates; conversion/persist failure keeps old registry/source/preferences.",
+      "related_tests": [
+        "test/native_tachi_repository_test.dart",
+        "test/extension_recovery_lifecycle_test.dart",
+        "test/extension_mutation_queue_test.dart"
+      ],
+      "original_ipa_evidence": "Original Komga109918-byte APK; Extension/PackageTools bytecode; genuine APK3/3 factory+restart.",
+      "limits": "No universal extension/iPhone compatibility. Repair artifacts retained with no GC. Dart boundary tests use fixture executor; Java genuine APK tests separate."
+    },
+    {
+      "group": 4,
+      "subsection": "4.3",
+      "feature_lines": "228-241",
+      "ui_subsections": [
+        "5.2",
+        "5.8",
+        "16.8"
+      ],
+      "mechanism_sections": [
+        "3",
+        "4",
+        "6",
+        "7"
+      ],
+      "production_source": [
+        "lib/features/sources/data/native_tachi_repository.dart:654",
+        "lib/features/sources/presentation/source_preferences_dialog.dart",
+        "tools/native_extension_engine/java/dev/tachibooks/engine/ExtensionHost.java"
+      ],
+      "success_path": "Rx/suspend/Factory, filters/detail/TOC/Page/image hooks, persistent cookies, exact-host UA.",
+      "error_path": "Constructor preference failure rollback; lazy far-page error isolated; stale CDN renewed by chapter+ordinal; caller URL cannot select target.",
+      "recovery_path": "Cookie expiry/deletion/corruption/restart recovery; malformed browser optional file preserved; native timeout retains lease until settles.",
+      "related_tests": [
+        "test/native_tachi_repository_test.dart",
+        "test/source_preferences_widget_test.dart"
+      ],
+      "original_ipa_evidence": "Original HttpSource/MangasPage/Page/McCookieJar/McCookieManager/UserAgentInterceptor bytes.",
+      "limits": "OpenJ9/JDK17 vs Zero/Java8, child-first optional vs parent-first differences; unsupported click/OAuth/vBook dynamic config, bidirectional Java/WK cookie sync and hard native cancel remain."
+    },
+    {
+      "group": 5,
+      "subsection": "5.1",
+      "feature_lines": "242-262",
+      "ui_subsections": [
+        "6.1",
+        "6.2"
+      ],
+      "mechanism_sections": [
+        "6"
+      ],
+      "production_source": [
+        "lib/features/library/presentation/book_detail_header.dart",
+        "lib/features/library/presentation/book_detail_screen.dart:55"
+      ],
+      "success_path": "Header title/2alternate names/author/artist/genres/status/source/count/updated/state; expand/search callbacks.",
+      "error_path": "Bad cover placeholder, invalid title/alternate inputs blocked; source-list failure does not undo valid metadata.",
+      "recovery_path": "Restored missing metadata hydrated preserving existing custom fields/cover; explicit refresh updates source data.",
+      "related_tests": [
+        "test/book_detail_layout_test.dart",
+        "test/book_detail_reading_state_test.dart",
+        "test/restored_source_reference_test.dart"
+      ],
+      "original_ipa_evidence": "Original SManga/MangaTable/ChapterTable signatures; manga_detail identifier.",
+      "limits": "2alternate names per user; numeric remap requires exact-source unique saved chapter URL evidence. No native visual proof."
+    },
+    {
+      "group": 5,
+      "subsection": "5.2",
+      "feature_lines": "263-287",
+      "ui_subsections": [
+        "6.2",
+        "6.5"
+      ],
+      "mechanism_sections": [
+        "5.5",
+        "6"
+      ],
+      "production_source": [
+        "lib/features/library/presentation/book_detail_screen.dart:96",
+        "lib/features/library/presentation/library_view_model.dart:118",
+        "lib/features/library/application/book_cover_import.dart"
+      ],
+      "success_path": "Edit metadata/cover/notes/categories/reader prefs, refresh separately, share/copy/deeplink/resume/migrate/remove.",
+      "error_path": "Revision rejects stale edits; confirmation for removal; custom cover retained.",
+      "recovery_path": "Uncomplete now clears only conflicting explicit completed; other states/notes/bookmark/cache/progress preserved.",
+      "related_tests": [
+        "test/book_detail_reading_state_test.dart",
+        "test/spec_library_activity_gaps_test.dart"
+      ],
+      "original_ipa_evidence": "Original detail-related model/identifier evidence.",
+      "limits": "Tracker excluded. Photos/Files/share native acceptance and non-library preview unavailable/unproven."
+    },
+    {
+      "group": 5,
+      "subsection": "5.3",
+      "feature_lines": "288-328",
+      "ui_subsections": [
+        "6.3",
+        "6.4",
+        "6.6"
+      ],
+      "mechanism_sections": [
+        "6.4",
+        "6.5"
+      ],
+      "production_source": [
+        "lib/features/library/domain/chapter_list_options.dart",
+        "lib/features/library/presentation/book_detail_screen.dart",
+        "lib/features/library/presentation/library_view_model.dart:1144"
+      ],
+      "success_path": "Stable chapter IDs; source/number/title ordering, scanlator/dedup filters, select/range/read/bookmark/download.",
+      "error_path": "Missing/duplicate refs or invalid ordinals rejected; empty online TOC cannot erase existing chapters.",
+      "recovery_path": "Identity remap preserves cache/read/bookmarks/resume; retry preserves prior TOC on failure.",
+      "related_tests": [
+        "test/chapter_list_management_test.dart",
+        "test/stable_source_chapter_identity_test.dart",
+        "test/library_scoped_update_test.dart",
+        "test/book_detail_layout_test.dart"
+      ],
+      "original_ipa_evidence": "Original ChapterTable signatures and HttpSource chapter APIs.",
+      "limits": "Unknown numbers not guessed; native chapter gesture/accessibility parity unmeasured."
+    },
+    {
+      "group": 8,
+      "subsection": "8.1",
+      "feature_lines": "540-556",
+      "ui_subsections": [
+        "9.1",
+        "9.3",
+        "9.4"
+      ],
+      "mechanism_sections": [
+        "6.5"
+      ],
+      "production_source": [
+        "lib/features/library/presentation/library_view_model.dart:984",
+        "lib/features/library/application/library_update_scheduler.dart:33",
+        "lib/features/library/application/library_update_report.dart"
+      ],
+      "success_path": "Manual/scoped/scheduled IDs with lock/category/conditions/policy, per-book progress and report.",
+      "error_path": "Source failure isolated; skipped reasons; empty TOC rejection; replacement revision rejects late data/queue/timestamp.",
+      "recovery_path": "Retry failed IDs with revision; coalesced fetch; expired token cannot revive.",
+      "related_tests": [
+        "test/library_scoped_update_test.dart",
+        "test/library_automatic_update_test.dart",
+        "test/library_update_report_widget_test.dart"
+      ],
+      "original_ipa_evidence": "Original Updater/UpdateRecord/UpdateStatus classes; summary identifiers.",
+      "limits": "iOS grant/background timing unverified; scheduling mechanism need not duplicate original internal architecture."
+    },
+    {
+      "group": 8,
+      "subsection": "8.2",
+      "feature_lines": "557-569",
+      "ui_subsections": [
+        "9.1",
+        "9.2"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/library/domain/library_update_events.dart:20",
+        "lib/features/library/presentation/activity_screens.dart:23"
+      ],
+      "success_path": "Ordered discoveredAt events; category/unread filters; open/read/download/multi/range actions.",
+      "error_path": "Imported chapters without discovery time do not fabricate new updates; empty/error state.",
+      "recovery_path": "Repeated update retains discovery time and identity; existing unread view explicit.",
+      "related_tests": [
+        "test/library_update_events_test.dart",
+        "test/activity_spec_interactions_test.dart",
+        "test/library_update_notifications_test.dart"
+      ],
+      "original_ipa_evidence": "UpdateRecordTable and update UI identifiers.",
+      "limits": "Discovery time app-observed, different from upload time."
+    },
+    {
+      "group": 8,
+      "subsection": "8.3",
+      "feature_lines": "570-579",
+      "ui_subsections": [
+        "9.3",
+        "9.4"
+      ],
+      "mechanism_sections": [
+        "6"
+      ],
+      "production_source": [
+        "lib/features/library/application/library_update_policy.dart",
+        "lib/features/library/application/library_update_scheduler.dart:66",
+        "lib/features/library/presentation/library_view_model.dart:360"
+      ],
+      "success_path": "Skip completed/unstarted/unread/early/category; reasons, retry and explicit metadata/cover refresh.",
+      "error_path": "Policy defaults bounded; missing optional Wi-Fi/charge conditions blocks work.",
+      "recovery_path": "Retry failed source; explicit refresh retains metadata/cache on failure.",
+      "related_tests": [
+        "test/library_automatic_update_test.dart",
+        "test/library_update_report_widget_test.dart",
+        "test/library_metadata_batch_test.dart"
+      ],
+      "original_ipa_evidence": "Original updater presence, no algorithm equivalence.",
+      "limits": "Release prediction inference only. Scheduled update refreshes TOC; metadata/cover refresh separately explicit."
+    },
+    {
+      "group": 8,
+      "subsection": "8.4",
+      "feature_lines": "580-586",
+      "ui_subsections": [
+        "9.3",
+        "9.4"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/library/presentation/library_view_model.dart:1096",
+        "lib/features/library/application/library_update_scheduler.dart:171"
+      ],
+      "success_path": "Deduplicated per-book/final notification owner and user controls.",
+      "error_path": "Privacy-generation/revision guards prevent stale/incognito notices; errors counted.",
+      "recovery_path": "No repeated announce for one shared fetched update; notification route implemented behind platform.",
+      "related_tests": [
+        "test/library_update_notifications_test.dart",
+        "test/library_automatic_update_test.dart"
+      ],
+      "original_ipa_evidence": "Original updater task DTOs; no device-notice equivalence.",
+      "limits": "iOS delivery/permission/tap/background expiration require device evidence; root owns native."
+    },
+    {
+      "group": 9,
+      "subsection": "9",
+      "feature_lines": "587-605",
+      "ui_subsections": [
+        "10.1",
+        "10.2",
+        "10.3"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/library/presentation/activity_screens.dart:623",
+        "lib/features/library/presentation/library_view_model.dart:232",
+        "lib/features/library/domain/library_reading.dart:3"
+      ],
+      "success_path": "Latest read/current chapter history, chronological search/resume, one/many/all clear, incognito suppression.",
+      "error_path": "Filtered selected scope and restore guard; missing IDs harmless; stale confirmation rejected.",
+      "recovery_path": "Fixed nullable legacy inference loss by materializing only null flags before removing lastRead; explicit flags/empty history/cache/bookmarks/progress unchanged.",
+      "related_tests": [
+        "test/history_selection_test.dart",
+        "test/library_view_model_test.dart",
+        "test/spec_library_activity_gaps_test.dart",
+        "test/incognito_reader_test.dart"
+      ],
+      "original_ipa_evidence": "Direct original HistoryTable fields mangaId/lastChapterId/lastReadAt/readDuration/lastChapterName and action identifiers.",
+      "limits": "Schema evidence supports latest-book history, not every past chapter event. No original runtime interaction proof."
+    },
+    {
+      "group": 10,
+      "subsection": "10.1",
+      "feature_lines": "606-619",
+      "ui_subsections": [
+        "11.1",
+        "11.2",
+        "11.3",
+        "11.4"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/sources/presentation/source_migration_screen.dart:90",
+        "lib/features/sources/domain/source_migration.dart:54"
+      ],
+      "success_path": "Different same-kind source; search/detail/TOC and reviewed immutable target; explicit keep/replace.",
+      "error_path": "Wrong detail identity/empty/duplicate/invalid target refused; cancel discards late callbacks.",
+      "recovery_path": "Page metadata preserved, explicit final removed from eligible source identities; legacy nonempty fallback; new query resets source eligibility.",
+      "related_tests": [
+        "test/migration_multi_source_test.dart",
+        "test/source_migration_widget_test.dart",
+        "test/source_migration_test.dart"
+      ],
+      "original_ipa_evidence": "migrate_manga identifier only; no original transfer algorithm disassembled.",
+      "limits": "No original exact migration UI/runtime proof; page-level failure requires explicit new search, not per-source cursor retry."
+    },
+    {
+      "group": 10,
+      "subsection": "10.2",
+      "feature_lines": "620-632",
+      "ui_subsections": [
+        "11.2",
+        "11.4",
+        "11.5"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/sources/presentation/source_bulk_migration_screen.dart:42",
+        "lib/features/sources/domain/source_migration.dart:189"
+      ],
+      "success_path": "Reviewed targets share one snapshot; selected ready previews atomically committed; unreviewed skipped.",
+      "error_path": "Fingerprint/duplicate target/old ID/revision rejects entire batch.",
+      "recovery_path": "Hydrated recovery before replace; default keeps old offline copy; replace warns cache removal.",
+      "related_tests": [
+        "test/source_migration_test.dart",
+        "test/source_migration_widget_test.dart",
+        "test/migration_multi_source_test.dart"
+      ],
+      "original_ipa_evidence": "migrate_manga Flutter identifier. DB schema migration names are not transfer evidence.",
+      "limits": "Commit one atomic transaction; search cancel supported, no cancel mid-publication or per-item partial commit."
+    },
+    {
+      "group": 10,
+      "subsection": "10.3",
+      "feature_lines": "633-647",
+      "ui_subsections": [
+        "11.4",
+        "11.5"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/sources/domain/source_migration.dart:104",
+        "lib/features/sources/domain/source_migration.dart:225"
+      ],
+      "success_path": "One-to-one number/title map preserves read/current chapter/category/favorite/notes/reader/rating/opaque metadata/bookmarks.",
+      "error_path": "Ambiguous numbers/titles unmapped; existing target rejects overwrite; no false page equivalence.",
+      "recovery_path": "CAS+revision protects later changes; never reattach old source cache; full recovery retained.",
+      "related_tests": [
+        "test/source_migration_test.dart",
+        "test/legacy_chapter_remap_test.dart",
+        "test/source_migration_widget_test.dart"
+      ],
+      "original_ipa_evidence": "Original chapter/manga schema presence only.",
+      "limits": "BookReadingTimes/libraryFolders remain preference maps keyed old ID, whereas migration publishes books only; replacement new ID has no transferred duration/folder assignment. Static integration limit, not normative parity failure reproduced here. Bookmark fraction intentionally resets."
+    },
+    {
+      "group": 14,
+      "subsection": "14.1",
+      "feature_lines": "827-841",
+      "ui_subsections": [
+        "15.1",
+        "15.2"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/library/domain/reading_statistics.dart",
+        "lib/features/library/application/reading_statistics_controller.dart:15",
+        "lib/features/settings/presentation/reading_info_screen.dart:42"
+      ],
+      "success_path": "Hydrated consistent snapshot totals/read/unread/verified offline/local states/rating, valid day time.",
+      "error_path": "Invalid/future/negative day duration ignored/reported; invalid content excluded without mutation; bad book-time JSON shows error.",
+      "recovery_path": "Refresh invalidates; guarded latest-row state/rating; completed conflict fixed across uncomplete/unread/reset.",
+      "related_tests": [
+        "test/reading_statistics_test.dart",
+        "test/reading_statistics_extended_test.dart",
+        "test/reading_info_extended_widget_test.dart",
+        "test/book_detail_reading_state_test.dart"
+      ],
+      "original_ipa_evidence": "Direct StatsTable day/mangaId/readDuration; ReadTimeDataClass totalSeconds/mangaList; read_time_stats_screen.",
+      "limits": "Old day totals not allocated to unknown book IDs. Large hydrated snapshots not device-memory profiled. External tracker chart/count excluded."
+    },
+    {
+      "group": 14,
+      "subsection": "14.2",
+      "feature_lines": "842-852",
+      "ui_subsections": [
+        "15.1",
+        "15.2"
+      ],
+      "mechanism_sections": [],
+      "production_source": [
+        "lib/features/library/domain/reading_statistics.dart:29",
+        "lib/features/library/domain/book_reading_times.dart",
+        "lib/features/settings/presentation/reading_statistics_book_list.dart",
+        "lib/features/settings/presentation/reading_statistics_charts.dart"
+      ],
+      "success_path": "Identity/source/category/state/progress grouping; recent/most/longest-read, duration/title/chapters/recent sort,7/30day chart/local rating.",
+      "error_path": "Bad scores ignored; future recent read excluded; tie-breaks stable; restore/privacy refuses stale edits.",
+      "recovery_path": "Additive backup-compatible time preferences retained; no fabricated old per-book time.",
+      "related_tests": [
+        "test/reading_statistics_extended_test.dart",
+        "test/book_reading_times_test.dart",
+        "test/reading_info_extended_widget_test.dart"
+      ],
+      "original_ipa_evidence": "Original StatsTable/ReadTimeDataClass direct descriptors and read_time_stats_screen bytes.",
+      "limits": "Extra cards/charts are proposed in UI15.2, not original pixel parity. No per-book-per-day series stored."
+    }
+  ],
+  "limitations": [
+    "Every requested subsection traced to success/error/recovery source paths; not every bullet or every extension exercised.",
+    "Original IPA static identifier bytes/model signatures are presence/contract evidence only, not original UI/runtime equivalence.",
+    "No new IPA, CI, iPhone, native build or production website execution. Current fixes are not in IPA11.",
+    "Focused suites overlap; do not sum them. Parent owns final whole-suite/analyze result.",
+    "Six UIKit tabs, no All category, Vietnamese, vBook/novel/folders/time and existing additions preserved; tracker external integrations excluded by user."
+  ],
+  "original_ipa_static_evidence": {
+    "ipa_sha256": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+    "app_sha256": "cf14f3023a63a93c89d5e2c66a62bdb44f40a90b849956034d2aa487c16006a7",
+    "matching_classes": {
+      "library": [
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$CategoryMetaTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0025_CategoryManga_Index.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$MangaTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$CategoryTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$CategoryMangaTable.class",
+        "suwayomi/tachidesk/manga/impl/CategoryManga$MangaCategoryUpdateInput.class",
+        "suwayomi/tachidesk/manga/impl/CategoryManga.class",
+        "suwayomi/tachidesk/manga/impl/CategoryManga$MangaCategoryUpdateInput$$serializer.class",
+        "suwayomi/tachidesk/manga/impl/CategoryManga$MangaCategoryUpdateInput$Companion.class",
+        "suwayomi/tachidesk/manga/impl/Category.class",
+        "suwayomi/tachidesk/manga/impl/CategoryManga$special$$inlined$injectLazy$1$1.class",
+        "suwayomi/tachidesk/manga/impl/CategoryManga$special$$inlined$injectLazy$1.class",
+        "suwayomi/tachidesk/manga/controller/CategoryController$special$$inlined$handler$2.class",
+        "suwayomi/tachidesk/manga/controller/CategoryController$special$$inlined$instance$default$1.class",
+        "suwayomi/tachidesk/manga/controller/CategoryController.class",
+        "suwayomi/tachidesk/manga/controller/CategoryController$special$$inlined$handler$1.class",
+        "suwayomi/tachidesk/manga/controller/CategoryController$CategoryMetaUpdate.class",
+        "suwayomi/tachidesk/manga/controller/CategoryController$CategoryMetaUpdate$$serializer.class",
+        "suwayomi/tachidesk/manga/controller/CategoryController$CategoryMetaUpdate$Companion.class",
+        "suwayomi/tachidesk/manga/model/table/CategoryTableKt.class",
+        "suwayomi/tachidesk/manga/model/table/CategoryMangaTable.class",
+        "suwayomi/tachidesk/manga/model/table/MangaTable.class",
+        "suwayomi/tachidesk/manga/model/table/MangaTableKt.class",
+        "suwayomi/tachidesk/manga/model/table/CategoryMetaKey.class",
+        "suwayomi/tachidesk/manga/model/table/CategoryTable.class",
+        "suwayomi/tachidesk/manga/model/table/CategoryMetaTable.class",
+        "suwayomi/tachidesk/manga/model/dataclass/CategoryDataClass.class",
+        "suwayomi/tachidesk/cloud/processor/CategoryProcessor.class",
+        "eu/kanade/tachiyomi/data/backup/models/BackupCategory.class",
+        "eu/kanade/tachiyomi/data/backup/models/BackupCategory$$serializer.class"
+      ],
+      "browse": [
+        "suwayomi/tachidesk/manga/impl/MangaList$getMangaList$mangasPage$1.class",
+        "eu/kanade/tachiyomi/source/model/MangasPage.class",
+        "eu/kanade/tachiyomi/source/online/HttpSource.class",
+        "eu/kanade/tachiyomi/source/online/ParsedHttpSource.class",
+        "eu/kanade/tachiyomi/source/online/HttpSource$special$$inlined$injectLazy$1.class",
+        "eu/kanade/tachiyomi/source/online/HttpSource$Companion.class",
+        "eu/kanade/tachiyomi/source/online/HttpSource$special$$inlined$injectLazy$1$1.class"
+      ],
+      "extensions": [
+        "suwayomi/tachidesk/manga/impl/extension/Extension.class",
+        "suwayomi/tachidesk/manga/impl/util/PackageTools.class",
+        "suwayomi/tachidesk/manga/impl/util/PackageTools$special$$inlined$instance$default$1.class",
+        "eu/kanade/tachiyomi/source/SourceFactory.class"
+      ],
+      "detail": [
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$ChapterTable.class",
+        "suwayomi/tachidesk/manga/model/table/ChapterTable.class",
+        "suwayomi/tachidesk/manga/model/table/ChapterTableKt.class",
+        "suwayomi/tachidesk/manga/model/dataclass/SMangaDataClass$Companion.class",
+        "suwayomi/tachidesk/manga/model/dataclass/SMangaDataClass.class",
+        "suwayomi/tachidesk/manga/model/dataclass/SMangaDataClassKt.class",
+        "suwayomi/tachidesk/manga/model/dataclass/SMangaDataClass$$serializer.class",
+        "suwayomi/tachidesk/manga/model/dataclass/PagedSMangaListDataClass.class",
+        "eu/kanade/tachiyomi/source/model/SManga$DefaultImpls.class",
+        "eu/kanade/tachiyomi/source/model/SManga$Companion.class",
+        "eu/kanade/tachiyomi/source/model/SMangaImpl.class",
+        "eu/kanade/tachiyomi/source/model/SManga.class",
+        "eu/kanade/tachiyomi/source/model/SMangaUpdate.class"
+      ],
+      "update": [
+        "suwayomi/tachidesk/server/database/migration/M0027_UpdateRecord.class",
+        "suwayomi/tachidesk/manga/impl/update/IUpdater$DefaultImpls.class",
+        "suwayomi/tachidesk/manga/impl/update/IUpdater.class",
+        "suwayomi/tachidesk/manga/impl/update/Updater$createUpdateChannel$1.class",
+        "suwayomi/tachidesk/manga/impl/update/Updater$createUpdateChannel$2.class",
+        "suwayomi/tachidesk/manga/impl/update/UpdaterSocket$special$$inlined$instance$default$1.class",
+        "suwayomi/tachidesk/manga/impl/update/Updater.class",
+        "suwayomi/tachidesk/manga/impl/update/UpdaterSocket$start$1.class",
+        "suwayomi/tachidesk/manga/impl/update/UpdaterKt.class",
+        "suwayomi/tachidesk/manga/impl/update/Updater$process$1.class",
+        "suwayomi/tachidesk/manga/impl/update/UpdateRecord$special$$inlined$instance$default$1.class",
+        "suwayomi/tachidesk/manga/impl/update/Updater$addMangaListToQueue$2.class",
+        "suwayomi/tachidesk/manga/impl/update/UpdateRecord.class",
+        "suwayomi/tachidesk/manga/impl/update/UpdateStatus.class",
+        "suwayomi/tachidesk/manga/impl/update/UpdaterSocket.class",
+        "suwayomi/tachidesk/manga/controller/UpdateController$RetryUpdateRequest$$serializer.class",
+        "suwayomi/tachidesk/manga/controller/UpdateController$updateSummary$lambda$1$$inlined$instance$default$1.class",
+        "suwayomi/tachidesk/manga/controller/UpdateController$RetryUpdateRequest$Companion.class",
+        "suwayomi/tachidesk/manga/controller/UpdateController$RetryUpdateRequest.class",
+        "suwayomi/tachidesk/manga/model/table/UpdateRecordTable.class",
+        "suwayomi/tachidesk/manga/model/dataclass/update/UpdateRecordDataClass$Companion.class",
+        "suwayomi/tachidesk/manga/model/dataclass/update/BgUpdateResultDataClass$$serializer.class",
+        "suwayomi/tachidesk/manga/model/dataclass/update/BgUpdateResultDataClass.class",
+        "suwayomi/tachidesk/manga/model/dataclass/update/UpdateRecordDataClass.class",
+        "suwayomi/tachidesk/manga/model/dataclass/update/BgUpdateResultDataClass$Companion.class",
+        "suwayomi/tachidesk/manga/model/dataclass/update/UpdateRecordDataClass$$serializer.class",
+        "suwayomi/tachidesk/manga/model/dataclass/task/BgContinuedUpdateResultDataClass$Companion.class",
+        "suwayomi/tachidesk/manga/model/dataclass/task/BgContinuedUpdateResultDataClass$$serializer.class",
+        "suwayomi/tachidesk/manga/model/dataclass/task/BgContinuedUpdateResultDataClass.class"
+      ],
+      "history": [
+        "suwayomi/tachidesk/server/database/migration/M0017_History_ReadDuration.class",
+        "suwayomi/tachidesk/server/database/migration/M0012_History.class",
+        "suwayomi/tachidesk/server/database/migration/M0016_HistorySyncFix.class",
+        "suwayomi/tachidesk/server/database/migration/M0013_History_index.class",
+        "suwayomi/tachidesk/server/database/migration/M0020_History_SyncBuff.class",
+        "suwayomi/tachidesk/manga/impl/History$ClearInput.class",
+        "suwayomi/tachidesk/manga/impl/History$ClearInput$Companion.class",
+        "suwayomi/tachidesk/manga/impl/History$BatchInput$Companion.class",
+        "suwayomi/tachidesk/manga/impl/History.class",
+        "suwayomi/tachidesk/manga/impl/History$BatchInput$$serializer.class",
+        "suwayomi/tachidesk/manga/impl/History$ClearInput$$serializer.class",
+        "suwayomi/tachidesk/manga/impl/History$BatchInput.class",
+        "suwayomi/tachidesk/manga/controller/HistoryController.class",
+        "suwayomi/tachidesk/manga/controller/HistoryController$special$$inlined$instance$default$1.class",
+        "suwayomi/tachidesk/manga/model/table/HistoryTable.class",
+        "suwayomi/tachidesk/manga/model/table/HistoryTableKt.class",
+        "suwayomi/tachidesk/cloud/processor/HistoryProcessor.class",
+        "eu/kanade/tachiyomi/data/backup/models/BackupHistory$$serializer.class",
+        "eu/kanade/tachiyomi/data/backup/models/BackupHistory$Companion.class",
+        "eu/kanade/tachiyomi/data/backup/models/BackupHistory$$serializer$annotationImpl$kotlinx_serialization_protobuf_ProtoNumber$0.class",
+        "eu/kanade/tachiyomi/data/backup/models/BackupHistory.class"
+      ],
+      "statistics": [
+        "suwayomi/tachidesk/server/database/migration/M0018_Stats.class",
+        "suwayomi/tachidesk/manga/impl/Stats.class",
+        "suwayomi/tachidesk/manga/controller/StatsController.class",
+        "suwayomi/tachidesk/manga/controller/StatsController$special$$inlined$instance$default$1.class",
+        "suwayomi/tachidesk/manga/model/table/StatsTable.class",
+        "suwayomi/tachidesk/manga/model/dataclass/ReadTimeDataClass.class"
+      ],
+      "database_schema_migrations_not_source_transfer": [
+        "suwayomi/tachidesk/server/database/migration/M0017_History_ReadDuration.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$SourceTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0009_Extension_RepoId.class",
+        "suwayomi/tachidesk/server/database/migration/M0007_Extension_Changelog.class",
+        "suwayomi/tachidesk/server/database/migration/M0006_PkgFactory.class",
+        "suwayomi/tachidesk/server/database/migration/M0023_Manga_in_library_index.class",
+        "suwayomi/tachidesk/server/database/migration/M0015_Sync.class",
+        "suwayomi/tachidesk/server/database/migration/M0027_UpdateRecord.class",
+        "suwayomi/tachidesk/server/database/migration/M0022_Manga_source_index.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$ChapterMetaTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$CategoryMetaTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0021_Chapter_manga_index.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$ExtensionTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0025_CategoryManga_Index.class",
+        "suwayomi/tachidesk/server/database/migration/M0029_Extension_AlternateName.class",
+        "suwayomi/tachidesk/server/database/migration/M0012_History.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$PageTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0024_Page_chapter_index.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$MangaTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0028_Extension_BaseUrl.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$CategoryTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0032_ExtensionStore.class",
+        "suwayomi/tachidesk/server/database/migration/M0019_SourceMeta.class",
+        "suwayomi/tachidesk/server/database/migration/M0026_MetaTable_Index.class",
+        "suwayomi/tachidesk/server/database/migration/M0010_Repo.class",
+        "suwayomi/tachidesk/server/database/migration/M0001_Initial$CategoryMangaTable.class",
+        "suwayomi/tachidesk/server/database/migration/M0030_Memo.class",
+        "suwayomi/tachidesk/server/database/migration/M0016_HistorySyncFix.class",
+        "suwayomi/tachidesk/server/database/migration/M0005_Manga.class",
+        "suwayomi/tachidesk/server/database/migration/M0011_Setting.class"
+      ]
+    },
+    "flutter_identifier_bytes": {
+      "library_manga_filter": {
+        "present": true,
+        "offset": 16368381
+      },
+      "library_manga_sort_tile": {
+        "present": true,
+        "offset": 13696973
+      },
+      "library_manga_display": {
+        "present": true,
+        "offset": 16756557
+      },
+      "library_source_filter_dialog": {
+        "present": true,
+        "offset": 17612877
+      },
+      "history_multi_action_bar": {
+        "present": true,
+        "offset": 17658720
+      },
+      "history_select_icon_button": {
+        "present": true,
+        "offset": 16730528
+      },
+      "history_clear_icon_button": {
+        "present": true,
+        "offset": 13319056
+      },
+      "update_status_summary_sheet_v3": {
+        "present": true,
+        "offset": 16869504
+      },
+      "update_status_list_tile": {
+        "present": true,
+        "offset": 17760272
+      },
+      "update_summary_manga_list_tile": {
+        "present": true,
+        "offset": 15928816
+      },
+      "read_time_stats_screen": {
+        "present": true,
+        "offset": 13614974
+      },
+      "migration": {
+        "present": true,
+        "offset": 13168346
+      },
+      "migrate_manga": {
+        "present": true,
+        "offset": 15435475
+      },
+      "manga_detail": {
+        "present": true,
+        "offset": 13430336
+      },
+      "category": {
+        "present": true,
+        "offset": 13165165
+      },
+      "global_search": {
+        "present": true,
+        "offset": 13228787
+      }
+    },
+    "limits": "Static identifier bytes/class presence only; not UI layout, state correctness, or original runtime execution. Database migration class names are not source-transfer mechanism evidence."
+  },
+  "original_model_disassembly": {
+    "path": ".tools/audit_original_models_javap.txt",
+    "classes": [
+      {
+        "class": "suwayomi/tachidesk/manga/model/dataclass/ReadTimeDataClass.class",
+        "sha256": "4139eca2d0cd836b7150733d0a70d888f87352d73f0830d251d2dd9aa42f6d34"
+      },
+      {
+        "class": "suwayomi/tachidesk/manga/model/table/HistoryTable.class",
+        "sha256": "b8b6993785db78f540507100b601cdd3ee0ded5594efb30af33d02460d9cfad5"
+      },
+      {
+        "class": "suwayomi/tachidesk/manga/model/table/StatsTable.class",
+        "sha256": "13d9563da6486e64d84d2575a4d47f0b0a7f6b858bca4ba11bcf830e99073123"
+      }
+    ],
+    "limits": "Only javap reads original bytes; no original native/mod code executed."
+  },
+  "documents": [
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\tinh nang phai co.md",
+      "sha256": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c"
+    },
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md",
+      "sha256": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083"
+    },
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md",
+      "sha256": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0"
+    }
+  ],
+  "file_sha256": {
+    "lib/features/library/application/book_cover_import.dart": "03fb085c3d56ebc6d0efe11d382ec1222256c959915c8ac704819cf345ee183e",
+    "lib/features/library/application/library_bulk_actions.dart": "76301a7ce6da25456ea8241cd08becad84d7fdd1ca4a2ea454f6f0e8ce224ba4",
+    "lib/features/library/application/library_update_policy.dart": "71336e35a0c0d1870559cf694bbb44960f79c36256e1256f3bce60f41e7e8029",
+    "lib/features/library/application/library_update_report.dart": "ad67d1b5602a7b4c5c0517e568786b48506ad14b9f7132282decd48d6f339e8a",
+    "lib/features/library/application/library_update_scheduler.dart": "50132e35faa37a4592ebb5789fa0af81ae6a10ba16cf7531f171b78c98ec2573",
+    "lib/features/library/application/reading_statistics_controller.dart": "cdd739b7226fbdd4bda81dfdfc042695babb93776a83807a178d33f76a1fe256",
+    "lib/features/library/domain/book_reading_times.dart": "9db207cdccfb827a3c69f2a251a5f4e803b9321aa1d4f44d0b6e46719d4d34e2",
+    "lib/features/library/domain/chapter_list_options.dart": "e077ddc0b162f1578d6fd801abb71cf713629c13481263dff950316f3b9d7431",
+    "lib/features/library/domain/library_reading.dart": "7c625c06593ba2f985ce0208925c81a13859ead86aef016fc5a79f795b593336",
+    "lib/features/library/domain/library_update_events.dart": "b3db819b93cb318f25c9b86707ec4437826daadefa61c90a8b7ac48803ad70d4",
+    "lib/features/library/domain/reading_statistics.dart": "57d2c32cdfa9ffb4d199b377f61cde25d4de2239335ede3c03e54dbb483f864a",
+    "lib/features/library/presentation/activity_screens.dart": "677856c0bb757c6a8c98b1d0309937825474a0506785cbb31e671a588e19c7be",
+    "lib/features/library/presentation/book_detail_header.dart": "42a49badcd7e9e6e64ad32012f952f084dfe82b79dc1a2d3e583586c1e29658e",
+    "lib/features/library/presentation/book_detail_screen.dart": "17d380e75a9de49a3abf0b857adf0bb2cf4c502b95e632922b53f12f7c44de01",
+    "lib/features/library/presentation/library_book_metadata.dart": "75a05f61745fad0a33d0e86fb717f754dba75305702a2437fc28bffde950966b",
+    "lib/features/library/presentation/library_book_tile.dart": "f15bc0f72695597a1d2a71cde0fa87eb6406f6d44c98dad651b260abcd4b4da6",
+    "lib/features/library/presentation/library_categories_screen.dart": "508059b059b1882872006d0e6c345ada31e440e8942c31fd01d6ecb01bb0916c",
+    "lib/features/library/presentation/library_category_controller.dart": "43b11f3a4cffd5912ea2db64a8d74a307a3416a2d8ad14e06f67ca48a21544c8",
+    "lib/features/library/presentation/library_category_preference_migration.dart": "9216a264ee14c34452637e4803de42434aa32ae694f0f765a82f3fcf5405e64e",
+    "lib/features/library/presentation/library_filter_controller.dart": "4cf871eae5c03c6470d56a0697376ff623c9b0955759e0385974f7ba648f5f7d",
+    "lib/features/library/presentation/library_filter_sheet.dart": "1c23d712c5173444f743a52b7f1ec0af6e2f047e24ef24ee6290c798651c5cef",
+    "lib/features/library/presentation/library_group_order_controller.dart": "f7e3c02d1ee6a0fc4ea6d038983eb3734222b58b9ca9ff6b9bd11f8edef2f38d",
+    "lib/features/library/presentation/library_screen.dart": "5a2feda8ad9f13d36f814a92bc08bacc1efc4d4232857cf518e55057d7ee926a",
+    "lib/features/library/presentation/library_view_model.dart": "145a8f60d75a6116da2dede0dcec172a3e92930f70e12207d18a4f0a697c8cf4",
+    "lib/features/library/presentation/library_view_session.dart": "8999b09dd6b7212074ad715834a05035cafa202dfe238d11b98b9a943cf1b3b2",
+    "lib/features/settings/presentation/reading_info_screen.dart": "359152021f3f244188d84ad81bced77e67c2b0265973a8d193175be55d00b894",
+    "lib/features/settings/presentation/reading_statistics_book_list.dart": "a3826ebd3ecab3652e0394e7a52486f227ca40a9acd3de812dbb9c05349fb036",
+    "lib/features/settings/presentation/reading_statistics_charts.dart": "eb4cc4934009734d4cb3ca1a2d9aa92340b9f8d3c5a2c5755d7ad373721e4098",
+    "lib/features/sources/application/migration_search.dart": "89bb95093000d6faeebb6261dff04ee8ff0505faae9fe06b2d52715894ac7567",
+    "lib/features/sources/data/extension_index.dart": "2ed6a4ed92f6b306c860927638867a660c587cd4cd651b6d52a875bea33ba2b6",
+    "lib/features/sources/data/native_tachi_repository.dart": "8414621a11f8c73951646316f8c7936587172eae59a4a48e464c075ca0c7e3ee",
+    "lib/features/sources/domain/source_filters.dart": "4aaf1b135ee13d68f43cbf84a3065d7c620d8939e6b6952e32f1d8c014165042",
+    "lib/features/sources/domain/source_migration.dart": "2f3567dd1fb109dd7dbfe33e11583cea0354c69b1748584db2bfdd2814ad9383",
+    "lib/features/sources/presentation/browse_screen.dart": "d86858ddb5bfa05fea57e00c117beac01120d537818dc0ca4e924daab9f6a015",
+    "lib/features/sources/presentation/browse_widgets.dart": "9531b53b0a60ebed2daf62d32fb9da64901b0eb483a432a92f013c047eb83c73",
+    "lib/features/sources/presentation/extension_catalogue_controller.dart": "0ef8fd6396f4561c36f6f6be79c6868a8d5ee745162153fe0dd63c0fa376fbb3",
+    "lib/features/sources/presentation/extension_repository_screen.dart": "2f088084cf2a2725f2e6c9fdbabaae43aa6564ebd711ccbf980220f5dc9d30d0",
+    "lib/features/sources/presentation/global_search_controller.dart": "d5d7de26c9ff87ca9d71746d049023ed2f24bf299dece3735fd2aa1ae2656fa2",
+    "lib/features/sources/presentation/global_search_screen.dart": "e4e82259962d68b80d46506b43a23491f5a0588f68c17dc4d4ddb861560412fc",
+    "lib/features/sources/presentation/source_bulk_migration_screen.dart": "95e5d13d927cd6fba73d3dd5945ac2815baa10a14c796af5a5c1a1f5d7bc4ae2",
+    "lib/features/sources/presentation/source_filter_presets.dart": "96d434e42b66b3d058b0ded1b9cb2139b6c2ac32d638f9c7ea4e63e6a85e5231",
+    "lib/features/sources/presentation/source_filter_sheet.dart": "b74c222a97439ad6d3952ee912aef5ac1a61ae8d6ac13d3f0f4c2052beb9e42d",
+    "lib/features/sources/presentation/source_languages_controller.dart": "f7aa9ccf21d62b49967fff09f388df94c6b627c804f73c3ffbe2596d9f604668",
+    "lib/features/sources/presentation/source_migration_screen.dart": "5522993ad9015397a564cee67b0251d9133d8032bf9231f957f7dfaacd8a8ea1",
+    "lib/features/sources/presentation/source_preferences_dialog.dart": "e4a6bfc844e1118bbfc2fd0e136d4153f7b33bc635ca8ee4e251d6ff732d224c",
+    "lib/features/sources/presentation/source_search_screen.dart": "b57d0875937293578fc14cd75bf94bab6d7b8709c4943f604a0e4389673df532",
+    "test/activity_spec_interactions_test.dart": "0e9b5b6b2f59141f546abd57d772d0a90b60628d2e81a65134e21b7de7edf559",
+    "test/book_detail_layout_test.dart": "9f15a1368a4271c23f48497e4436bf3e9d74a83fd3233d32b7ec2acb687d4bf9",
+    "test/book_detail_reading_state_test.dart": "9c7358ca262224cae71b8fca995e7576f16895277ba23c1c535d3a4ebb09a518",
+    "test/book_reading_times_test.dart": "06035f163ce76aa51673b9a96aeaa7c398f8bf1815e7561b0b7edfb7f9a49d48",
+    "test/chapter_list_management_test.dart": "652918c162802f5d8feb16330aa5915d74200ebf4295e85433da1228016ba76b",
+    "test/extension_catalogue_controller_test.dart": "a162610cfaa54b5ad38fe84d850cfafb5faa018de34f5cc20b7578f8c8e02598",
+    "test/extension_index_test.dart": "8d67a7957ce9f6ff5712ee77f451b039631b83908f33db6d034dffbfede1a836",
+    "test/extension_mutation_queue_test.dart": "4b7657d1adf283bbd01e5da3251354ed3c0de17dcf237417a73f44e3c85be424",
+    "test/extension_recovery_lifecycle_test.dart": "e08de05042f1fe5fa285a52175e9c93be63b548eed312cecdab48e7709f7e974",
+    "test/extension_repository_widget_test.dart": "403173906971af7df92c7e8eaefb5738e04b680b63239a04ca80232f03024f02",
+    "test/history_selection_test.dart": "8ffe241ebd6f18566d367914f7e3cc0a8216ebd07af591bf2ee0651a4c542525",
+    "test/incognito_reader_test.dart": "0ac68225b2b3b673ab7e76dce00ac92a626002ad90bc88cb105b7919cc72ec5c",
+    "test/legacy_chapter_remap_test.dart": "41571ef35e576a76077970ad024d6c632f680923d76f0c26ee2edddd08fa5c26",
+    "test/library_add_categories_test.dart": "9f059aa79f52350313f603b0b92485e8b397551784ecf45a3f7443a4046f0ec1",
+    "test/library_automatic_update_test.dart": "4d33c92e389f938760ecb2c4ebe39ec981f6a700dd69876fc77e98124f0231b8",
+    "test/library_bulk_actions_test.dart": "f1654e99dba36ac47b1d3e4ce895fdc17654d5dbbc5097ddbbe66008cc781e56",
+    "test/library_bulk_download_widget_test.dart": "a4b659d6ea3990895dfe72bba599be7d621dc9b0da93598204ad6da75069f481",
+    "test/library_categories_filters_test.dart": "2b055d1d03eb3be61eafe39f76aad68a90a52ba4b83aa19c89840670775ef60f",
+    "test/library_category_preference_migration_test.dart": "686866a61f6de019a7a30a394e61c2c2704348dc6e8be8f76821dcab08508821",
+    "test/library_category_refresh_widget_test.dart": "e5f1c42168edffe63ba94e600f06187e0a00df679d80d7abf1ad2eb762dc752c",
+    "test/library_category_registry_test.dart": "f2fcceb40c5f08940ea5881647810ff06c26a39f9cbd05b6bd278309f6260891",
+    "test/library_display_metadata_test.dart": "d0983f1b7bea3185488cd6bc9fbaf5f22f431b61c206893b03fde4475f4684c2",
+    "test/library_filter_layout_test.dart": "d6dc2c0b9b9d7dea777ad2b1aea2d378411f1ca21eef61cda4d40ccb77de9c62",
+    "test/library_filter_presets_test.dart": "cac7b93e5a3562920782ab27bf07e64be23b9ea58fd12907004803ded5f232cb",
+    "test/library_grouping_widget_test.dart": "9ad6c2c7f6465db8d2f38a12403295f1feae8f114613b31dcaa875dee5409167",
+    "test/library_insert_restore_test.dart": "db731c463143f39439a9686c52ff9ea5cdc3aa6c92f151d1b409f407faef536a",
+    "test/library_metadata_batch_test.dart": "02e39412c97729b52996e50877b8b38f15e593d2d0fb7b6683810c7afd99100f",
+    "test/library_opaque_navigation_test.dart": "7cc94ac59aa09e0c97dc6310db8058c4b954f7872c32c13fd4474bb9ddd81740",
+    "test/library_scoped_update_test.dart": "def31c96f34ad05fc0c7da19e2534d60dfbb030e80eece1e7a7c580f8943c8d9",
+    "test/library_update_events_test.dart": "5539811cdab23838affed6ff9c9973e488147ee65112fdef6cc4c2fb3707086a",
+    "test/library_update_notifications_test.dart": "d5205101e0c1250c3b620051486a3fa060d6d45b895bad1758f1f98b23f56607",
+    "test/library_update_report_widget_test.dart": "554e636d0d0a79a87e0e80c37c90d6ccc91d1133627b0d215e61cad5b0123d13",
+    "test/library_view_model_test.dart": "1c91520cd02cfff93fb2e05ae4e490b93d45600df006e5e9c409fabe88ffab8c",
+    "test/library_view_session_test.dart": "b79c4638e75e7ec52326a68a031a8c93e1e89b2140af3d3e60d9b341e3f9dfb6",
+    "test/migration_multi_source_test.dart": "02fb24f39015ab932c2954b229e0d67f4f543eb8037e2490aacda992703694c2",
+    "test/native_tachi_repository_test.dart": "c7776509aeba35a4d6d9f8be71530369f8495d501a2d538423f4a173a2626660",
+    "test/reading_info_extended_widget_test.dart": "6eefcedd1df5c4baab9a04e9a37d9c55942d370ddd47300b519edbd6418e2423",
+    "test/reading_statistics_extended_test.dart": "76a1299bb9746f05319b94f334872dadfe040658a5abc343a71c9c50ae2449d1",
+    "test/reading_statistics_test.dart": "c8efa4ed93e4a5ab564e30b76127a7370b604c2f6d8dc5ab02fa9a67066f4dee",
+    "test/restored_source_reference_test.dart": "ed37c08694adca223dd2ac53a3f9bf19e39f53bdc367d252c6319750d4aafbfb",
+    "test/source_browse_widget_test.dart": "1dffc43d8145fcac121c8ada0e3f7b2dc966af5e2c5ac9bbfa69d73cb1649f95",
+    "test/source_catalogue_features_test.dart": "eb5cdfc38823a4a39ce70c3b6a478719522700d647ae47c1624e6c56c068415a",
+    "test/source_catalogue_widget_test.dart": "310a454851e9919ab4f29b709db18c101e0bdbd42d0c9ff15510b1d712ec32ed",
+    "test/source_cover_image_test.dart": "c755436e17b5da142a2a29d1f86ec295210a9efd193ab4fa3190e9f653a8ec97",
+    "test/source_filters_test.dart": "07c670bdc23c86514325fcc3411c1e449d70ca717227fd4ecdab784008d67053",
+    "test/source_languages_settings_widget_test.dart": "18d9b595bf65f473aa39015c0ec79db44ac53fc3311ffbed8bbe49bbed6aea71",
+    "test/source_languages_test.dart": "db8167d9f0460970e6068f56ab0efea99127886a011972d1a2d7eaade024d00c",
+    "test/source_migration_test.dart": "27b09ae91ca63d1471b45d4ad37739fb918173a8f4ebb93b72cf1c683aef7fce",
+    "test/source_migration_widget_test.dart": "1fa7ec05a435969bab1369cc4d4cc265289b987aa97d613abf37861b2a78f88b",
+    "test/source_preferences_widget_test.dart": "830f198c604291e1b7f1ec45c9e952930c4e5e96318af972c9eb9d8e423e8f26",
+    "test/source_recents_privacy_test.dart": "bf8f155d8029e1adb14016702b89dbdc39f1c312cda9a08845bd2413f37ebd85",
+    "test/spec_library_activity_gaps_test.dart": "43abc72fbb1037b767aaeff8c9363f536e2ae45e173fc0de5a22179f8f0c85e0",
+    "test/spec_library_states_test.dart": "dc342315ccca5f4e6bda3bd74af99e1f4e7f41ed39b1d7a2a78c468f4c815370",
+    "test/stable_source_chapter_identity_test.dart": "f5948164a192b3450b25ca4405fde65acc5eec76f3635c064475dd580ac3c6b9",
+    "tools/native_extension_engine/java/dev/tachibooks/engine/ExtensionHost.java": "50554646e86b965507e52adbd17b4a754cee7a03e53c0ef3f0de2f6e1550a18a",
+    "tools/native_extension_engine/java/dev/tachibooks/engine/ExtensionRegistry.java": "5a0849fc50c1f4510cdec09143ad7b3669389339855e27078ee2eee5810452e3"
+  },
+  "trace_validation": {
+    "subsections": 26,
+    "groups": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      8,
+      9,
+      10,
+      14
+    ],
+    "files_hashed": 102,
+    "missing_paths": [],
+    "note": "Path existence/hash checking is not execution or semantic verification."
+  }
+}

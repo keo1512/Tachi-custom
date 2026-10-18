@@ -11,9 +11,102 @@ import 'package:tachi_books/features/library/domain/library_folders.dart';
 import 'package:tachi_books/features/library/domain/library_grouping.dart';
 import 'package:tachi_books/features/library/presentation/library_folders_controller.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
+import 'package:tachi_books/features/library/presentation/library_category_preference_migration.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
 
 void main() {
+  test('category folder overrides retain legacy data and migrate IDs without overwriting orphan assignment', () {
+    final folders = LibraryFolders(
+      {'a': 'Legacy'},
+      {
+        'Manga': {'a': 'Manga folder'},
+        'Novel': {'a': null},
+      },
+    );
+    final roundtrip = LibraryFolders.decodeWithCategories(
+      folders.encode(),
+      folders.encodeCategories(),
+    );
+    expect(roundtrip.namesIn('Manga'), {'a': 'Manga folder'});
+    expect(roundtrip.namesIn('Novel'), isEmpty);
+    expect(roundtrip.namesIn('Favorites'), {'a': 'Legacy'});
+    final moved = roundtrip.migrateBookIds({'a': 'b'}, replaceOld: true);
+    expect(moved.namesIn('Manga'), {'b': 'Manga folder'});
+    expect(moved.namesIn('Novel'), isEmpty);
+    expect(moved.categoryNames['Novel'], {'b': null});
+    expect(
+      roundtrip.migrateBookIds({'a': 'b'}, replaceOld: false).namesIn('Manga'),
+      {'a': 'Manga folder', 'b': 'Manga folder'},
+    );
+    expect(
+      () =>
+          LibraryFolders({'a': 'Old', 'b': 'Other'})
+              .migrateBookIds({'a': 'b'}, replaceOld: true),
+      throwsStateError,
+    );
+  });
+  test('same title has independent folders per category and rename rollback preserves scopes', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final repo = MemoryLibraryRepository();
+    await repo.save(
+      LibraryBook(id: 'a', title: 'A', categories: ['Manga', 'Novel']),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        preferencesProvider.overrideWithValue(prefs),
+        libraryRepositoryProvider.overrideWithValue(repo),
+      ],
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(libraryFoldersProvider.notifier);
+    final revision = repo.replacementRevision;
+    final before = (await repo.snapshot()).fingerprint;
+    await controller.assign(
+      ['a'],
+      'M',
+      expectedRevision: revision,
+      category: 'Manga',
+    );
+    await controller.assign(
+      ['a'],
+      'N',
+      expectedRevision: revision,
+      category: 'Novel',
+    );
+    expect(container.read(libraryFoldersProvider).namesIn('Manga'), {'a': 'M'});
+    expect(container.read(libraryFoldersProvider).namesIn('Novel'), {'a': 'N'});
+    await controller.assign(
+      ['a'],
+      null,
+      expectedRevision: revision,
+      category: 'Manga',
+    );
+    expect(container.read(libraryFoldersProvider).namesIn('Manga'), isEmpty);
+    expect(container.read(libraryFoldersProvider).namesIn('Novel'), {'a': 'N'});
+    final migration = LibraryCategoryPreferenceMigration.prepare(
+      prefs,
+      'Novel',
+      'Books',
+    );
+    final raw = prefs.getString(LibraryFolders.categoryPreferenceKey);
+    await migration.apply();
+    expect(
+      LibraryFolders.decodeWithCategories(
+        null,
+        prefs.getString(LibraryFolders.categoryPreferenceKey),
+      ).namesIn('Books'),
+      {'a': 'N'},
+    );
+    await migration.rollback();
+    expect(prefs.getString(LibraryFolders.categoryPreferenceKey), raw);
+    expect((await repo.snapshot()).fingerprint, before);
+    expect(
+      BackupConfiguration.capture(prefs).values
+          .containsKey(LibraryFolders.categoryPreferenceKey),
+      true,
+    );
+  });
   test('automatic folders stay within category; singles and missing authors stay loose', () {
     final books = [
       LibraryBook(

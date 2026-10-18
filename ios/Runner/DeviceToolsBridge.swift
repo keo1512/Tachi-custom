@@ -38,8 +38,12 @@ final class DeviceToolsBridge {
       }
     case "clearHttpCache": URLCache.shared.removeAllCachedResponses(); result(nil)
     case "resetMutedDomains": UserDefaults.standard.removeObject(forKey: "dev.tachibooks.browserMutedDomains"); result(nil)
-    case "resetUserAgents": UserDefaults.standard.removeObject(forKey: "dev.tachibooks.browserUserAgents"); result(nil)
+    case "resetUserAgents":
+      NotificationCenter.default.post(name: Notification.Name("dev.tachibooks.clearSourceSessions"), object: nil)
+      UserDefaults.standard.removeObject(forKey: "dev.tachibooks.browserUserAgents")
+      result(nil)
     case "clearCookies":
+      NotificationCenter.default.post(name: Notification.Name("dev.tachibooks.clearSourceSessions"), object: nil)
       for cookie in HTTPCookieStorage.shared.cookies ?? [] { HTTPCookieStorage.shared.deleteCookie(cookie) }
       let store = WKWebsiteDataStore.default().httpCookieStore
       store.getAllCookies { cookies in
@@ -48,6 +52,7 @@ final class DeviceToolsBridge {
         group.notify(queue: .main) { result(nil) }
       }
     case "clearWebData":
+      NotificationCenter.default.post(name: Notification.Name("dev.tachibooks.clearSourceSessions"), object: nil)
       let store = WKWebsiteDataStore.default()
       store.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast) { result(nil) }
     case "shareLog":

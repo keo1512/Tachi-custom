@@ -59,7 +59,7 @@ class SettingsHomeScreen extends StatelessWidget {
         const SettingsHeading('Dữ liệu và riêng tư'),
         SettingsRow(
           icon: CupertinoIcons.arrow_2_circlepath,
-          title: 'Theo dõi',
+          title: 'Trạng thái và đánh giá',
           subtitle: 'Trạng thái và điểm đọc trong thư viện',
           onTap: () => open(const TrackingSettingsScreen()),
         ),

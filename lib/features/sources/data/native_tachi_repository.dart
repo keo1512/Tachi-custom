@@ -22,6 +22,9 @@ import 'source_cover_cache.dart';
 
 typedef NativeTachiExecutor = Future<String> Function(String request);
 typedef NativeTachiBrowser = Future<Map<String, dynamic>> Function(String url);
+typedef NativeTachiSessionBrowser = Future<Map<String, dynamic>> Function(
+  Map<String, dynamic> options,
+);
 
 /// APK bytes are stored locally and interpreted by the bundled Java runtime.
 class NativeTachiRepository
@@ -32,6 +35,7 @@ class NativeTachiRepository
         NativeCoverCacheEngine,
         NativeSourceBrowserEngine,
         NativeSourceMaintenanceEngine,
+        NativeUserAgentResetEngine,
         NativeCatalogueBrowserEngine,
         NativeExtensionManagementEngine,
         NativeExtensionFileEngine,
@@ -41,6 +45,10 @@ class NativeTachiRepository
   NativeTachiRepository({
     NativeTachiExecutor? executor,
     NativeTachiBrowser? browser,
+    NativeTachiSessionBrowser? sessionBrowser,
+    this.automaticallyVerifyChallenges = false,
+    this.canVerifyChallenge,
+    this.browserSessionRevision,
     http.Client? client,
     Directory? storageDirectory,
     this.iconForPackage,
@@ -48,12 +56,23 @@ class NativeTachiRepository
     this.coverCacheEpoch,
   }) : _execute = executor ?? const TachiRuntime().invoke,
        _openBrowser = browser ?? const TachiRuntime().openBrowser,
+       _sessionBrowser =
+           sessionBrowser ??
+           (browser == null ? const TachiRuntime().openSourceBrowser : null),
        _client = client ?? http.Client(),
        _ownsClient = client == null,
        _directory = storageDirectory;
 
   final NativeTachiExecutor _execute;
   final NativeTachiBrowser _openBrowser;
+  final NativeTachiSessionBrowser? _sessionBrowser;
+  final bool automaticallyVerifyChallenges;
+  final bool Function()? canVerifyChallenge;
+  final Object? Function()? browserSessionRevision;
+  final _challengeFlights = <String, Future<bool>>{};
+  final _challengeCooldown = <String, DateTime>{};
+  String? _activeChallenge;
+  int _browserEpoch = 0;
   final http.Client _client;
   final bool _ownsClient;
   final String Function(String packageUrl)? iconForPackage;
@@ -135,6 +154,16 @@ class NativeTachiRepository
 
   Future<dynamic> _request(String method, Map<String, dynamic> args) async {
     if ({
+      'install',
+      'uninstall',
+      'setPreference',
+      'clearCookies',
+      'clearSourceCache',
+      'resetUserAgents',
+    }.contains(method)) {
+      _browserEpoch++;
+    }
+    if ({
       'initialize',
       'install',
       'uninstall',
@@ -142,6 +171,7 @@ class NativeTachiRepository
       'browserSession',
       'clearCookies',
       'clearSourceCache',
+      'resetUserAgents',
     }.contains(method)) {
       _verifiedBookRefs.clear();
       return exclusiveExtensionBackup(() => _requestUnlocked(method, args));
@@ -154,8 +184,14 @@ class NativeTachiRepository
     Map<String, dynamic> args,
   ) async {
     try {
-      final raw = await _execute(jsonEncode({'method': method, 'args': args}))
-          .timeout(const Duration(seconds: 90));
+      final pending = _execute(jsonEncode({'method': method, 'args': args}));
+      final raw = await pending.timeout(
+        const Duration(seconds: 90),
+        onTimeout: () {
+          ExtensionMutationQueue.retainUntilSettled(pending);
+          throw TimeoutException('Native engine response timed out.');
+        },
+      );
       final value = _map(jsonDecode(raw));
       if (value['ok'] != true) {
         final error = value['error'] is Map
@@ -230,11 +266,158 @@ class NativeTachiRepository
   ]) async {
     try {
       await _ready();
-      return await _request(method, args);
+      try {
+        return await _request(method, args);
+      } on ApiException catch (error) {
+        if (error.code != 'source_requires_browser' ||
+            !automaticallyVerifyChallenges ||
+            _sessionBrowser == null ||
+            !{
+              'search',
+              'detail',
+              'chapters',
+              'chapter',
+              'image',
+            }.contains(method) ||
+            args['sourceId'] is! String ||
+            canVerifyChallenge?.call() == false) {
+          rethrow;
+        }
+        if (!await _verifyChallenge(args['sourceId'] as String)) rethrow;
+        // One replay of the exact source request. A repeated challenge is shown
+        // to the user instead of recursively opening another browser.
+        return await _request(method, args);
+      }
     } catch (error) {
       DiagnosticLogs.error('source', error, operation: method);
       rethrow;
     }
+  }
+
+  Future<bool> _verifyChallenge(String sourceId) async {
+    final pending = _challengeFlights[sourceId];
+    if (pending != null) return pending;
+    if (_disposed ||
+        _activeChallenge != null ||
+        (_challengeCooldown[sourceId]?.isAfter(DateTime.now()) ?? false)) {
+      return false;
+    }
+    _activeChallenge = sourceId;
+    final future = () async {
+      try {
+        final sources = _list(await _request('sources', const {}))
+            .map((v) => _source(_map(v)));
+        final source = sources.where((s) => s.id == sourceId).single;
+        return await _openSourceSession(
+          sourceId,
+          Uri.parse(source.baseUrl),
+          automatic: true,
+        );
+      } finally {
+        _activeChallenge = null;
+        if (_challengeCooldown.length >= 256) {
+          _challengeCooldown.remove(_challengeCooldown.keys.first);
+        }
+        _challengeCooldown[sourceId] = DateTime.now().add(
+          const Duration(seconds: 30),
+        );
+        _challengeFlights.remove(sourceId);
+      }
+    }();
+    _challengeFlights[sourceId] = future;
+    return future;
+  }
+
+  Future<bool> _openSourceSession(
+    String sourceId,
+    Uri url, {
+    required bool automatic,
+  }) async {
+    if (url.path.isEmpty) url = url.replace(path: '/');
+    if (!url.hasAuthority ||
+        !{'http', 'https'}.contains(url.scheme) ||
+        url.userInfo.isNotEmpty ||
+        url.hasFragment) {
+      throw const ApiException('Địa chỉ nguồn không hợp lệ.');
+    }
+    final epoch = _browserEpoch, revision = browserSessionRevision?.call();
+    bool current() =>
+        !_disposed &&
+        epoch == _browserEpoch &&
+        revision == browserSessionRevision?.call() &&
+        (!automatic || canVerifyChallenge?.call() != false);
+    if (!current()) return false;
+    final advanced = _sessionBrowser;
+    final seed = advanced == null
+        ? null
+        : _map(
+            await _request('browserSeed', {
+              'sourceId': sourceId,
+              'url': url.toString(),
+            }),
+          );
+    if (!current()) return false;
+    if (seed != null &&
+        (seed['url'] != url.toString() ||
+            seed['cookies'] is! List ||
+            seed['seedToken'] is! String)) {
+      throw const ApiException(
+        'Engine chưa trả phiên nguồn hợp lệ.',
+        code: 'INVALID_SOURCE_DATA',
+      );
+    }
+    final session = advanced == null
+        ? await _openBrowser(url.toString())
+        : await advanced({
+            'url': url.toString(),
+            'automatic': automatic,
+            'seed': seed,
+          });
+    if (!current()) {
+      throw const ApiException(
+        'Thư viện hoặc phiên nguồn đã thay đổi. Hãy mở lại nguồn.',
+        code: 'BROWSER_SESSION_CHANGED',
+      );
+    }
+    if (session['cancelled'] == true) return false;
+    final cleared = session['cleared'] == true;
+    if (session['url'] != url.toString() ||
+        session['cookies'] is! List ||
+        session['userAgent'] is! String ||
+        (cleared && (session['cookies'] as List).isNotEmpty) ||
+        (automatic && !cleared && session['verified'] != true)) {
+      throw const ApiException(
+        'Trình duyệt chưa hoàn tất xác minh nguồn.',
+        code: 'source_requires_browser',
+      );
+    }
+    await exclusiveExtensionBackup(() {
+      // Restore/maintenance may have completed while publication waited for
+      // this lease. Check immediately before invoking the native mutation.
+      if (!current()) {
+        throw const ApiException(
+          'Phiên nguồn đã thay đổi. Hãy thử lại.',
+          code: 'BROWSER_SESSION_CHANGED',
+        );
+      }
+      _verifiedBookRefs.clear();
+      return _requestUnlocked('browserSession', {
+        'sourceId': sourceId,
+        'url': url.toString(),
+        'userAgent': session['userAgent'],
+        'cookies': session['cookies'],
+        if (seed != null) 'seedToken': seed['seedToken'],
+      });
+    });
+    if (!current()) {
+      throw const ApiException(
+        'Phiên nguồn đã thay đổi. Hãy thử lại.',
+        code: 'BROWSER_SESSION_CHANGED',
+      );
+    }
+    // Logging out is a completed cookie mutation, never successful challenge
+    // verification: leave the original source error and do not replay it.
+    return !cleared;
   }
 
   @override
@@ -253,6 +436,9 @@ class NativeTachiRepository
   }
 
   @override
+  Future<void> resetUserAgents() async => _call('resetUserAgents');
+
+  @override
   Future<List<CatalogueSource>> listSources() async => [
     for (final value in _list(await _call('sources'))) _source(_map(value)),
   ];
@@ -265,7 +451,17 @@ class NativeTachiRepository
     iconUrl: _text(item['iconUrl']),
     kind: ContentKind.manga,
     engine: SourceEngine.tachimanga,
+    supportsLatest: _optionalBoolean(item['supportsLatest']),
+    configurable: _optionalBoolean(item['configurable']),
   );
+
+  bool? _optionalBoolean(dynamic value) {
+    if (value == null || value is bool) return value as bool?;
+    throw const ApiException(
+      'Nguồn trả khả năng hỗ trợ không hợp lệ.',
+      code: 'INVALID_SOURCE_DATA',
+    );
+  }
 
   @override
   Future<List<CatalogueExtension>> extensions() async => [
@@ -371,8 +567,11 @@ class NativeTachiRepository
     final digest = sha256.convert(bytes).toString();
     final directory = Directory('${(await _storage()).path}/staging');
     await directory.create(recursive: true);
-    final file = File('${directory.path}/$digest.apk');
-    await _stagePackage(file, bytes, digest);
+    final file = await _stagePackage(
+      File('${directory.path}/$digest.apk'),
+      bytes,
+      digest,
+    );
     final result = _map(
       await _call('install', {
         'apkPath': file.path,
@@ -393,7 +592,7 @@ class NativeTachiRepository
 
   static final _stagingTails = <String, Future<void>>{};
 
-  Future<void> _stagePackage(File file, Uint8List bytes, String digest) {
+  Future<File> _stagePackage(File file, Uint8List bytes, String digest) {
     // The exists/rename boundary is shared across repository handles. Without
     // this lock a concurrent rename can overwrite an in-use input on POSIX or
     // fail with access denied on Windows. Retained input remains recoverable.
@@ -415,37 +614,44 @@ class NativeTachiRepository
     return result;
   }
 
-  Future<void> _writeStagedPackage(
+  Future<File> _writeStagedPackage(
     File file,
     Uint8List bytes,
     String digest,
   ) async {
-    if (await file.exists()) {
-      if (sha256.convert(await file.readAsBytes()).toString() != digest) {
+    Future<bool> intact() async {
+      if (await FileSystemEntity.type(file.path, followLinks: false) !=
+          FileSystemEntityType.file) {
+        return false;
+      }
+      // A damaged cache cannot cause an unbounded read before the hash check.
+      return await file.length() == bytes.length &&
+          sha256.convert(await file.readAsBytes()).toString() == digest;
+    }
+
+    if (await intact()) return file;
+    final staging = await file.parent.createTemp('$digest-');
+    var retained = false;
+    try {
+      final temporary = File('${staging.path}/$digest.apk');
+      await temporary.writeAsBytes(bytes, flush: true);
+      if (sha256.convert(await temporary.readAsBytes()).toString() != digest) {
         throw const ApiException(
-          'Gói APK đã lưu bị hỏng.',
+          'Không xác minh được gói APK vừa lưu.',
           code: 'PACKAGE_CORRUPT',
         );
       }
-    } else {
-      final staging = await file.parent.createTemp('$digest-');
-      try {
-        final temporary = File('${staging.path}/package.pending');
-        await temporary.writeAsBytes(bytes, flush: true);
-        // Concurrent downloads may have finished the same content first.
-        if (await file.exists()) {
-          if (sha256.convert(await file.readAsBytes()).toString() != digest) {
-            throw const ApiException(
-              'Gói APK đã lưu bị hỏng.',
-              code: 'PACKAGE_CORRUPT',
-            );
-          }
-        } else {
-          await temporary.rename(file.path);
-        }
-      } finally {
-        await staging.delete(recursive: true);
+      if (await FileSystemEntity.type(file.path, followLinks: false) ==
+          FileSystemEntityType.notFound) {
+        return await temporary.rename(file.path);
       }
+      if (await intact()) return file;
+      // The old input may still be open in JNI. Keep it unchanged and pass a
+      // fresh, verified path to this installation, just as for initial staging.
+      retained = true;
+      return temporary;
+    } finally {
+      if (!retained) await staging.delete(recursive: true);
     }
   }
 
@@ -473,18 +679,14 @@ class NativeTachiRepository
     int page = 1,
   }) async {
     if (page < 1) throw const ApiException('Số trang phải từ 1 trở lên.');
-    return [
-      for (final value in _list(
-        _map(
-          await _call('search', {
-            'sourceId': source.id,
-            'query': query,
-            'page': page,
-          }),
-        )['items'],
-      ))
-        _book(_map(value), source.id),
-    ];
+    return _cataloguePage(
+      await _call('search', {
+        'sourceId': source.id,
+        'query': query,
+        'page': page,
+      }),
+      source.id,
+    );
   }
 
   @override
@@ -494,18 +696,17 @@ class NativeTachiRepository
     int page = 1,
   }) async {
     if (page < 1) throw const ApiException('Số trang phải từ 1 trở lên.');
-    return [
-      for (final value in _list(
-        _map(
-          await _call('search', {
-            'sourceId': source.id,
-            'mode': mode.name,
-            'page': page,
-          }),
-        )['items'],
-      ))
-        _book(_map(value), source.id),
-    ];
+    if (mode == SourceBrowseMode.latest && source.supportsLatest == false) {
+      throw const ApiException('Nguồn này không hỗ trợ danh sách mới nhất.');
+    }
+    return _cataloguePage(
+      await _call('search', {
+        'sourceId': source.id,
+        'mode': mode.name,
+        'page': page,
+      }),
+      source.id,
+    );
   }
 
   @override
@@ -522,20 +723,25 @@ class NativeTachiRepository
     int page = 1,
   }) async {
     if (page < 1) throw const ApiException('Số trang phải từ 1 trở lên.');
-    return [
-      for (final value in _list(
-        _map(
-          await _call('search', {
-            'sourceId': source.id,
-            'query': query,
-            'page': page,
-            'filterSchema': filters.schema,
-            'filters': filters.toJson()['filters'],
-          }),
-        )['items'],
-      ))
-        _book(_map(value), source.id),
+    return _cataloguePage(
+      await _call('search', {
+        'sourceId': source.id,
+        'query': query,
+        'page': page,
+        'filterSchema': filters.schema,
+        'filters': filters.toJson()['filters'],
+      }),
+      source.id,
+    );
+  }
+
+  List<CatalogueBook> _cataloguePage(dynamic value, String sourceId) {
+    final result = _map(value);
+    final books = [
+      for (final item in _list(result['items'])) _book(_map(item), sourceId),
     ];
+    final hasNext = _optionalBoolean(result['hasNextPage']);
+    return hasNext == null ? books : CataloguePage(books, hasNextPage: hasNext);
   }
 
   @override
@@ -955,19 +1161,7 @@ class NativeTachiRepository
       throw const ApiException('Địa chỉ truyện không thuộc nguồn đang chọn.');
     }
     try {
-      final session = await _openBrowser(url.toString());
-      if (session['cancelled'] == true) return;
-      if (session['url'] != url.toString() ||
-          session['cookies'] is! List ||
-          session['userAgent'] is! String) {
-        throw const ApiException('Trình duyệt chưa trả phiên nguồn hợp lệ.');
-      }
-      await _call('browserSession', {
-        'sourceId': book.sourceId,
-        'url': url.toString(),
-        'userAgent': session['userAgent'],
-        'cookies': session['cookies'],
-      });
+      await _openSourceSession(book.sourceId, url, automatic: false);
     } on PlatformException catch (error) {
       throw ApiException(
         error.message ?? 'Không mở được trang nguồn.',

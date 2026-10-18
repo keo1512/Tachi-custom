@@ -1,0 +1,152 @@
+{
+  "scope": "Independent review and narrow corrections of current Cloudflare/browser/cookie implementation. Windows JVM and Flutter checks only; native iOS not compiled, original IPA not executed.",
+  "productionFrozen": true,
+  "findingsFixed": [
+    {
+      "id": "CF1",
+      "trigger": "Automatic verification browser: user selects clear-source-cookies and close before verified=true.",
+      "before": "WebKit deletion returned verified=false; Dart rejected the result before browserSession, so Java retained old cookies and next seed could restore them.",
+      "proofBefore": "verification/cloudflare_logout_before.log",
+      "after": "Native explicitly returns cleared=true and cookies=[] after user deletion. Dart accepts only the empty logout snapshot under token/current guards, then returns false without replay. Nonempty cleared result is rejected.",
+      "source": [
+        "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.m:314",
+        "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.m:440",
+        "lib/features/sources/data/native_tachi_repository.dart:383",
+        "lib/features/sources/data/native_tachi_repository.dart:420"
+      ]
+    },
+    {
+      "id": "CF2",
+      "trigger": "Browser result queued behind extension backup/restore lease; configuration revision changes before publication takes the lease.",
+      "before": "Current guard ran before enqueue and after mutation, allowing stale browserSession to reach JNI (expected0 actual1).",
+      "proofBefore": "verification/cloudflare_queued_before.log",
+      "after": "Recheck current revision/epoch/lifecycle/dispose immediately inside publication lease before invoking JNI. Tests include queued configuration, background, disposal and reset-UA epoch.",
+      "source": [
+        "lib/features/sources/data/native_tachi_repository.dart:394"
+      ]
+    },
+    {
+      "id": "CF3",
+      "trigger": "Network tools reset all User-Agents, then reopen source or cold-restart host.",
+      "before": "UI only removed NSUserDefaults; Java host map and saved browser session kept the old UA; browserSeed reapplied it.",
+      "after": "Optional runtime reset capability, SourceMaintenance attempts both stores with finite partial-failure messages, allowlisted host RPC persists removal before clearing host/legacy UA and seed tokens. Browser record without UA remains backward-compatible for cookie migration. DeviceTools resets native pref and cancels active browser; cookies are preserved.",
+      "proof": "tools/native_extension_engine/proof/BrowserSeedProof.java",
+      "source": [
+        "lib/features/settings/presentation/network_tools_screen.dart:90",
+        "lib/features/sources/application/source_maintenance.dart:51",
+        "tools/native_extension_engine/java/dev/tachibooks/engine/BrowserSession.java:43",
+        "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/interceptor/CFClearance.java:28",
+        "ios/Runner/DeviceToolsBridge.swift:41"
+      ]
+    },
+    {
+      "id": "CF4",
+      "trigger": "HTTP saveFromResponse lands between browser seed cookie capture and a second fingerprint snapshot, or after apply fingerprint check before replacement.",
+      "before": "Seed could contain old-browser while its token fingerprint described http-new; accepted publication restored old-browser. Apply also had a window between validation and replacement.",
+      "proofBefore": [
+        "verification/cloudflare_atomic_before.log",
+        "verification/cloudflare_atomic_regressions_before.json"
+      ],
+      "after": "Seed captures jar once and computes fingerprint from the same exported snapshot. Token records jar instance. Apply checks fingerprint and replaces under the same jar monitor used by HTTP callbacks. Deterministic callback proof verifies blocked HTTP resumes after publication and retains its newer cookie.",
+      "source": [
+        "tools/native_extension_engine/java/dev/tachibooks/engine/BrowserSession.java:90",
+        "tools/native_extension_engine/java/dev/tachibooks/engine/BrowserSession.java:125"
+      ]
+    },
+    {
+      "id": "CF5",
+      "trigger": "Explicit browser session save when source-cookies.json cannot be atomically replaced, or capacity/browser-file validation fails.",
+      "before": "Background best-effort persistence was reused for explicit browser saves; result could report success with changed browser-file/UA/RAM but unchanged cookie file.",
+      "proofBefore": "verification/cloudflare_atomic_regressions_before.json",
+      "after": "Validate full candidate and bounds first; explicit cookie persistence happens before RAM/UA publication, errors propagate, and prior browser bytes are restored from a private snapshot if cookie write fails. HTTP background callbacks retain their existing best-effort health contract.",
+      "source": [
+        "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/SourceCookieJar.java:82",
+        "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/SourceCookieJar.java:86",
+        "tools/native_extension_engine/java/dev/tachibooks/engine/BrowserSession.java:97"
+      ]
+    }
+  ],
+  "verification": {
+    "dart": {
+      "passed": 23,
+      "failed": 0,
+      "skipped": 0,
+      "files": [
+        "test/native_cloudflare_session_test.dart",
+        "test/network_tools_test.dart"
+      ],
+      "log": "verification/cloudflare_review_targeted_after.log"
+    },
+    "analyze": {
+      "files": 6,
+      "issues": 0,
+      "log": "verification/cloudflare_review_analyze.log"
+    },
+    "java": {
+      "tests": 13,
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "log": "verification/cloudflare_review_java_atomic.log",
+      "newAtomicProofAssertions": {
+        "seed": 5,
+        "apply": 5,
+        "persistence": 17
+      },
+      "originalKomgaSeedProofAssertions": 48,
+      "coldUaResetAssertions": 6,
+      "jvm": "Oracle Java8 -Xint Windows; current source rebuilt by build_host; original Komga APK immutable, HTTP fixtures only"
+    },
+    "compile": {
+      "sha256": "645371b2e8ecf3814f02fccd097003f82842bc6fdf46c2c43e54414b4e4b50e0",
+      "sourceSha256": "e43a51fbcff34a272d0ec6419c623c00241959b7bb4a3ac9c5346a1311839cc1",
+      "sourceFiles": 26,
+      "entrypoint": "dev.tachibooks.engine.ExtensionHost.invoke",
+      "jniSignature": "(Ljava/lang/String;)Ljava/lang/String;",
+      "scope": "Current production Java source compiled for Java8 on Windows; does not compile or execute UIKit/WebKit/iPhone and is not a packaged IPA.",
+      "dependencyEvidence": "verification/build11_host_harness_input.json",
+      "dependenciesSha256": "b77d955a79745d300b7522e224327d6bcc5a108399231dce7fe708150c2ee2bb",
+      "hostPath": "D:\\Codex\\TachiBooks\\.tools\\build11-host-harness\\implementation-source-build\\extension-host.jar",
+      "javaProofLog": "verification/cloudflare_review_java_atomic.log",
+      "nativeRuntimeVerified": false,
+      "originalIpaRuntimeVerified": false,
+      "classCount": 57,
+      "classMajors": [
+        52
+      ],
+      "productionFileHashes": {
+        "lib/features/sources/data/native_tachi_repository.dart": "24d048624cea64c3706369ba3a5e1c27c8b75bbbf5c99b79e9f99ac4cab98460",
+        "lib/features/sources/domain/native_source_engine.dart": "edd79e7e6b3b674b0041a0c4da98364a00cbd262f417a99175107ed5a2d2decc",
+        "lib/features/sources/application/source_maintenance.dart": "417756a2bf03aa8b9e4a111153e108049b7be73ee9ac8d88ef80e94f457ed69a",
+        "lib/features/settings/presentation/network_tools_screen.dart": "db4e1c2fc0fee39a899ebea064bca43e865223830f869584b7a6a46fc824c086",
+        "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.m": "eb1d7567d2731b1834b90427b007282e0f7e207c78a69877f91db4efe1af8c1d",
+        "ios/Runner/DeviceToolsBridge.swift": "60a7a7fe2c744bfe81c2b15835479eb39ff6694216ffc27890283133fa5b1295",
+        "tools/native_extension_engine/java/dev/tachibooks/engine/BrowserSession.java": "1f60de740bb196e45cffca323eb63080dc15cd4c66f5cf52119ef067d68266c6",
+        "tools/native_extension_engine/java/dev/tachibooks/engine/ExtensionHost.java": "4e5a71f01fcecbcb4570115161e6c86a457ec128d48afdd72196e28b5b8c11db",
+        "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/SourceCookieJar.java": "4289b6f4a1e8b76335203db7283d44f34bdf523b4fafdfb9eab71db1bb84379f",
+        "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/SourceCookieStore.java": "d25f29de7c3f3e86f86aeaec3c109909c71372f1bf71304a2b1249d0649bbeea",
+        "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/interceptor/CFClearance.java": "b524576f00e2a0c404c0bce952617bf9eda6483ed5f603d8203901c714883792"
+      }
+    },
+    "beforeAtomicHostSha256": "3742d6ff8e686a8863308364a1d689f96d714123b94b0dbe1309cd30f9f80221",
+    "diffCheck": "git diff --check exit0; line-ending warnings only in unrelated/root-owned files"
+  },
+  "referenceMapping": {
+    "requiredFeatures": "C:/Users/Nosgnoh/Downloads/tinh nang phai co.md:238-239,945,953,969-975 (website cookies, scoped UA, delete/reset, supported Cloudflare challenge, muted domains)",
+    "mechanism": "C:/Users/Nosgnoh/Downloads/# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md:470-475,699,917 (headers/cookies/source transport)",
+    "ui": "C:/Users/Nosgnoh/Downloads/TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md:547,1689,1724 (source/browser/cookie/network tools)",
+    "originalIpaStatic": [
+      "verification/original_cookie_javap.txt",
+      "verification/original_cookie_manager_javap.txt",
+      "verification/original_useragentinterceptor_javap.txt"
+    ],
+    "evidenceDistinction": "Original bytes demonstrate native cookie bridge calls and recorded source User-Agent behavior; they do not demonstrate original browser UI, seedToken protocol, implementation parity or live Cloudflare success. TachiBooks token/locking/rollback are local compatible correctness mechanisms, not claims copied from original bytecode."
+  },
+  "limits": [
+    "Browser sessions and HTTP cookies are two separately atomic private files with synchronous rollback. A crash/power loss between their renames is not a proven multi-file transaction; no crash-injection acceptance was performed.",
+    "UIKit/WebKit/Swift and new XCTest were read only from Windows; no native compile, simulator/device run, public website Cloudflare challenge or new IPA acceptance.",
+    "Single-flight is bounded per runtime/source; automatic browser retries exactly once and cancellation/repeated challenge keeps a finite cooldown. This does not establish every website supports WebKit verification.",
+    "Private cookies/UA are outside portable backup/sync configuration. Existing external tracker exclusion, schema, source IDs, library/offline data and original IPA/APK bytes were retained.",
+    "Existing legacy browserSession callers without seedToken keep compatibility. The strict current production openSourceBrowser path supplies a one-use seed token and Dart revision/lease guards."
+  ]
+}

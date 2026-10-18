@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:tachi_books/features/sources/data/native_tachi_repository.dart';
 import 'package:tachi_books/features/sources/domain/catalogue.dart';
+import 'package:tachi_books/features/sources/domain/native_page_locator.dart';
 
 const _sourceId = '9223372036854775806';
 const _source = CatalogueSource(
@@ -81,6 +82,58 @@ void main() {
         storageDirectory: directory,
         client: client ?? MockClient((_) async => http.Response('', 500)),
       );
+
+  test(
+    'reserved lazy-page hosts are native-only without blocking real image URLs',
+    () {
+      for (final url in [
+        'https://page.tachibooks.invalid/abc',
+        'https://PAGE.TACHIBOOKS.INVALID/abc',
+        'http://page.tachibooks.invalid./abc',
+      ]) {
+        expect(isNativePageLocator(url), true);
+        expect(
+          () => rejectNativePageHttpFallback(url),
+          throwsA(
+            isA<ApiException>().having(
+              (error) => error.code,
+              'code',
+              'NATIVE_PAGE_RUNTIME_REQUIRED',
+            ),
+          ),
+        );
+      }
+      for (final url in [
+        'https://source.example/image.png',
+        'data:image/png;base64,aA==',
+        'tachi-asset://image',
+      ]) {
+        expect(isNativePageLocator(url), false);
+        expect(() => rejectNativePageHttpFallback(url), returnsNormally);
+      }
+    },
+  );
+
+  test('lazy native page locator is forwarded unchanged to native image RPC with its ordinal', () async {
+    const marker =
+        'https://page.tachibooks.invalid/0000000000000000000000000000000000000000000000000000000000000000';
+    final bytes = Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10, 1]);
+    final host = _Host((method, args) {
+      expect(method, 'image');
+      expect(args['sourceId'], _sourceId);
+      expect(args['chapterRef'], _chapter.ref);
+      expect(args['index'], 2);
+      expect(args['url'], marker);
+      return {'base64': base64Encode(bytes), 'mimeType': 'image/png'};
+    });
+    final repo = repository(host);
+    final result = await repo.fetchImage(_book, _chapter, 2, marker);
+    expect(result.bytes, bytes);
+    expect(host.requests.map((request) => request['method']), [
+      'initialize',
+      'image',
+    ]);
+  });
 
   for (final outcome in [
     'unique',
@@ -526,32 +579,112 @@ void main() {
     },
   );
 
-  test(
-    'corrupt staged APK is preserved and not sent to the host again',
-    () async {
-      final bytes = _packageBytes();
-      var installations = 0;
-      final host = _Host((_, _) {
-        installations++;
-        return {'installed': true};
-      });
-      final repo = repository(
-        host,
-        client: MockClient((_) async => http.Response.bytes(bytes, 200)),
-      );
-      await repo.installExtension(_packageUrl);
-      final staged = File(
-        '${directory.path}/staging/${sha256.convert(bytes)}.apk',
-      );
-      await staged.writeAsBytes([9, 8, 7]);
-      await expectLater(
-        repo.installExtension(_packageUrl),
-        _apiCode('PACKAGE_CORRUPT'),
-      );
-      expect(installations, 1);
-      expect(await staged.readAsBytes(), [9, 8, 7]);
-    },
-  );
+  for (final sameLength in [false, true]) {
+    test(
+      '${sameLength ? 'same-length modified' : 'truncated'} staged APK is preserved while reimport supplies verified fresh bytes',
+      () async {
+        final bytes = _packageBytes();
+        var installations = 0;
+        final paths = <String>[];
+        final host = _Host((_, args) async {
+          installations++;
+          paths.add(args['apkPath'] as String);
+          expect(args['packageHash'], sha256.convert(bytes).toString());
+          expect(await File(paths.last).readAsBytes(), bytes);
+          return {'installed': true};
+        });
+        final repo = repository(
+          host,
+          client: MockClient((_) async => http.Response.bytes(bytes, 200)),
+        );
+        await repo.installExtension(_packageUrl);
+        final staged = File(
+          '${directory.path}/staging/${sha256.convert(bytes)}.apk',
+        );
+        final damaged = sameLength ? Uint8List.fromList(bytes) : [9, 8, 7];
+        if (sameLength) damaged[damaged.length - 1] ^= 1;
+        await staged.writeAsBytes(damaged);
+        await repo.installExtension(_packageUrl);
+        expect(installations, 2);
+        expect(paths[1], isNot(paths[0]));
+        expect(await staged.readAsBytes(), damaged);
+        expect(bytes, _packageBytes());
+      },
+    );
+  }
+
+  test('concurrent repair retains distinct immutable inputs until delayed host calls settle', () async {
+    final bytes = _packageBytes();
+    final digest = sha256.convert(bytes).toString();
+    final staging = Directory('${directory.path}/staging');
+    await staging.create(recursive: true);
+    final broken = File('${staging.path}/$digest.apk');
+    await broken.writeAsBytes([9, 8, 7]);
+    final entered = Completer<void>(), release = Completer<void>();
+    final paths = <String>[];
+    final host = _Host((method, args) async {
+      expect(method, 'install');
+      final path = args['apkPath'] as String;
+      paths.add(path);
+      expect(await File(path).readAsBytes(), bytes);
+      if (paths.length == 1) {
+        entered.complete();
+        await release.future;
+        expect(await File(path).readAsBytes(), bytes);
+      }
+      return {'installed': true, 'id': 'fixture', 'name': 'Fixture'};
+    });
+    final first = repository(host), peer = repository(host);
+    final one = first.installExtensionBytes(bytes);
+    await entered.future;
+    final two = peer.installExtensionBytes(bytes);
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+    expect(await File(paths.single).readAsBytes(), bytes);
+    expect(await broken.readAsBytes(), [9, 8, 7]);
+    release.complete();
+    await Future.wait([one, two]);
+    expect(paths.toSet(), hasLength(2));
+    expect(paths.every((path) => path != broken.path), true);
+    for (final path in paths) {
+      expect(await File(path).readAsBytes(), bytes);
+    }
+  });
+
+  test('host checksum rejection after repair stays an error and retains both input files', () async {
+    final bytes = _packageBytes();
+    final staging = Directory('${directory.path}/staging');
+    await staging.create(recursive: true);
+    final broken = File('${staging.path}/${sha256.convert(bytes)}.apk');
+    await broken.writeAsBytes([9, 8, 7]);
+    String? candidate;
+    final repo = NativeTachiRepository(
+      storageDirectory: directory,
+      executor: (raw) async {
+        final request = jsonDecode(raw) as Map;
+        if (request['method'] == 'install') {
+          candidate = request['args']['apkPath'] as String;
+          expect(await File(candidate!).readAsBytes(), bytes);
+          return jsonEncode({
+            'ok': false,
+            'error': {
+              'code': 'PACKAGE_CORRUPT',
+              'message': 'Checksum rejected',
+            },
+          });
+        }
+        return jsonEncode({'ok': true, 'result': {}});
+      },
+    );
+    addTearDown(repo.dispose);
+    await expectLater(
+      repo.installExtensionBytes(bytes),
+      _apiCode('PACKAGE_CORRUPT'),
+    );
+    expect(candidate, isNotNull);
+    expect(candidate, isNot(broken.path));
+    expect(await broken.readAsBytes(), [9, 8, 7]);
+    expect(await File(candidate!).readAsBytes(), bytes);
+  });
 
   test(
     'source and extension records preserve exact string identities',
@@ -564,6 +697,8 @@ void main() {
                   'name': 'Original source',
                   'lang': 'vi',
                   'baseUrl': _source.baseUrl,
+                  'supportsLatest': false,
+                  'configurable': true,
                 },
               ]
             : [
@@ -584,6 +719,12 @@ void main() {
       expect(source.identity, 'tachimanga:$_sourceId');
       expect(source.kind, ContentKind.manga);
       expect(source.engine, SourceEngine.tachimanga);
+      expect(source.supportsLatest, isFalse);
+      expect(source.configurable, isTrue);
+      await expectLater(
+        repo.browse(source, mode: SourceBrowseMode.latest),
+        throwsA(isA<ApiException>()),
+      );
       final extension = (await repo.extensions()).single;
       expect(extension.installed, isTrue);
       expect(extension.packageUrl, _packageUrl);
@@ -629,9 +770,11 @@ void main() {
           'page': 3,
         };
       });
-      final result = (await repository(
-        host,
-      ).search(_source, 'Original', page: 3)).single;
+      final results = await repository(host)
+          .search(_source, 'Original', page: 3);
+      expect(results, isA<CataloguePage>());
+      expect((results as CataloguePage).hasNextPage, isFalse);
+      final result = results.single;
       expect(result.ref, _book.ref);
       expect(result.sourceId, _sourceId);
       expect(result.author, 'Writer');

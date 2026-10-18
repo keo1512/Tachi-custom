@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../settings/settings_controller.dart';
 import '../../library/domain/library_book.dart';
+import '../domain/reader_options.dart';
 import 'reader_advanced_settings.dart';
+import 'reader_options_controller.dart';
 
 Future<void> showReaderSettings(
   BuildContext context, {
@@ -23,6 +25,17 @@ Future<void> showReaderSettings(
       builder: (sheetContext, ref, _) {
         final s = ref.watch(settingsProvider);
         final update = ref.read(settingsProvider.notifier);
+        final options = ReaderOptions.fromJson({
+          ...ref.watch(readerOptionsProvider).toJson(),
+          ...?book?.readerPreferences,
+        });
+        final backgroundLabel = switch (options.backgroundMode) {
+          'light' => 'Nền sáng',
+          'dark' => 'Nền tối',
+          'custom' =>
+            'Màu tùy chọn #${(options.backgroundColor & 0xffffff).toRadixString(16).padLeft(6, '0').toUpperCase()}',
+          _ => 'Theo giao diện sáng hoặc tối của ứng dụng.',
+        };
         final divider = CupertinoDynamicColor.resolve(
           CupertinoColors.separator,
           context,
@@ -81,9 +94,11 @@ Future<void> showReaderSettings(
                   Divider(height: .5, thickness: .5, color: divider),
                   if (manga)
                     section(
-                      'Cuộn dọc liên tục',
-                      const Text(
-                        'Các trang ảnh nối liền và vừa chiều rộng màn hình. Chạm vào trang để ẩn hoặc hiện điều khiển.',
+                      options.mangaLayoutLabel,
+                      Text(
+                        options.isPaged
+                            ? 'Vuốt hoặc dùng vùng chạm để lật trang. Chọn chế độ đọc trong Thiết lập nâng cao.'
+                            : 'Các trang ảnh nối liền theo thiết lập hiển thị. Chạm vào trang để ẩn hoặc hiện điều khiển.',
                       ),
                     )
                   else ...[
@@ -169,10 +184,7 @@ Future<void> showReaderSettings(
                     ),
                   ],
                   if (manga)
-                    section(
-                      'Nền đọc',
-                      const Text('Theo giao diện sáng hoặc tối của ứng dụng.'),
-                    )
+                    section('Nền đọc', Text(backgroundLabel))
                   else ...[
                     Divider(
                       height: .5,

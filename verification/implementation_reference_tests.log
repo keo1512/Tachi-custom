@@ -1,0 +1,81 @@
+test_duplicate_dependency_class_is_rejected (test_backend_reference.ArchiveComparisonTests.test_duplicate_dependency_class_is_rejected) ... ok
+test_duplicate_reference_entry_is_rejected_even_if_not_compared (test_backend_reference.ArchiveComparisonTests.test_duplicate_reference_entry_is_rejected_even_if_not_compared) ... ok
+test_identical_changed_missing_and_reference_only_are_distinct (test_backend_reference.ArchiveComparisonTests.test_identical_changed_missing_and_reference_only_are_distinct) ... ok
+test_inventory_fingerprint_is_order_independent_but_detects_changes (test_backend_reference.ArchiveComparisonTests.test_inventory_fingerprint_is_order_independent_but_detects_changes) ... ok
+test_every_truncated_prefix_is_rejected (test_backend_reference.ClassfileReaderTests.test_every_truncated_prefix_is_rejected) ... ok
+test_invalid_magic_and_class_index_are_rejected (test_backend_reference.ClassfileReaderTests.test_invalid_magic_and_class_index_are_rejected) ... ok
+test_native_signature_and_jvm_version_are_read (test_backend_reference.ClassfileReaderTests.test_native_signature_and_jvm_version_are_read) ... ok
+test_unknown_pool_tag_and_trailing_data_are_rejected (test_backend_reference.ClassfileReaderTests.test_unknown_pool_tag_and_trailing_data_are_rejected) ... ok
+test_failed_publication_preserves_prior_evidence_and_cleans_temporary (test_backend_reference.EvidencePublicationFailureTests.test_failed_publication_preserves_prior_evidence_and_cleans_temporary) ... ok
+test_report_is_written_as_complete_json (test_backend_reference.EvidencePublicationTests.test_report_is_written_as_complete_json) ... ok
+test_wrong_reference_hash_is_rejected_before_archive_parsing (test_backend_reference.EvidencePublicationTests.test_wrong_reference_hash_is_rejected_before_archive_parsing) ... ok
+test_changed_manifest_with_still_valid_files_is_rejected (test_backend_reference.SourceComparisonConsistencyTests.test_changed_manifest_with_still_valid_files_is_rejected) ... ok
+test_changed_source_during_comparison_discards_evidence (test_backend_reference.SourceComparisonConsistencyTests.test_changed_source_during_comparison_discards_evidence) ... ok
+test_stable_source_is_reverified_at_end (test_backend_reference.SourceComparisonConsistencyTests.test_stable_source_is_reverified_at_end) ... ok
+test_changed_missing_and_duplicate_source_are_rejected (test_backend_reference.SourceProvenanceTests.test_changed_missing_and_duplicate_source_are_rejected) ... ok
+test_wrong_commit_and_path_outside_engine_are_rejected (test_backend_reference.SourceProvenanceTests.test_wrong_commit_and_path_outside_engine_are_rejected) ... ok
+test_cli_output_and_exit_code (test_inspect_vbook.InspectVBookTests.test_cli_output_and_exit_code) ... ok
+test_cli_refuses_to_overwrite_input (test_inspect_vbook.InspectVBookTests.test_cli_refuses_to_overwrite_input) ... usage: python.exe -m unittest [-h] [--output OUTPUT]
+                              [--max-input-bytes MAX_INPUT_BYTES]
+                              [--max-entries MAX_ENTRIES]
+                              [--max-entry-bytes MAX_ENTRY_BYTES]
+                              [--max-uncompressed-bytes MAX_UNCOMPRESSED_BYTES]
+                              [--max-manifest-bytes MAX_MANIFEST_BYTES]
+                              [--max-registry-items MAX_REGISTRY_ITEMS]
+                              input
+python.exe -m unittest: error: Output must not overwrite the input package or JSON.
+ok
+test_declared_file_missing (test_inspect_vbook.InspectVBookTests.test_declared_file_missing) ... ok
+test_duplicate_and_case_colliding_paths_rejected (test_inspect_vbook.InspectVBookTests.test_duplicate_and_case_colliding_paths_rejected) ... ok
+test_duplicate_json_key_rejected (test_inspect_vbook.InspectVBookTests.test_duplicate_json_key_rejected) ... ok
+test_encrypted_package_never_scans_ciphertext (test_inspect_vbook.InspectVBookTests.test_encrypted_package_never_scans_ciphertext) ... ok
+test_invalid_json_manifest_rejected (test_inspect_vbook.InspectVBookTests.test_invalid_json_manifest_rejected) ... ok
+test_legacy_type_and_config_included (test_inspect_vbook.InspectVBookTests.test_legacy_type_and_config_included) ... ok
+test_manifest_shape_rejected (test_inspect_vbook.InspectVBookTests.test_manifest_shape_rejected) ... ok
+test_missing_root_manifest (test_inspect_vbook.InspectVBookTests.test_missing_root_manifest) ... ok
+test_registry_bad_entries_reported (test_inspect_vbook.InspectVBookTests.test_registry_bad_entries_reported) ... ok
+test_registry_local_only (test_inspect_vbook.InspectVBookTests.test_registry_local_only) ... ok
+test_required_mapping_missing (test_inspect_vbook.InspectVBookTests.test_required_mapping_missing) ... ok
+test_size_limits_checked_before_manifest_read (test_inspect_vbook.InspectVBookTests.test_size_limits_checked_before_manifest_read) ... ok
+test_standalone_manifest_does_not_open_adjacent_scripts (test_inspect_vbook.InspectVBookTests.test_standalone_manifest_does_not_open_adjacent_scripts) ... ok
+test_traversal_and_absolute_paths_rejected (test_inspect_vbook.InspectVBookTests.test_traversal_and_absolute_paths_rejected) ... ok
+test_valid_package_hash_and_heuristic_host_dependencies (test_inspect_vbook.InspectVBookTests.test_valid_package_hash_and_heuristic_host_dependencies) ... ok
+test_zip_symlink_rejected (test_inspect_vbook.InspectVBookTests.test_zip_symlink_rejected) ... ok
+test_atomic_evidence_and_source_preservation (test_ipa_reference.AuditTests.test_atomic_evidence_and_source_preservation) ... ok
+test_cli_requires_explicit_output_and_reports_static_scope (test_ipa_reference.AuditTests.test_cli_requires_explicit_output_and_reports_static_scope) ... ok
+test_crc_corruption_and_wrong_local_header_name_are_rejected (test_ipa_reference.AuditTests.test_crc_corruption_and_wrong_local_header_name_are_rejected) ... ok
+test_deflated_archive_and_private_disk_spool (test_ipa_reference.AuditTests.test_deflated_archive_and_private_disk_spool) ... ok
+test_destination_created_concurrently_is_preserved (test_ipa_reference.AuditTests.test_destination_created_concurrently_is_preserved) ... ok
+test_destination_suffix_parent_and_symlinks_are_checked (test_ipa_reference.AuditTests.test_destination_suffix_parent_and_symlinks_are_checked) ... ok
+test_directory_entries_are_in_inventory (test_ipa_reference.AuditTests.test_directory_entries_are_in_inventory) ... ok
+test_directory_with_data_is_rejected (test_ipa_reference.AuditTests.test_directory_with_data_is_rejected) ... ok
+test_duplicate_and_portable_name_collisions (test_ipa_reference.AuditTests.test_duplicate_and_portable_name_collisions) ... ok
+test_existing_output_and_source_destinations_are_never_overwritten (test_ipa_reference.AuditTests.test_existing_output_and_source_destinations_are_never_overwritten) ... ok
+test_explicit_strict_reference_rejects_other_ipa (test_ipa_reference.AuditTests.test_explicit_strict_reference_rejects_other_ipa) ... ok
+test_fat_macho_architectures_and_invalid_slices (test_ipa_reference.AuditTests.test_fat_macho_architectures_and_invalid_slices) ... ok
+test_invalid_class_headers_are_rejected (test_ipa_reference.AuditTests.test_invalid_class_headers_are_rejected) ... ok
+test_invalid_nested_zip_and_manifest_are_rejected (test_ipa_reference.AuditTests.test_invalid_nested_zip_and_manifest_are_rejected) ... ok
+test_inventory_hashes_metadata_and_static_boundary (test_ipa_reference.AuditTests.test_inventory_hashes_metadata_and_static_boundary) ... ok
+test_macho_encryption_flag_is_recorded_without_runtime_claim (test_ipa_reference.AuditTests.test_macho_encryption_flag_is_recorded_without_runtime_claim) ... ok
+test_macho_segments_and_signature_ranges_are_bounded (test_ipa_reference.AuditTests.test_macho_segments_and_signature_ranges_are_bounded) ... ok
+test_macho_string_offsets_and_termination (test_ipa_reference.AuditTests.test_macho_string_offsets_and_termination) ... ok
+test_main_plist_missing_or_ambiguous_is_rejected (test_ipa_reference.AuditTests.test_main_plist_missing_or_ambiguous_is_rejected) ... ok
+test_malformed_and_non_dictionary_plists_are_rejected (test_ipa_reference.AuditTests.test_malformed_and_non_dictionary_plists_are_rejected) ... ok
+test_malformed_macho_headers_commands_and_types (test_ipa_reference.AuditTests.test_malformed_macho_headers_commands_and_types) ... ok
+test_missing_required_binaries_and_nested_zip_are_rejected (test_ipa_reference.AuditTests.test_missing_required_binaries_and_nested_zip_are_rejected) ... ok
+test_nested_archive_uses_same_safety_rules (test_ipa_reference.AuditTests.test_nested_archive_uses_same_safety_rules) ... ok
+test_nested_crc_corruption_is_rejected (test_ipa_reference.AuditTests.test_nested_crc_corruption_is_rejected) ... ok
+test_nested_limits_are_applied_independently (test_ipa_reference.AuditTests.test_nested_limits_are_applied_independently) ... ok
+test_no_partial_output_on_failed_validation (test_ipa_reference.AuditTests.test_no_partial_output_on_failed_validation) ... ok
+test_required_metadata_and_executable_path_are_validated (test_ipa_reference.AuditTests.test_required_metadata_and_executable_path_are_validated) ... ok
+test_resource_limits_cover_metadata_and_streamed_resources (test_ipa_reference.AuditTests.test_resource_limits_cover_metadata_and_streamed_resources) ... ok
+test_source_changed_during_audit_discards_evidence (test_ipa_reference.AuditTests.test_source_changed_during_audit_discards_evidence) ... ok
+test_strict_reference_checks_identity_and_metadata (test_ipa_reference.AuditTests.test_strict_reference_checks_identity_and_metadata) ... ok
+test_symlink_and_special_file_entries_are_rejected (test_ipa_reference.AuditTests.test_symlink_and_special_file_entries_are_rejected) ... ok
+test_trailing_data_and_malformed_end_record_are_rejected (test_ipa_reference.AuditTests.test_trailing_data_and_malformed_end_record_are_rejected) ... ok
+test_unsafe_paths_are_rejected_before_streaming (test_ipa_reference.AuditTests.test_unsafe_paths_are_rejected_before_streaming) ... ok
+
+----------------------------------------------------------------------
+Ran 67 tests in 2.217s
+
+OK

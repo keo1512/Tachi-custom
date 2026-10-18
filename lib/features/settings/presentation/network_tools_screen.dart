@@ -86,8 +86,8 @@ class _NetworkToolsState extends ConsumerState<NetworkToolsScreen> {
             ? null
             : () => confirm(
                 'Đặt lại User-Agent?',
-                'Các trang web sẽ dùng User-Agent mặc định trong lần mở sau. Engine nhận giá trị mới khi bạn bấm Xong trên trang nguồn.',
-                () => ref.read(deviceToolsProvider).resetUserAgents(),
+                'Đặt lại User-Agent của engine và trình duyệt, đóng trang nguồn đang mở và giữ cookie đăng nhập. Website có thể yêu cầu xác minh lại.',
+                () => ref.read(sourceMaintenanceProvider).resetUserAgents(),
               ),
       ),
       SettingsRow(

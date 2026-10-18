@@ -17,6 +17,11 @@ public final class OriginalApkReadProof {
     }
     private static JsonObject args(String... values){JsonObject result=new JsonObject();for(int i=0;i<values.length;i+=2)result.addProperty(values[i],values[i+1]);return result;}
     public static void main(String[] argv)throws Exception{
+        // An extension can start non-daemon workers. Report a failed proof and
+        // terminate its disposable JVM instead of hiding the failure in a timeout.
+        try{run(argv);}catch(Throwable failure){failure.printStackTrace();System.exit(1);}
+    }
+    private static void run(String[] argv)throws Exception{
         if(argv.length!=4)throw new IllegalArgumentException("Usage: dataDirectory originalAPK localOptionsJSON outputReport");
         if(!"1.8".equals(System.getProperty("java.specification.version")))throw new IllegalStateException("Run with Java8 -Xint");
         if(!java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments().contains("-Xint"))throw new IllegalStateException("Interpreter proof requires -Xint");

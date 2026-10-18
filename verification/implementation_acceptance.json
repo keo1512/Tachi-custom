@@ -1,0 +1,133 @@
+{
+  "scope": "Implementation after full 19-group, 98-UI-section and 10-mechanism source/reference audit; source acceptance remains partial, physical iOS acceptance pending",
+  "baselineCommit": "5906375e0039f99fe67f1d7232376c43dfe95cea",
+  "sourceFreeze": {
+    "path": "verification/implementation_source_freeze.json",
+    "sha256": "12dc642f68abacf293379701d5c3dacefb0b8b2c556275c2cb95e827b2d43bb1",
+    "fileCount": 606
+  },
+  "verification": {
+    "flutter": {
+      "passed": 1213,
+      "skipped": 6,
+      "failed": 0,
+      "isar": "Real Isar Community3.3.2 Windows DLL"
+    },
+    "analyze": "No issues found",
+    "pythonHelpers": {
+      "passed": 66,
+      "skipped": 15,
+      "failed": 0
+    },
+    "referenceTools": {
+      "passed": 67,
+      "failed": 0
+    },
+    "javascript": {
+      "passed": 18,
+      "skipped": 5,
+      "failed": 0
+    },
+    "diffCheck": "passed"
+  },
+  "implemented": [
+    "Browser seed, two-way scoped cookies/UA, bounded automatic real-browser verification and one exact RPC replay",
+    "Logout, reset UA cold restart, queued restore guards and atomic HTTP-cookie/browser-session checks",
+    "Independent folders per category with legacy fallback, rename/remove rollback and portable backup",
+    "Source migration preserves total/daily reading time and folder IDs using joint recovery/CAS",
+    "Per-book/per-local-day reading time with midnight split and guarded batch checkpoint/rollback",
+    "Optional LTR/RTL/vertical/two-page manga layouts with source ordinals, odd pages and inversion; continuous default preserved",
+    "Independent paged/continuous tap profiles including edges/Kindle/L-shape",
+    "OCR region selection and native Vision normalized ROI with EXIF orientation",
+    "Chapter boundary and explicit next respecting skip rules and stale-revision guard",
+    "Actual ephemeral page download progress and narrow-screen/large-text downloads layout"
+  ],
+  "remaining": [
+    "Native source edits/XCTest not compiled or executed on current iOS artifact; no physical iPhone validation",
+    "No universal Cloudflare/CAPTCHA guarantee; source websites, UA/TLS and browser policies can require interaction or refuse access",
+    "Browser-session and cookie files use separate atomic replacements; power loss between them is not a multi-file transaction",
+    "vBook dynamic/encrypted/browser configuration and some extension Android/JNI/click/OAuth capabilities remain incomplete",
+    "Outside-library detail preview, automatic border crop, reader magnifier/annotations/Pencil, theme/accent/icons, Keychain migration/app PIN remain open",
+    "Download byte progress, HTTP Range/page concurrency, additional GC/retention remain open",
+    "Google/Firebase production two-device and native Files/Photos/Share/background behavior need device acceptance"
+  ],
+  "artifacts": [
+    {
+      "path": "verification/implementation_full_flutter_tests.log",
+      "sha256": "7311caadb8caec1630a1ac618e711598b97e21de2f71d5aeb7f3483241986beb",
+      "bytes": 199663
+    },
+    {
+      "path": "verification/implementation_final_analyze.log",
+      "sha256": "036eb070ff0c4f38c1c694103ed50bd02f8615eaa62f4865ec02bde28981d08a",
+      "bytes": 98
+    },
+    {
+      "path": "verification/implementation_helpers_tests.log",
+      "sha256": "1b187d463e45398da2a3470af0f7b35c083bacda37ee1a1428b5f267dc455147",
+      "bytes": 20662
+    },
+    {
+      "path": "verification/implementation_reference_tests.log",
+      "sha256": "3ef92797ed6bbd938555f98f58b7bdf9a88e4f423babe1faaed134d9c3a97aa0",
+      "bytes": 10159
+    },
+    {
+      "path": "verification/implementation_vbook_tests.log",
+      "sha256": "ed4375242ecaacec5039074bcba6e493926870254153f6d5007e049ac0afc015",
+      "bytes": 2373
+    },
+    {
+      "path": "verification/implementation_reference_check.json",
+      "sha256": "c0d33303887d4620ad5dbd26136667f7cbb8bb452caa3cff8acb9f6dc8cc05ce",
+      "bytes": 1664
+    },
+    {
+      "path": "verification/implementation_host_compile.json",
+      "sha256": "18bdb14a4421cc7cd326f7e7df97bc570a8d30d6fcca8e26131ddc00290c9efc",
+      "bytes": 2558
+    },
+    {
+      "path": "verification/migration_daily_time_implementation.json",
+      "sha256": "29a5dddf961cfe5bff4b9d662591f55dc4a74515047b24a2bdcdf53268a475e2",
+      "bytes": 11548
+    },
+    {
+      "path": "verification/cloudflare_original_reference.json",
+      "sha256": "ac11bf3376503980845b15260185b2280726b9424ab273e2ce0a635c5338cb59",
+      "bytes": 10020
+    },
+    {
+      "path": "verification/cloudflare_independent_review.json",
+      "sha256": "1dbbe0768889c1c08deffc540450582d61cd1ac3c85a81ed9cde34e3e438ce7d",
+      "bytes": 11133
+    },
+    {
+      "path": "verification/cloudflare_review_java_atomic.log",
+      "sha256": "3f04ce592a921f1c2323d37da150629bf616f5a8cdf1e7802339cb59e0888204",
+      "bytes": 4263
+    }
+  ],
+  "newIPAPackaged": false,
+  "iosRuntimeVerified": false,
+  "externalTrackerServices": "excluded by user",
+  "ciDispatched": false,
+  "pushed": false,
+  "skipDetails": {
+    "flutter": [
+      "Private TMB sample opt-in",
+      "Two Windows symlink cases needing privileges",
+      "Live extension index opt-in",
+      "Full Dart-JVM package portability opt-in",
+      "Live companion Suwayomi opt-in"
+    ],
+    "python": "15 local Firestore emulator cases not run; no production Firebase request",
+    "javascript": "5 live service fixtures not enabled"
+  },
+  "javaBoundarySubset": {
+    "passed": 13,
+    "includedInPythonHelpers": true,
+    "platform": "Windows Java8 -Xint",
+    "physicalIOS": false
+  }
+}

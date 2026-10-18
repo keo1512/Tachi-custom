@@ -1,0 +1,2386 @@
+{
+  "schemaVersion": 1,
+  "dateLocal": "2026-10-18",
+  "scope": "Second whole-build/source audit against all three documents and unchanged original Tachimanga IPA",
+  "head": "5906375e0039f99fe67f1d7232376c43dfe95cea",
+  "sourceFingerprint": "563bd52e1fbb1684375f68d52397f2f8f2d72d9fa172f0b28c13b81faee36d16",
+  "sourceFileCount": 591,
+  "sourceStillMatchesTestFreeze": true,
+  "productParityAccepted": false,
+  "physicalDeviceTested": false,
+  "sourceStatus": "Uncommitted local changes; no push, commit, CI dispatch, signing or new IPA packaging",
+  "referenceInputs": [
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\tinh nang phai co.md",
+      "sha256": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c",
+      "bytes": 43832,
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md",
+      "sha256": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083",
+      "bytes": 62663,
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md",
+      "sha256": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0",
+      "bytes": 162280,
+      "unchanged": true
+    },
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\Tachimanga iOS Mod IPA No Jailbreak Cheats 5.0 Hacked IPA by iOSGods.com.ipa",
+      "sha256": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+      "bytes": 128494339,
+      "unchanged": true
+    }
+  ],
+  "artifacts": {
+    "scope": "Second whole-build audit: static artifact/source comparison, no iOS app execution",
+    "checkedOn": "2026-10-18",
+    "artifacts": [
+      {
+        "path": "C:\\Users\\Nosgnoh\\Downloads\\Tachimanga iOS Mod IPA No Jailbreak Cheats 5.0 Hacked IPA by iOSGods.com.ipa",
+        "sha256": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+        "bytes": 128494339,
+        "crcValid": true,
+        "bundleId": "com.mangacrush.ios",
+        "version": "5.0",
+        "build": "511",
+        "minimumOS": "15.0",
+        "backgroundModes": null,
+        "permittedTasks": [
+          "com.mangacrush.ios.task1",
+          "com.mangacrush.ios.task2"
+        ],
+        "urlSchemes": [
+          "tachiyomi",
+          "tachimanga",
+          "mihon"
+        ],
+        "hostJars": [],
+        "originalFlutterAotStringPresence": {
+          "single_page_reader_mode_v2.dart": true,
+          "double_page_reader_mode_v2.dart": true,
+          "continuous_reader_mode_v2.dart": true,
+          "chapter_separator": true,
+          "chapter_loading_widget": true,
+          "reader_tap_zone_settings_sheet.dart": true,
+          "crop_border": true,
+          "read_time_stats_screen": true,
+          "downloads_screen": true,
+          "downloaded_screen": true,
+          "backup_screen_v2": true,
+          "security_setting_screen": true,
+          "sync_settings_screen": true,
+          "custom_tabs_config_screen": true,
+          "storage_local_sources_screen": true
+        },
+        "uiEvidenceLimit": "String presence only: no layout, event ordering or iPhone behavior proven"
+      },
+      {
+        "path": "C:\\Users\\Nosgnoh\\Downloads\\TachiBooks-build11.ipa",
+        "sha256": "d32645766ee4c352edc6215e793ace4794a6716c39944ae071ca8e73e6b8afd0",
+        "bytes": 94116250,
+        "crcValid": true,
+        "bundleId": "dev.tachibooks.tachiBooks",
+        "version": "1.0.0",
+        "build": "11",
+        "minimumOS": "15.0",
+        "backgroundModes": [
+          "processing"
+        ],
+        "permittedTasks": [
+          "dev.tachibooks.downloads.processing",
+          "dev.tachibooks.tachiBooks.downloads.continued"
+        ],
+        "urlSchemes": [
+          "tachibooks",
+          "com.googleusercontent.apps.340925094049-ejetl1t7bikpcpk6ss0i6o7gkn7f5gq2"
+        ],
+        "hostJars": [
+          {
+            "entry": "Payload/Runner.app/Frameworks/tachi_runtime.framework/TachiRuntime.bundle/engine/extension-dependencies.jar",
+            "bytes": 25141002,
+            "sha256": "b77d955a79745d300b7522e224327d6bcc5a108399231dce7fe708150c2ee2bb"
+          },
+          {
+            "entry": "Payload/Runner.app/Frameworks/tachi_runtime.framework/TachiRuntime.bundle/engine/extension-host.jar",
+            "bytes": 86917,
+            "sha256": "1c12dafd892b92257c9303603b1c5d111a59b18fbb18d1723a509e55163fc7ea"
+          }
+        ]
+      }
+    ],
+    "sourceBuild": "pubspec1.0.0+11 plus uncommitted changes, not packaged",
+    "currentHost": {
+      "sha256": "305c8fc442e33fd7cf1af6c785e526b36928eb5d6508fc80c5590262e3aa5081",
+      "sourceSha256": "d2434cae84b32ae9b4ce1b4a6fda277a1858fa0cc359afdbc389ae8ad4d642b8",
+      "sourceFiles": 26,
+      "entrypoint": "dev.tachibooks.engine.ExtensionHost.invoke",
+      "jniSignature": "(Ljava/lang/String;)Ljava/lang/String;",
+      "scope": "Current production host rebuilt after conversion-cache repair for Windows Java8 interpreter proof only",
+      "hostPath": "D:\\Codex\\TachiBooks\\.tools\\build11-host-harness\\cache-repair-source-build\\extension-host.jar",
+      "dependenciesSha256": "b77d955a79745d300b7522e224327d6bcc5a108399231dce7fe708150c2ee2bb",
+      "iosRuntimeVerified": false,
+      "ipaPackaged": false
+    },
+    "packagedBuild11HostContainsCurrentFixes": false
+  },
+  "currentJavaHost": {
+    "sha256": "305c8fc442e33fd7cf1af6c785e526b36928eb5d6508fc80c5590262e3aa5081",
+    "sourceSha256": "d2434cae84b32ae9b4ce1b4a6fda277a1858fa0cc359afdbc389ae8ad4d642b8",
+    "sourceFiles": 26,
+    "entrypoint": "dev.tachibooks.engine.ExtensionHost.invoke",
+    "jniSignature": "(Ljava/lang/String;)Ljava/lang/String;",
+    "scope": "Current production host rebuilt after conversion-cache repair for Windows Java8 interpreter proof only",
+    "hostPath": "D:\\Codex\\TachiBooks\\.tools\\build11-host-harness\\cache-repair-source-build\\extension-host.jar",
+    "dependenciesSha256": "b77d955a79745d300b7522e224327d6bcc5a108399231dce7fe708150c2ee2bb",
+    "iosRuntimeVerified": false,
+    "ipaPackaged": false,
+    "sourceFingerprintReverified": true
+  },
+  "featureGroups": [
+    {
+      "group": 1,
+      "title": "1. Thư viện",
+      "reviewedBehavior": "Lọc/sort/selection/folder giữ identity; thao tác bỏ đã đọc nay bỏ cả `readingState=completed` cũ khi cần.",
+      "remainingLimits": "Tổ hợp toàn bộ bộ lọc và UI trên iPhone chưa được nghiệm thu; giữ folder và bỏ tab Tất cả theo người dùng.",
+      "featureSubsections": [
+        [
+          "1.1",
+          "Quản lý truyện"
+        ],
+        [
+          "1.2",
+          "Kiểu hiển thị thư viện"
+        ],
+        [
+          "1.3",
+          "Sắp xếp thư viện"
+        ],
+        [
+          "1.4",
+          "Bộ lọc thư viện"
+        ],
+        [
+          "1.5",
+          "Thao tác hàng loạt"
+        ]
+      ],
+      "requirementScope": {
+        "included": 78,
+        "excluded_by_user": 6
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 2,
+      "title": "2. Danh mục",
+      "reviewedBehavior": "Registry/thứ tự/default/gán nhiều và migration preference giữ dữ liệu, có revision/rollback.",
+      "remainingLimits": "Folder hiện dùng tên/membership chung theo bookID giữa các danh mục; chưa có assignment độc lập từng danh mục. Cử chỉ/native Files cần thiết bị.",
+      "featureSubsections": [],
+      "requirementScope": {
+        "included": 25
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 3,
+      "title": "3. Duyệt/tìm",
+      "reviewedBehavior": "Browse/search giữ `hasNextPage` và capability; lỗi/empty/timeout không được biến thành catalogue thành công giả.",
+      "remainingLimits": "Không chứng minh mọi website hoặc mọi dynamic filter.",
+      "featureSubsections": [
+        [
+          "3.1",
+          "Quản lý nguồn truyện"
+        ],
+        [
+          "3.2",
+          "Duyệt nội dung nguồn"
+        ],
+        [
+          "3.3",
+          "Tìm kiếm truyện"
+        ],
+        [
+          "3.4",
+          "Bộ lọc tìm kiếm"
+        ]
+      ],
+      "requirementScope": {
+        "included": 64
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 4,
+      "title": "4. Extension",
+      "reviewedBehavior": "Kiểm tra lại index→APK→staging→DEX→factory→registry→restart; đã sửa staging Dart hỏng và repository edit trả muộn ghi đè cấu hình vừa restore.",
+      "remainingLimits": "Click/OAuth preference, một số API Android/JNI, vBook config động/encrypted/browser còn thiếu; xem E1/E2.",
+      "featureSubsections": [
+        [
+          "4.1",
+          "Kho tiện ích"
+        ],
+        [
+          "4.2",
+          "Quản lý tiện ích"
+        ],
+        [
+          "4.3",
+          "Tương thích nguồn"
+        ]
+      ],
+      "requirementScope": {
+        "included": 46
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 5,
+      "title": "5. Chi tiết",
+      "reviewedBehavior": "Metadata/TOC/chapter identity, selection, cache giữ dữ liệu; bỏ hoàn thành nay thống nhất chi tiết/thống kê/bộ lọc.",
+      "remainingLimits": "Chưa có preview detail độc lập ngoài thư viện: chạm kết quả hiện thêm sách trước khi mở detail. Numeric cũ chỉ remap khi đủ bằng chứng; tracker ngoài bị loại.",
+      "featureSubsections": [
+        [
+          "5.1",
+          "Thông tin truyện"
+        ],
+        [
+          "5.2",
+          "Quản lý thông tin truyện"
+        ],
+        [
+          "5.3",
+          "Danh sách chương"
+        ]
+      ],
+      "requirementScope": {
+        "included": 81,
+        "excluded_by_user": 2
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 6,
+      "title": "6. Reader",
+      "reviewedBehavior": "Kiểm tra online/offline/partial, seek ảnh cao khác nhau, zoom/tap/auto/hold, modal/lifecycle/revision, retry; đã sửa nhãn nền theo giá trị global/riêng truyện. Test auto-scroll dùng clock kiểm thử thay cho thời gian thật.",
+      "remainingLimits": "Thiếu mode/hai trang/crop/profile vùng chạm/OCR chọn vùng và separator như R1–R5; native OCR/Photos/Translation/Pencil chưa được nghiệm thu.",
+      "featureSubsections": [
+        [
+          "6.1",
+          "Chế độ đọc"
+        ],
+        [
+          "6.2",
+          "Chế độ hai trang"
+        ],
+        [
+          "6.3",
+          "Phóng to và thu nhỏ"
+        ],
+        [
+          "6.4",
+          "Tự động cuộn"
+        ],
+        [
+          "6.5",
+          "Nhấn giữ để cuộn"
+        ],
+        [
+          "6.6",
+          "Vùng chạm điều hướng"
+        ],
+        [
+          "6.7",
+          "Điều khiển trang và chương"
+        ],
+        [
+          "6.8",
+          "Màu sắc và hiển thị"
+        ],
+        [
+          "6.9",
+          "Thao tác với ảnh"
+        ],
+        [
+          "6.10",
+          "Nhận dạng văn bản OCR"
+        ],
+        [
+          "6.11",
+          "Chuột và bàn phím"
+        ]
+      ],
+      "requirementScope": {
+        "included": 129
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 7,
+      "title": "7. Tải",
+      "reviewedBehavior": "Hàng đợi bền, dedup,1–4tác vụ và1/source, pause/cancel/retry/restore, partial bytes; native lease/background expiry có đường xử lý.",
+      "remainingLimits": "UI chương đang tải chưa có page/byte progress; chưa có HTTP Range/tải nhiều trang song song; chạy nền thực cần iPhone.",
+      "featureSubsections": [
+        [
+          "7.1",
+          "Tải chương"
+        ],
+        [
+          "7.2",
+          "Hàng chờ tải xuống"
+        ],
+        [
+          "7.3",
+          "Tải xuống trong nền"
+        ],
+        [
+          "7.4",
+          "Quản lý chương đã tải"
+        ],
+        [
+          "7.5",
+          "Tự động tải"
+        ]
+      ],
+      "requirementScope": {
+        "included": 64
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 8,
+      "title": "8. Cập nhật",
+      "reviewedBehavior": "Scheduler có phạm vi/bỏ qua/timeout/cancel/revision, phát hiện chương và tự thêm hàng tải; giữ thống kê kết quả.",
+      "remainingLimits": "Thông báo/quyền/BGTask và dự đoán lịch cần dữ liệu/thiết bị thật.",
+      "featureSubsections": [
+        [
+          "8.1",
+          "Kiểm tra cập nhật"
+        ],
+        [
+          "8.2",
+          "Danh sách chương mới"
+        ],
+        [
+          "8.3",
+          "Cập nhật thông minh"
+        ],
+        [
+          "8.4",
+          "Thông báo"
+        ]
+      ],
+      "requirementScope": {
+        "included": 42
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 9,
+      "title": "9. Lịch sử",
+      "reviewedBehavior": "Đã sửa xóa history làm null `read` của thư viện cũ bị suy lại thành chưa đọc; materialize đúng nghĩa trước khi bỏ timestamp. Tiến độ/cache/bookmark/nguồn giữ nguyên.",
+      "remainingLimits": "Không suy đủ timestamp cho backup thiếu dữ liệu.",
+      "featureSubsections": [],
+      "requirementScope": {
+        "included": 18
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 10,
+      "title": "10. Chuyển nguồn",
+      "reviewedBehavior": "Preview/unique chapter match/CAS/keep-old và cancel/late results giữ an toàn; đã sửa metadata trang cuối và chỉ phân trang nguồn còn kết quả.",
+      "remainingLimits": "Nguồn mới cần tải lại media; ánh xạ mơ hồ bị từ chối. Thời lượng/folder preference theo ID cũ chưa chuyển sang ID thay thế.",
+      "featureSubsections": [
+        [
+          "10.1",
+          "Chuyển một truyện"
+        ],
+        [
+          "10.2",
+          "Chuyển nguồn hàng loạt"
+        ],
+        [
+          "10.3",
+          "Chuyển dữ liệu"
+        ]
+      ],
+      "requirementScope": {
+        "included": 37,
+        "excluded_by_user": 1
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 11,
+      "title": "11. Local",
+      "reviewedBehavior": "TXT/EPUB/ZIP/CBZ/RAR/CBR/images và folder scan có bounds, natural order, metadata, staging/CAS; quyền folder không theo backup.",
+      "remainingLimits": "JPEGXL/HEIF/AVIF phụ thuộc decoder thiết bị; nhận đuôi file không chứng minh decode. RAR mã hóa/chia tập và EPUB DRM không hỗ trợ.",
+      "featureSubsections": [
+        [
+          "11.1",
+          "Định dạng hình ảnh"
+        ],
+        [
+          "11.2",
+          "Định dạng đóng gói"
+        ],
+        [
+          "11.3",
+          "Quản lý truyện cục bộ"
+        ]
+      ],
+      "requirementScope": {
+        "included": 42
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 12,
+      "title": "12. Tracker",
+      "reviewedBehavior": "Không có đường đăng nhập/liên kết tracker ngoài; local trạng thái/điểm/lịch sử/bookmark và opaque imported tracking/memo vẫn giữ.",
+      "remainingLimits": "Loại theo người dùng; không đếm là chức năng dịch vụ đã triển khai.",
+      "featureSubsections": [
+        [
+          "12.1",
+          "Các dịch vụ hỗ trợ"
+        ],
+        [
+          "12.2",
+          "Quản lý dịch vụ theo dõi"
+        ],
+        [
+          "12.3",
+          "Quản lý tiến độ"
+        ],
+        [
+          "12.4",
+          "Theo dõi hàng loạt"
+        ],
+        [
+          "12.5",
+          "Theo dõi nâng cao"
+        ]
+      ],
+      "requirementScope": {
+        "excluded_by_user": 62
+      },
+      "acceptance": "excluded_external_tracker_services"
+    },
+    {
+      "group": 13,
+      "title": "13. Backup",
+      "reviewedBehavior": "Preview/validate/recovery-before-write/CAS/rollback, config/extension plans, auto retention chỉ sau write+verify; nhận định dạng bằng bytes.",
+      "remainingLimits": "Chỉ TMB511/type0/Mihon protobuf gzip/nativeJSON đã có adapter; chưa có mẫu backup vBook, native Files cần thiết bị.",
+      "featureSubsections": [
+        [
+          "13.1",
+          "Sao lưu"
+        ],
+        [
+          "13.2",
+          "Nội dung sao lưu"
+        ],
+        [
+          "13.3",
+          "Khôi phục"
+        ],
+        [
+          "13.4",
+          "Tương thích bản sao lưu"
+        ]
+      ],
+      "requirementScope": {
+        "included": 57,
+        "excluded_by_user": 3
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 14,
+      "title": "14. Thống kê",
+      "reviewedBehavior": "Có tổng theo ngày, tổng từng bookID, ranking/charts/filter; trạng thái hoàn thành thống nhất với thao tác thư viện sau sửa.",
+      "remainingLimits": "Chưa lưu chuỗi từng truyện/từng ngày như schemaStats gốc; không phân bổ ngược thời gian cũ thiếu bookID. Tracker statistics bị loại.",
+      "featureSubsections": [
+        [
+          "14.1",
+          "Thống kê tổng quan"
+        ],
+        [
+          "14.2",
+          "Thống kê chi tiết"
+        ]
+      ],
+      "requirementScope": {
+        "included": 21,
+        "excluded_by_user": 2
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 15,
+      "title": "15. Giao diện",
+      "reviewedBehavior": "6tabUIKit, order/label/start/restore, light/dark/system và UI tiếng Việt; responsive widget có test.",
+      "remainingLimits": "Chưa có alternate icon/theme/accent picker; thiếu baseline screenshot/video để đo parity.",
+      "featureSubsections": [
+        [
+          "15.1",
+          "Giao diện"
+        ],
+        [
+          "15.2",
+          "Biểu tượng ứng dụng"
+        ],
+        [
+          "15.3",
+          "Thanh điều hướng"
+        ],
+        [
+          "15.4",
+          "Ngôn ngữ"
+        ],
+        [
+          "15.5",
+          "Định dạng hiển thị"
+        ]
+      ],
+      "requirementScope": {
+        "included": 52
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 16,
+      "title": "16. Riêng tư",
+      "reviewedBehavior": "Lock/idle/background/input/accessibility/native tabs/secure-screen và incognito có guard; dữ liệu cũ/cấu hình không tự bị xóa.",
+      "remainingLimits": "Có xác thực thiết bị, chưa có PIN app riêng; che AppSwitcher không chứng minh chặn mọi screenshot.",
+      "featureSubsections": [
+        [
+          "16.1",
+          "Khóa ứng dụng"
+        ],
+        [
+          "16.2",
+          "Chế độ ẩn danh"
+        ],
+        [
+          "16.3",
+          "Bảo vệ nội dung"
+        ]
+      ],
+      "requirementScope": {
+        "included": 33
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 17,
+      "title": "17. Công cụ",
+      "reviewedBehavior": "Storage/cache/diagnostics/repair/recovery/log/UA/browser/clear nối source; clear global Java→DeviceTools/WK có code.",
+      "remainingLimits": "Chưa seed cookie Java vào WK lúc mở; cookie hai chiều/Cloudflare/đĩa hỏng/Keychain mọi credential chưa đạt. GC package/recovery/cloud còn thiếu.",
+      "featureSubsections": [
+        [
+          "17.1",
+          "Bộ nhớ và cache"
+        ],
+        [
+          "17.2",
+          "WebView và mạng"
+        ],
+        [
+          "17.3",
+          "Cơ sở dữ liệu"
+        ],
+        [
+          "17.4",
+          "Nhật ký và chẩn đoán"
+        ],
+        [
+          "17.5",
+          "Thông tin ứng dụng"
+        ]
+      ],
+      "requirementScope": {
+        "included": 61
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 18,
+      "title": "18. Sync",
+      "reviewedBehavior": "Google/Firebase, UID pin/CAS/head/chunk hash/conflict preview/merge/stale rejection/local preservation; reconnect/foreground có lifecycle.",
+      "remainingLimits": "Chưa xác nhận production hai thiết bị; emulator chưa chạy khi thiếu môi trường. Giữ phương thức Google đã chọn.",
+      "featureSubsections": [
+        [
+          "18.1",
+          "Tài khoản đồng bộ"
+        ],
+        [
+          "18.2",
+          "Dữ liệu đồng bộ"
+        ],
+        [
+          "18.3",
+          "Hoạt động đồng bộ"
+        ]
+      ],
+      "requirementScope": {
+        "included": 34,
+        "excluded_by_user": 1
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    },
+    {
+      "group": 19,
+      "title": "19. iOS/iPad",
+      "reviewedBehavior": "Đọc lại bridge Files/FaceID/Photos/Share/Vision/Translation/notification/background/deep link, native capabilities và workflow/package contract.",
+      "remainingLimits": "Windows không compile native; simulator JVM bị từ chối. iPad/Pencil/codec/performance và JNI/Zero trên iPhone chưa được kiểm chứng.",
+      "featureSubsections": [
+        [
+          "19.1",
+          "Thiết bị và màn hình"
+        ],
+        [
+          "19.2",
+          "Xác thực và lưu trữ"
+        ],
+        [
+          "19.3",
+          "Chia sẻ và xử lý nội dung"
+        ],
+        [
+          "19.4",
+          "Thông báo và tác vụ nền"
+        ],
+        [
+          "19.5",
+          "Điều khiển ngoại vi"
+        ],
+        [
+          "19.6",
+          "Tính năng bổ sung dành cho iPad"
+        ]
+      ],
+      "requirementScope": {
+        "included": 38
+      },
+      "acceptance": "partial_source_and_automated_evidence_device_parity_pending"
+    }
+  ],
+  "uiSectionMapping": [
+    {
+      "section": "1.1",
+      "heading": "1.1. Đặc điểm thiết kế",
+      "sourceLines": [
+        33,
+        56
+      ],
+      "scope": "included",
+      "sourceMapping": "`core/theme/app_theme.dart`, `core/widgets/`, `settings/presentation/settings_widgets.dart`",
+      "testAndLimits": "`ui_spec_settings_test.dart`, `book_cover_compact_badges_test.dart`; theme/icon mở rộng chưa có.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "1.2",
+      "heading": "1.2. Thư viện thành phần dùng chung",
+      "sourceLines": [
+        57,
+        90
+      ],
+      "scope": "included",
+      "sourceMapping": "`core/theme/app_theme.dart`, `core/widgets/`, `settings/presentation/settings_widgets.dart`",
+      "testAndLimits": "`ui_spec_settings_test.dart`, `book_cover_compact_badges_test.dart`; theme/icon mở rộng chưa có.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "2.1",
+      "heading": "2.1. Năm tab chính",
+      "sourceLines": [
+        114,
+        137
+      ],
+      "scope": "included",
+      "sourceMapping": "`lib/app.dart`, `core/platform/native_tabs.dart`, `ios/Runner/NativeTabsController.swift`",
+      "testAndLimits": "`native_tabs_test.dart`, `adaptive_navigation_test.dart`; giữ 6 tab theo yêu cầu, không đổi thành 5.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "2.2",
+      "heading": "2.2. Màn hình phụ",
+      "sourceLines": [
+        138,
+        156
+      ],
+      "scope": "included",
+      "sourceMapping": "`lib/app.dart`, `core/platform/native_tabs.dart`, `ios/Runner/NativeTabsController.swift`",
+      "testAndLimits": "`native_tabs_test.dart`, `adaptive_navigation_test.dart`; giữ 6 tab theo yêu cầu, không đổi thành 5.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "2.3",
+      "heading": "2.3. Quy tắc tương tác",
+      "sourceLines": [
+        157,
+        179
+      ],
+      "scope": "included",
+      "sourceMapping": "`lib/app.dart`, `core/platform/native_tabs.dart`, `ios/Runner/NativeTabsController.swift`",
+      "testAndLimits": "`native_tabs_test.dart`, `adaptive_navigation_test.dart`; giữ 6 tab theo yêu cầu, không đổi thành 5.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "3.1",
+      "heading": "3.1. Cấu trúc",
+      "sourceLines": [
+        185,
+        205
+      ],
+      "scope": "included",
+      "sourceMapping": "`library_screen.dart`, `library_book_tile.dart`, `library_group_tabs.dart`, `library_filter_sheet.dart`, `library_bulk_actions.dart`",
+      "testAndLimits": "`spec_library_states_test.dart`, `library_filter_layout_test.dart`, `library_bulk_actions_test.dart`; Tất cả bị bỏ theo yêu cầu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "3.2",
+      "heading": "3.2. Thẻ truyện",
+      "sourceLines": [
+        206,
+        225
+      ],
+      "scope": "included",
+      "sourceMapping": "`library_screen.dart`, `library_book_tile.dart`, `library_group_tabs.dart`, `library_filter_sheet.dart`, `library_bulk_actions.dart`",
+      "testAndLimits": "`spec_library_states_test.dart`, `library_filter_layout_test.dart`, `library_bulk_actions_test.dart`; Tất cả bị bỏ theo yêu cầu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "3.3",
+      "heading": "3.3. Tab danh mục",
+      "sourceLines": [
+        226,
+        244
+      ],
+      "scope": "included",
+      "sourceMapping": "`library_screen.dart`, `library_book_tile.dart`, `library_group_tabs.dart`, `library_filter_sheet.dart`, `library_bulk_actions.dart`",
+      "testAndLimits": "`spec_library_states_test.dart`, `library_filter_layout_test.dart`, `library_bulk_actions_test.dart`; Tất cả bị bỏ theo yêu cầu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "3.4",
+      "heading": "3.4. Bộ lọc, sắp xếp, hiển thị",
+      "sourceLines": [
+        245,
+        264
+      ],
+      "scope": "included",
+      "sourceMapping": "`library_screen.dart`, `library_book_tile.dart`, `library_group_tabs.dart`, `library_filter_sheet.dart`, `library_bulk_actions.dart`",
+      "testAndLimits": "`spec_library_states_test.dart`, `library_filter_layout_test.dart`, `library_bulk_actions_test.dart`; Tất cả bị bỏ theo yêu cầu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "3.5",
+      "heading": "3.5. Chọn nhiều truyện",
+      "sourceLines": [
+        265,
+        284
+      ],
+      "scope": "included",
+      "sourceMapping": "`library_screen.dart`, `library_book_tile.dart`, `library_group_tabs.dart`, `library_filter_sheet.dart`, `library_bulk_actions.dart`",
+      "testAndLimits": "`spec_library_states_test.dart`, `library_filter_layout_test.dart`, `library_bulk_actions_test.dart`; Tất cả bị bỏ theo yêu cầu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "3.6",
+      "heading": "3.6. Trạng thái",
+      "sourceLines": [
+        285,
+        307
+      ],
+      "scope": "included",
+      "sourceMapping": "`library_screen.dart`, `library_book_tile.dart`, `library_group_tabs.dart`, `library_filter_sheet.dart`, `library_bulk_actions.dart`",
+      "testAndLimits": "`spec_library_states_test.dart`, `library_filter_layout_test.dart`, `library_bulk_actions_test.dart`; Tất cả bị bỏ theo yêu cầu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "4.1",
+      "heading": "4.1. Danh sách danh mục",
+      "sourceLines": [
+        313,
+        331
+      ],
+      "scope": "included",
+      "sourceMapping": "`library_categories_screen.dart`, `library_category_controller.dart`, `library_add_categories.dart`, `library_group_order_sheet.dart`",
+      "testAndLimits": "`library_category_registry_test.dart`, `library_add_categories_test.dart`, `library_group_order_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "4.2",
+      "heading": "4.2. Tạo/sửa danh mục",
+      "sourceLines": [
+        332,
+        349
+      ],
+      "scope": "included",
+      "sourceMapping": "`library_categories_screen.dart`, `library_category_controller.dart`, `library_add_categories.dart`, `library_group_order_sheet.dart`",
+      "testAndLimits": "`library_category_registry_test.dart`, `library_add_categories_test.dart`, `library_group_order_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "4.3",
+      "heading": "4.3. Gán danh mục cho truyện",
+      "sourceLines": [
+        350,
+        368
+      ],
+      "scope": "included",
+      "sourceMapping": "`library_categories_screen.dart`, `library_category_controller.dart`, `library_add_categories.dart`, `library_group_order_sheet.dart`",
+      "testAndLimits": "`library_category_registry_test.dart`, `library_add_categories_test.dart`, `library_group_order_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "4.4",
+      "heading": "4.4. Xóa danh mục",
+      "sourceLines": [
+        369,
+        386
+      ],
+      "scope": "included",
+      "sourceMapping": "`library_categories_screen.dart`, `library_category_controller.dart`, `library_add_categories.dart`, `library_group_order_sheet.dart`",
+      "testAndLimits": "`library_category_registry_test.dart`, `library_add_categories_test.dart`, `library_group_order_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "5.1",
+      "heading": "5.1. Trang Khám phá",
+      "sourceLines": [
+        392,
+        409
+      ],
+      "scope": "included",
+      "sourceMapping": "`browse_screen.dart`, `browse_widgets.dart`, `extension_catalogue_view.dart`, `extension_repository_screen.dart`",
+      "testAndLimits": "`spec_sources_layout_test.dart`, `extension_repository_widget_test.dart`, `extension_catalogue_icon_widget_test.dart`; capabilities đã sửa theoP2, click/OAuth preference và vBook config còn thiếu theoE1/E2.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "5.2",
+      "heading": "5.2. Danh sách nguồn",
+      "sourceLines": [
+        410,
+        428
+      ],
+      "scope": "included",
+      "sourceMapping": "`browse_screen.dart`, `browse_widgets.dart`, `extension_catalogue_view.dart`, `extension_repository_screen.dart`",
+      "testAndLimits": "`spec_sources_layout_test.dart`, `extension_repository_widget_test.dart`, `extension_catalogue_icon_widget_test.dart`; capabilities đã sửa theoP2, click/OAuth preference và vBook config còn thiếu theoE1/E2.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "5.3",
+      "heading": "5.3. Tab Tiện ích",
+      "sourceLines": [
+        429,
+        448
+      ],
+      "scope": "included",
+      "sourceMapping": "`browse_screen.dart`, `browse_widgets.dart`, `extension_catalogue_view.dart`, `extension_repository_screen.dart`",
+      "testAndLimits": "`spec_sources_layout_test.dart`, `extension_repository_widget_test.dart`, `extension_catalogue_icon_widget_test.dart`; capabilities đã sửa theoP2, click/OAuth preference và vBook config còn thiếu theoE1/E2.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "5.4",
+      "heading": "5.4. Kho tiện ích",
+      "sourceLines": [
+        449,
+        469
+      ],
+      "scope": "included",
+      "sourceMapping": "`browse_screen.dart`, `browse_widgets.dart`, `extension_catalogue_view.dart`, `extension_repository_screen.dart`",
+      "testAndLimits": "`spec_sources_layout_test.dart`, `extension_repository_widget_test.dart`, `extension_catalogue_icon_widget_test.dart`; capabilities đã sửa theoP2, click/OAuth preference và vBook config còn thiếu theoE1/E2.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "5.5",
+      "heading": "5.5. Duyệt một nguồn",
+      "sourceLines": [
+        470,
+        490
+      ],
+      "scope": "included",
+      "sourceMapping": "`source_search_screen.dart`, `source_filter_sheet.dart`, `global_search_screen.dart`, `TachiSourceBrowser.m`",
+      "testAndLimits": "`source_catalogue_widget_test.dart`, `source_filters_test.dart`, `network_tools_test.dart`; metadata phân trang đã sửa theoP1, browser cookie Java↔WK/native vẫn chưa nghiệm thu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "5.6",
+      "heading": "5.6. Bộ lọc động của nguồn",
+      "sourceLines": [
+        491,
+        509
+      ],
+      "scope": "included",
+      "sourceMapping": "`source_search_screen.dart`, `source_filter_sheet.dart`, `global_search_screen.dart`, `TachiSourceBrowser.m`",
+      "testAndLimits": "`source_catalogue_widget_test.dart`, `source_filters_test.dart`, `network_tools_test.dart`; metadata phân trang đã sửa theoP1, browser cookie Java↔WK/native vẫn chưa nghiệm thu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "5.7",
+      "heading": "5.7. Tìm kiếm toàn cục",
+      "sourceLines": [
+        510,
+        529
+      ],
+      "scope": "included",
+      "sourceMapping": "`source_search_screen.dart`, `source_filter_sheet.dart`, `global_search_screen.dart`, `TachiSourceBrowser.m`",
+      "testAndLimits": "`source_catalogue_widget_test.dart`, `source_filters_test.dart`, `network_tools_test.dart`; metadata phân trang đã sửa theoP1, browser cookie Java↔WK/native vẫn chưa nghiệm thu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "5.8",
+      "heading": "5.8. WebView",
+      "sourceLines": [
+        530,
+        549
+      ],
+      "scope": "included",
+      "sourceMapping": "`source_search_screen.dart`, `source_filter_sheet.dart`, `global_search_screen.dart`, `TachiSourceBrowser.m`",
+      "testAndLimits": "`source_catalogue_widget_test.dart`, `source_filters_test.dart`, `network_tools_test.dart`; metadata phân trang đã sửa theoP1, browser cookie Java↔WK/native vẫn chưa nghiệm thu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "6.1",
+      "heading": "6.1. Tổng quan bố cục",
+      "sourceLines": [
+        555,
+        577
+      ],
+      "scope": "included",
+      "sourceMapping": "`book_detail_screen.dart`, `book_detail_header.dart`, `book_cover_viewer.dart`",
+      "testAndLimits": "`book_detail_layout_test.dart`, `book_cover_viewer_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "6.2",
+      "heading": "6.2. Phần thông tin",
+      "sourceLines": [
+        578,
+        596
+      ],
+      "scope": "included",
+      "sourceMapping": "`book_detail_screen.dart`, `book_detail_header.dart`, `book_cover_viewer.dart`",
+      "testAndLimits": "`book_detail_layout_test.dart`, `book_cover_viewer_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "6.3",
+      "heading": "6.3. Một hàng chương",
+      "sourceLines": [
+        597,
+        615
+      ],
+      "scope": "included",
+      "sourceMapping": "`book_detail_screen.dart`, `book_detail_header.dart`, `book_cover_viewer.dart`",
+      "testAndLimits": "`book_detail_layout_test.dart`, `book_cover_viewer_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "6.4",
+      "heading": "6.4. Chọn nhiều chương",
+      "sourceLines": [
+        616,
+        634
+      ],
+      "scope": "included",
+      "sourceMapping": "`chapter_options_sheet.dart`, `chapter_range_dialog.dart`, `book_metadata_editor.dart`, `book_detail_screen.dart`",
+      "testAndLimits": "`chapter_list_management_test.dart`, `book_metadata_management_test.dart`, `spec_library_activity_gaps_test.dart`; tracker excluded.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "6.5",
+      "heading": "6.5. Màn hình/phần con",
+      "sourceLines": [
+        635,
+        654
+      ],
+      "scope": "included",
+      "sourceMapping": "`chapter_options_sheet.dart`, `chapter_range_dialog.dart`, `book_metadata_editor.dart`, `book_detail_screen.dart`",
+      "testAndLimits": "`chapter_list_management_test.dart`, `book_metadata_management_test.dart`, `spec_library_activity_gaps_test.dart`; tracker excluded.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "6.6",
+      "heading": "6.6. Trạng thái",
+      "sourceLines": [
+        655,
+        673
+      ],
+      "scope": "included",
+      "sourceMapping": "`chapter_options_sheet.dart`, `chapter_range_dialog.dart`, `book_metadata_editor.dart`, `book_detail_screen.dart`",
+      "testAndLimits": "`chapter_list_management_test.dart`, `book_metadata_management_test.dart`, `spec_library_activity_gaps_test.dart`; tracker excluded.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.1",
+      "heading": "7.1. Nguyên tắc",
+      "sourceLines": [
+        679,
+        697
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_screen.dart`, `reader_controls.dart`, `reader_settings_sheet.dart`, `reader_advanced_settings.dart`",
+      "testAndLimits": "`reader_ui_test.dart`, `reader_progress_test.dart`, `reader_advanced_settings_layout_test.dart`; initial chrome/title notes cần đối chiếu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.2",
+      "heading": "7.2. Các lớp UI",
+      "sourceLines": [
+        698,
+        722
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_screen.dart`, `reader_controls.dart`, `reader_settings_sheet.dart`, `reader_advanced_settings.dart`",
+      "testAndLimits": "`reader_ui_test.dart`, `reader_progress_test.dart`, `reader_advanced_settings_layout_test.dart`; initial chrome/title notes cần đối chiếu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.3",
+      "heading": "7.3. Chọn chế độ đọc",
+      "sourceLines": [
+        723,
+        741
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_options.dart`, `manga_page_layout.dart`, `reader_screen.dart`",
+      "testAndLimits": "Mode khác/hai trang còn thiếu; giữ mặc định vertical liên tục không loại các yêu cầu này.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.4",
+      "heading": "7.4. Hai trang",
+      "sourceLines": [
+        742,
+        759
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_options.dart`, `manga_page_layout.dart`, `reader_screen.dart`",
+      "testAndLimits": "Mode khác/hai trang còn thiếu; giữ mặc định vertical liên tục không loại các yêu cầu này.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.5",
+      "heading": "7.5. Thanh tiến độ",
+      "sourceLines": [
+        760,
+        777
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_screen.dart`, `reader_controls.dart`, `reader_settings_sheet.dart`, `reader_advanced_settings.dart`",
+      "testAndLimits": "`reader_ui_test.dart`, `reader_progress_test.dart`, `reader_advanced_settings_layout_test.dart`; initial chrome/title notes cần đối chiếu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.6",
+      "heading": "7.6. Cài đặt nhanh",
+      "sourceLines": [
+        778,
+        794
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_screen.dart`, `reader_controls.dart`, `reader_settings_sheet.dart`, `reader_advanced_settings.dart`",
+      "testAndLimits": "`reader_ui_test.dart`, `reader_progress_test.dart`, `reader_advanced_settings_layout_test.dart`; initial chrome/title notes cần đối chiếu.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.7",
+      "heading": "7.7. Vùng chạm",
+      "sourceLines": [
+        795,
+        812
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_tap_zones.dart`, `reader_hold_scroll.dart`, `reader_auto_scroll.dart`",
+      "testAndLimits": "`reader_options_test.dart`, `reader_hold_scroll_test.dart`, `reader_auto_scroll_test.dart`; tap layouts đơn giản hơn IPA.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.8",
+      "heading": "7.8. Tự cuộn và nhấn giữ để cuộn",
+      "sourceLines": [
+        813,
+        829
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_tap_zones.dart`, `reader_hold_scroll.dart`, `reader_auto_scroll.dart`",
+      "testAndLimits": "`reader_options_test.dart`, `reader_hold_scroll_test.dart`, `reader_auto_scroll_test.dart`; tap layouts đơn giản hơn IPA.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.9",
+      "heading": "7.9. Menu nhấn giữ trang",
+      "sourceLines": [
+        830,
+        846
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_screen.dart:857`, `native_manga_image_window.dart`, `ios/Runner/AppDelegate.swift:117`",
+      "testAndLimits": "`reader_platform_test.dart`, `chapter_navigation_test.dart`, `native_image_pipeline_test.dart`; OCR region/chapter boundary cần bổ sung, không gọi parity 100%.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.10",
+      "heading": "7.10. Chuyển chương",
+      "sourceLines": [
+        847,
+        863
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_screen.dart:857`, `native_manga_image_window.dart`, `ios/Runner/AppDelegate.swift:117`",
+      "testAndLimits": "`reader_platform_test.dart`, `chapter_navigation_test.dart`, `native_image_pipeline_test.dart`; OCR region/chapter boundary cần bổ sung, không gọi parity 100%.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.11",
+      "heading": "7.11. Lỗi tải ảnh",
+      "sourceLines": [
+        864,
+        880
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_screen.dart:857`, `native_manga_image_window.dart`, `ios/Runner/AppDelegate.swift:117`",
+      "testAndLimits": "`reader_platform_test.dart`, `chapter_navigation_test.dart`, `native_image_pipeline_test.dart`; OCR region/chapter boundary cần bổ sung, không gọi parity 100%.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "7.12",
+      "heading": "7.12. Ranh giới phiên bản",
+      "sourceLines": [
+        881,
+        896
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_screen.dart:857`, `native_manga_image_window.dart`, `ios/Runner/AppDelegate.swift:117`",
+      "testAndLimits": "`reader_platform_test.dart`, `chapter_navigation_test.dart`, `native_image_pipeline_test.dart`; OCR region/chapter boundary cần bổ sung, không gọi parity 100%.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "8.1",
+      "heading": "8.1. Màn hình tác vụ",
+      "sourceLines": [
+        902,
+        920
+      ],
+      "scope": "included",
+      "sourceMapping": "`downloads_screen.dart`, `download_queue_controller.dart`, `download_queue_bulk_actions.dart`",
+      "testAndLimits": "`download_management_widget_test.dart`, `download_queue_bulk_controls_test.dart`; thiếu tiến độ page/byte và grouping offline theo truyện/dung lượng.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "8.2",
+      "heading": "8.2. Hàng chờ",
+      "sourceLines": [
+        921,
+        939
+      ],
+      "scope": "included",
+      "sourceMapping": "`downloads_screen.dart`, `download_queue_controller.dart`, `download_queue_bulk_actions.dart`",
+      "testAndLimits": "`download_management_widget_test.dart`, `download_queue_bulk_controls_test.dart`; thiếu tiến độ page/byte và grouping offline theo truyện/dung lượng.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "8.3",
+      "heading": "8.3. Đã tải",
+      "sourceLines": [
+        940,
+        956
+      ],
+      "scope": "included",
+      "sourceMapping": "`downloads_screen.dart`, `download_queue_controller.dart`, `download_queue_bulk_actions.dart`",
+      "testAndLimits": "`download_management_widget_test.dart`, `download_queue_bulk_controls_test.dart`; thiếu tiến độ page/byte và grouping offline theo truyện/dung lượng.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "8.4",
+      "heading": "8.4. Trạng thái",
+      "sourceLines": [
+        957,
+        975
+      ],
+      "scope": "included",
+      "sourceMapping": "`downloads_screen.dart`, `download_queue_controller.dart`, `download_queue_bulk_actions.dart`",
+      "testAndLimits": "`download_management_widget_test.dart`, `download_queue_bulk_controls_test.dart`; thiếu tiến độ page/byte và grouping offline theo truyện/dung lượng.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "9.1",
+      "heading": "9.1. Danh sách chương mới",
+      "sourceLines": [
+        981,
+        998
+      ],
+      "scope": "included",
+      "sourceMapping": "`activity_screens.dart:23`, `library_update_report_panel.dart`, `library_update_report.dart`",
+      "testAndLimits": "`library_update_report_widget_test.dart`, `library_update_events_test.dart`, `activity_spec_interactions_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "9.2",
+      "heading": "9.2. Chọn nhiều",
+      "sourceLines": [
+        999,
+        1015
+      ],
+      "scope": "included",
+      "sourceMapping": "`activity_screens.dart:23`, `library_update_report_panel.dart`, `library_update_report.dart`",
+      "testAndLimits": "`library_update_report_widget_test.dart`, `library_update_events_test.dart`, `activity_spec_interactions_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "9.3",
+      "heading": "9.3. Bảng trạng thái cập nhật",
+      "sourceLines": [
+        1016,
+        1034
+      ],
+      "scope": "included",
+      "sourceMapping": "`activity_screens.dart:23`, `library_update_report_panel.dart`, `library_update_report.dart`",
+      "testAndLimits": "`library_update_report_widget_test.dart`, `library_update_events_test.dart`, `activity_spec_interactions_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "9.4",
+      "heading": "9.4. Trạng thái",
+      "sourceLines": [
+        1035,
+        1053
+      ],
+      "scope": "included",
+      "sourceMapping": "`activity_screens.dart:23`, `library_update_report_panel.dart`, `library_update_report.dart`",
+      "testAndLimits": "`library_update_report_widget_test.dart`, `library_update_events_test.dart`, `activity_spec_interactions_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "10.1",
+      "heading": "10.1. Danh sách",
+      "sourceLines": [
+        1059,
+        1077
+      ],
+      "scope": "included",
+      "sourceMapping": "`activity_screens.dart:619`",
+      "testAndLimits": "`history_selection_test.dart`, `activity_spec_interactions_test.dart`, `incognito_reader_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "10.2",
+      "heading": "10.2. Nhiều lựa chọn và xóa",
+      "sourceLines": [
+        1078,
+        1094
+      ],
+      "scope": "included",
+      "sourceMapping": "`activity_screens.dart:619`",
+      "testAndLimits": "`history_selection_test.dart`, `activity_spec_interactions_test.dart`, `incognito_reader_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "10.3",
+      "heading": "10.3. Trạng thái",
+      "sourceLines": [
+        1095,
+        1112
+      ],
+      "scope": "included",
+      "sourceMapping": "`activity_screens.dart:619`",
+      "testAndLimits": "`history_selection_test.dart`, `activity_spec_interactions_test.dart`, `incognito_reader_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "11.1",
+      "heading": "11.1. Chọn nguồn cũ",
+      "sourceLines": [
+        1118,
+        1134
+      ],
+      "scope": "included",
+      "sourceMapping": "`source_migration_library_screen.dart`, `source_bulk_migration_screen.dart`, `migration_search.dart`, `source_migration_view.dart`",
+      "testAndLimits": "`migration_multi_source_test.dart`, `source_migration_widget_test.dart`, `source_migration_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "11.2",
+      "heading": "11.2. Chọn truyện",
+      "sourceLines": [
+        1135,
+        1152
+      ],
+      "scope": "included",
+      "sourceMapping": "`source_migration_library_screen.dart`, `source_bulk_migration_screen.dart`, `migration_search.dart`, `source_migration_view.dart`",
+      "testAndLimits": "`migration_multi_source_test.dart`, `source_migration_widget_test.dart`, `source_migration_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "11.3",
+      "heading": "11.3. Cấu hình tìm kiếm",
+      "sourceLines": [
+        1153,
+        1170
+      ],
+      "scope": "included",
+      "sourceMapping": "`source_migration_library_screen.dart`, `source_bulk_migration_screen.dart`, `migration_search.dart`, `source_migration_view.dart`",
+      "testAndLimits": "`migration_multi_source_test.dart`, `source_migration_widget_test.dart`, `source_migration_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "11.4",
+      "heading": "11.4. Đối chiếu kết quả",
+      "sourceLines": [
+        1171,
+        1188
+      ],
+      "scope": "included",
+      "sourceMapping": "`source_migration_library_screen.dart`, `source_bulk_migration_screen.dart`, `migration_search.dart`, `source_migration_view.dart`",
+      "testAndLimits": "`migration_multi_source_test.dart`, `source_migration_widget_test.dart`, `source_migration_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "11.5",
+      "heading": "11.5. Tiến độ",
+      "sourceLines": [
+        1189,
+        1207
+      ],
+      "scope": "included",
+      "sourceMapping": "`source_migration_library_screen.dart`, `source_bulk_migration_screen.dart`, `migration_search.dart`, `source_migration_view.dart`",
+      "testAndLimits": "`migration_multi_source_test.dart`, `source_migration_widget_test.dart`, `source_migration_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "12.1",
+      "heading": "12.1. Danh sách nguồn Local",
+      "sourceLines": [
+        1213,
+        1229
+      ],
+      "scope": "included",
+      "sourceMapping": "`local_source_screen.dart`, `local_comic_library_screen.dart`, `folder_comic_importer.dart`, `document_importer.dart`",
+      "testAndLimits": "`folder_comic_import_test.dart`, `document_importer_test.dart`; Files/codec native còn điều kiện.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "12.2",
+      "heading": "12.2. Nhập từ Files",
+      "sourceLines": [
+        1230,
+        1246
+      ],
+      "scope": "included",
+      "sourceMapping": "`local_source_screen.dart`, `local_comic_library_screen.dart`, `folder_comic_importer.dart`, `document_importer.dart`",
+      "testAndLimits": "`folder_comic_import_test.dart`, `document_importer_test.dart`; Files/codec native còn điều kiện.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "12.3",
+      "heading": "12.3. Quản lý lưu trữ Local",
+      "sourceLines": [
+        1247,
+        1264
+      ],
+      "scope": "included",
+      "sourceMapping": "`local_source_screen.dart`, `local_comic_library_screen.dart`, `folder_comic_importer.dart`, `document_importer.dart`",
+      "testAndLimits": "`folder_comic_import_test.dart`, `document_importer_test.dart`; Files/codec native còn điều kiện.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "12.4",
+      "heading": "12.4. Trạng thái",
+      "sourceLines": [
+        1265,
+        1282
+      ],
+      "scope": "included",
+      "sourceMapping": "`local_source_screen.dart`, `local_comic_library_screen.dart`, `folder_comic_importer.dart`, `document_importer.dart`",
+      "testAndLimits": "`folder_comic_import_test.dart`, `document_importer_test.dart`; Files/codec native còn điều kiện.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "13.1",
+      "heading": "13.1. Danh sách tracker",
+      "sourceLines": [
+        1288,
+        1306
+      ],
+      "scope": "excluded_by_user",
+      "sourceMapping": "External tracker UI ngoài phạm vi; local editor ở `reading_statistics_book_list.dart`",
+      "testAndLimits": "Giữ `external_backup_metadata_test.dart` và local editing tests, không tạo OAuth/API tracker.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "13.2",
+      "heading": "13.2. Tìm và liên kết truyện",
+      "sourceLines": [
+        1307,
+        1323
+      ],
+      "scope": "excluded_by_user",
+      "sourceMapping": "External tracker UI ngoài phạm vi; local editor ở `reading_statistics_book_list.dart`",
+      "testAndLimits": "Giữ `external_backup_metadata_test.dart` và local editing tests, không tạo OAuth/API tracker.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "13.3",
+      "heading": "13.3. Chỉnh dữ liệu theo dõi",
+      "sourceLines": [
+        1324,
+        1350
+      ],
+      "scope": "excluded_by_user",
+      "sourceMapping": "External tracker UI ngoài phạm vi; local editor ở `reading_statistics_book_list.dart`",
+      "testAndLimits": "Giữ `external_backup_metadata_test.dart` và local editing tests, không tạo OAuth/API tracker.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "13.4",
+      "heading": "13.4. Tracking hàng loạt",
+      "sourceLines": [
+        1351,
+        1368
+      ],
+      "scope": "excluded_by_user",
+      "sourceMapping": "External tracker UI ngoài phạm vi; local editor ở `reading_statistics_book_list.dart`",
+      "testAndLimits": "Giữ `external_backup_metadata_test.dart` và local editing tests, không tạo OAuth/API tracker.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "13.5",
+      "heading": "13.5. Enhanced Tracking",
+      "sourceLines": [
+        1369,
+        1386
+      ],
+      "scope": "excluded_by_user",
+      "sourceMapping": "External tracker UI ngoài phạm vi; local editor ở `reading_statistics_book_list.dart`",
+      "testAndLimits": "Giữ `external_backup_metadata_test.dart` và local editing tests, không tạo OAuth/API tracker.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "14.1",
+      "heading": "14.1. Trang chính",
+      "sourceLines": [
+        1392,
+        1409
+      ],
+      "scope": "included",
+      "sourceMapping": "`backup_settings_screen.dart`, `automatic_backup_screen.dart`, `backup_preview*`, `backup_restore_progress_screen.dart`",
+      "testAndLimits": "`backup_restore_completion_widget_test.dart`, `backup_preview_widget_test.dart`, `automatic_backup_test.dart`, `backup_service_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "14.2",
+      "heading": "14.2. Hàng backup",
+      "sourceLines": [
+        1410,
+        1425
+      ],
+      "scope": "included",
+      "sourceMapping": "`backup_settings_screen.dart`, `automatic_backup_screen.dart`, `backup_preview*`, `backup_restore_progress_screen.dart`",
+      "testAndLimits": "`backup_restore_completion_widget_test.dart`, `backup_preview_widget_test.dart`, `automatic_backup_test.dart`, `backup_service_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "14.3",
+      "heading": "14.3. Tự động sao lưu",
+      "sourceLines": [
+        1426,
+        1442
+      ],
+      "scope": "included",
+      "sourceMapping": "`backup_settings_screen.dart`, `automatic_backup_screen.dart`, `backup_preview*`, `backup_restore_progress_screen.dart`",
+      "testAndLimits": "`backup_restore_completion_widget_test.dart`, `backup_preview_widget_test.dart`, `automatic_backup_test.dart`, `backup_service_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "14.4",
+      "heading": "14.4. Luồng khôi phục",
+      "sourceLines": [
+        1443,
+        1463
+      ],
+      "scope": "included",
+      "sourceMapping": "`backup_settings_screen.dart`, `automatic_backup_screen.dart`, `backup_preview*`, `backup_restore_progress_screen.dart`",
+      "testAndLimits": "`backup_restore_completion_widget_test.dart`, `backup_preview_widget_test.dart`, `automatic_backup_test.dart`, `backup_service_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "14.5",
+      "heading": "14.5. Các hộp thoại",
+      "sourceLines": [
+        1464,
+        1480
+      ],
+      "scope": "included",
+      "sourceMapping": "`backup_settings_screen.dart`, `automatic_backup_screen.dart`, `backup_preview*`, `backup_restore_progress_screen.dart`",
+      "testAndLimits": "`backup_restore_completion_widget_test.dart`, `backup_preview_widget_test.dart`, `automatic_backup_test.dart`, `backup_service_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "15.1",
+      "heading": "15.1. Xác nhận từ IPA",
+      "sourceLines": [
+        1486,
+        1503
+      ],
+      "scope": "included",
+      "sourceMapping": "`reading_info_screen.dart`, `reading_statistics_book_list.dart`, `reading_statistics_charts.dart`, `book_reading_times.dart`",
+      "testAndLimits": "`reading_info_extended_widget_test.dart`, `reading_statistics_extended_test.dart`, `book_reading_times_test.dart`; charts bổ sung không mặc định là UI gốc.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "15.2",
+      "heading": "15.2. Mở rộng cho phạm vi dự án [Đề xuất]",
+      "sourceLines": [
+        1504,
+        1524
+      ],
+      "scope": "included",
+      "sourceMapping": "`reading_info_screen.dart`, `reading_statistics_book_list.dart`, `reading_statistics_charts.dart`, `book_reading_times.dart`",
+      "testAndLimits": "`reading_info_extended_widget_test.dart`, `reading_statistics_extended_test.dart`, `book_reading_times_test.dart`; charts bổ sung không mặc định là UI gốc.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "16.1",
+      "heading": "16.1. Trang Thêm [Cấu trúc dự án]",
+      "sourceLines": [
+        1530,
+        1548
+      ],
+      "scope": "included",
+      "sourceMapping": "`more_screen.dart`, `settings_home_screen.dart`, `navigation_settings_screen.dart`",
+      "testAndLimits": "`ui_spec_settings_test.dart`, `navigation_preferences_test.dart`; giữ 6 tabs/local rating.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "16.2",
+      "heading": "16.2. Màn hình cài đặt nhận diện trong IPA",
+      "sourceLines": [
+        1549,
+        1580
+      ],
+      "scope": "included",
+      "sourceMapping": "`more_screen.dart`, `settings_home_screen.dart`, `navigation_settings_screen.dart`",
+      "testAndLimits": "`ui_spec_settings_test.dart`, `navigation_preferences_test.dart`; giữ 6 tabs/local rating.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "16.3",
+      "heading": "16.3. Chung",
+      "sourceLines": [
+        1581,
+        1598
+      ],
+      "scope": "included",
+      "sourceMapping": "`more_screen.dart`, `settings_home_screen.dart`, `navigation_settings_screen.dart`",
+      "testAndLimits": "`ui_spec_settings_test.dart`, `navigation_preferences_test.dart`; giữ 6 tabs/local rating.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "16.4",
+      "heading": "16.4. Giao diện",
+      "sourceLines": [
+        1599,
+        1617
+      ],
+      "scope": "included",
+      "sourceMapping": "`app_settings_screens.dart:120`, `library_update_settings_screen.dart`, `library_filter_sheet.dart`",
+      "testAndLimits": "`library_filter_layout_test.dart`, `library_automatic_update_test.dart`; custom theme/accent/icon chưa có.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "16.5",
+      "heading": "16.5. Thư viện",
+      "sourceLines": [
+        1618,
+        1635
+      ],
+      "scope": "included",
+      "sourceMapping": "`app_settings_screens.dart:120`, `library_update_settings_screen.dart`, `library_filter_sheet.dart`",
+      "testAndLimits": "`library_filter_layout_test.dart`, `library_automatic_update_test.dart`; custom theme/accent/icon chưa có.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "16.6",
+      "heading": "16.6. Trình đọc",
+      "sourceLines": [
+        1636,
+        1655
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_*settings.dart`, `downloads/presentation/download_settings_screen.dart`, `sources/presentation/`, `network_tools_screen.dart`",
+      "testAndLimits": "`reader_advanced_settings_layout_test.dart`, `download_deletion_test.dart`, `source_preferences_widget_test.dart`; reader/extension gaps ở dưới.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "16.7",
+      "heading": "16.7. Tải xuống",
+      "sourceLines": [
+        1656,
+        1672
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_*settings.dart`, `downloads/presentation/download_settings_screen.dart`, `sources/presentation/`, `network_tools_screen.dart`",
+      "testAndLimits": "`reader_advanced_settings_layout_test.dart`, `download_deletion_test.dart`, `source_preferences_widget_test.dart`; reader/extension gaps ở dưới.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "16.8",
+      "heading": "16.8. Nguồn",
+      "sourceLines": [
+        1673,
+        1689
+      ],
+      "scope": "included",
+      "sourceMapping": "`reader_*settings.dart`, `downloads/presentation/download_settings_screen.dart`, `sources/presentation/`, `network_tools_screen.dart`",
+      "testAndLimits": "`reader_advanced_settings_layout_test.dart`, `download_deletion_test.dart`, `source_preferences_widget_test.dart`; reader/extension gaps ở dưới.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "16.9",
+      "heading": "16.9. Lưu trữ",
+      "sourceLines": [
+        1690,
+        1707
+      ],
+      "scope": "included",
+      "sourceMapping": "`storage_maintenance_screen.dart`, `advanced_settings_screen.dart`, `log_diagnostics_screen.dart`, `library_recovery_screen.dart`",
+      "testAndLimits": "`storage_maintenance_widget_test.dart`, `log_diagnostics_widget_test.dart`, `library_safe_repair_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "16.10",
+      "heading": "16.10. Nâng cao/chẩn đoán",
+      "sourceLines": [
+        1708,
+        1727
+      ],
+      "scope": "included",
+      "sourceMapping": "`storage_maintenance_screen.dart`, `advanced_settings_screen.dart`, `log_diagnostics_screen.dart`, `library_recovery_screen.dart`",
+      "testAndLimits": "`storage_maintenance_widget_test.dart`, `log_diagnostics_widget_test.dart`, `library_safe_repair_test.dart`.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "17.1",
+      "heading": "17.1. Cài đặt bảo mật",
+      "sourceLines": [
+        1733,
+        1750
+      ],
+      "scope": "included",
+      "sourceMapping": "`privacy_settings.dart`, `privacy_gate.dart`, `app_lock_controller.dart`, native privacy bridge",
+      "testAndLimits": "`privacy_app_lock_test.dart`, `privacy_native_boundary_test.dart`, `incognito_reader_test.dart`; chưa có app PIN riêng.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "17.2",
+      "heading": "17.2. Màn hình mở khóa",
+      "sourceLines": [
+        1751,
+        1768
+      ],
+      "scope": "included",
+      "sourceMapping": "`privacy_settings.dart`, `privacy_gate.dart`, `app_lock_controller.dart`, native privacy bridge",
+      "testAndLimits": "`privacy_app_lock_test.dart`, `privacy_native_boundary_test.dart`, `incognito_reader_test.dart`; chưa có app PIN riêng.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "17.3",
+      "heading": "17.3. Incognito",
+      "sourceLines": [
+        1769,
+        1784
+      ],
+      "scope": "included",
+      "sourceMapping": "`privacy_settings.dart`, `privacy_gate.dart`, `app_lock_controller.dart`, native privacy bridge",
+      "testAndLimits": "`privacy_app_lock_test.dart`, `privacy_native_boundary_test.dart`, `incognito_reader_test.dart`; chưa có app PIN riêng.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "17.4",
+      "heading": "17.4. Bảo vệ App Switcher",
+      "sourceLines": [
+        1785,
+        1801
+      ],
+      "scope": "included",
+      "sourceMapping": "`privacy_settings.dart`, `privacy_gate.dart`, `app_lock_controller.dart`, native privacy bridge",
+      "testAndLimits": "`privacy_app_lock_test.dart`, `privacy_native_boundary_test.dart`, `incognito_reader_test.dart`; chưa có app PIN riêng.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "18.1",
+      "heading": "18.1. Tài khoản",
+      "sourceLines": [
+        1807,
+        1824
+      ],
+      "scope": "included",
+      "sourceMapping": "`sync_screen.dart`, `sync_controller.dart`, sync merge/resolution screens",
+      "testAndLimits": "`sync_screen_test.dart`, `sync_auth_test.dart`, `ui_spec_sync_status_test.dart`, `sync_merge_widget_test.dart`; Google login giữ theo quyết định hiện hành.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "18.2",
+      "heading": "18.2. Trang Đồng bộ",
+      "sourceLines": [
+        1825,
+        1842
+      ],
+      "scope": "included",
+      "sourceMapping": "`sync_screen.dart`, `sync_controller.dart`, sync merge/resolution screens",
+      "testAndLimits": "`sync_screen_test.dart`, `sync_auth_test.dart`, `ui_spec_sync_status_test.dart`, `sync_merge_widget_test.dart`; Google login giữ theo quyết định hiện hành.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "18.3",
+      "heading": "18.3. Trạng thái",
+      "sourceLines": [
+        1843,
+        1868
+      ],
+      "scope": "included",
+      "sourceMapping": "`sync_screen.dart`, `sync_controller.dart`, sync merge/resolution screens",
+      "testAndLimits": "`sync_screen_test.dart`, `sync_auth_test.dart`, `ui_spec_sync_status_test.dart`, `sync_merge_widget_test.dart`; Google login giữ theo quyết định hiện hành.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "19.1",
+      "heading": "19.1. Thành phần hệ thống",
+      "sourceLines": [
+        1874,
+        1893
+      ],
+      "scope": "included",
+      "sourceMapping": "`AppDelegate.swift`, task/privacy/device bridges, `packages/*/ios/`",
+      "testAndLimits": "`reader_platform_test.dart`, `task_platform_test.dart`, `ios/RunnerTests/`; iPad/Pencil/native APIs chưa có acceptance thiết bị.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "19.2",
+      "heading": "19.2. iPad",
+      "sourceLines": [
+        1894,
+        1911
+      ],
+      "scope": "included",
+      "sourceMapping": "`AppDelegate.swift`, task/privacy/device bridges, `packages/*/ios/`",
+      "testAndLimits": "`reader_platform_test.dart`, `task_platform_test.dart`, `ios/RunnerTests/`; iPad/Pencil/native APIs chưa có acceptance thiết bị.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "19.3",
+      "heading": "19.3. Trạng thái thiết bị",
+      "sourceLines": [
+        1912,
+        1929
+      ],
+      "scope": "included",
+      "sourceMapping": "`AppDelegate.swift`, task/privacy/device bridges, `packages/*/ios/`",
+      "testAndLimits": "`reader_platform_test.dart`, `task_platform_test.dart`, `ios/RunnerTests/`; iPad/Pencil/native APIs chưa có acceptance thiết bị.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "21.1",
+      "heading": "21.1. Tìm và đọc truyện",
+      "sourceLines": [
+        1986,
+        2002
+      ],
+      "scope": "included",
+      "sourceMapping": "`lib/app.dart`, source/detail/reader/download/backup/migration screens, `deep_links/`",
+      "testAndLimits": "`library_opaque_navigation_test.dart`, `deep_link_reader_handoff_test.dart`, `sync_backup_integration_test.dart`, các flow tests tương ứng; không thay thế một vòng dùng thật trên iPhone.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "21.2",
+      "heading": "21.2. Tải truyện",
+      "sourceLines": [
+        2003,
+        2019
+      ],
+      "scope": "included",
+      "sourceMapping": "`lib/app.dart`, source/detail/reader/download/backup/migration screens, `deep_links/`",
+      "testAndLimits": "`library_opaque_navigation_test.dart`, `deep_link_reader_handoff_test.dart`, `sync_backup_integration_test.dart`, các flow tests tương ứng; không thay thế một vòng dùng thật trên iPhone.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "21.3",
+      "heading": "21.3. Chuyển nguồn",
+      "sourceLines": [
+        2020,
+        2036
+      ],
+      "scope": "included",
+      "sourceMapping": "`lib/app.dart`, source/detail/reader/download/backup/migration screens, `deep_links/`",
+      "testAndLimits": "`library_opaque_navigation_test.dart`, `deep_link_reader_handoff_test.dart`, `sync_backup_integration_test.dart`, các flow tests tương ứng; không thay thế một vòng dùng thật trên iPhone.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "21.4",
+      "heading": "21.4. Khôi phục dữ liệu",
+      "sourceLines": [
+        2037,
+        2053
+      ],
+      "scope": "included",
+      "sourceMapping": "`lib/app.dart`, source/detail/reader/download/backup/migration screens, `deep_links/`",
+      "testAndLimits": "`library_opaque_navigation_test.dart`, `deep_link_reader_handoff_test.dart`, `sync_backup_integration_test.dart`, các flow tests tương ứng; không thay thế một vòng dùng thật trên iPhone.",
+      "mappingIsRuntimeAcceptance": false
+    },
+    {
+      "section": "21.5",
+      "heading": "21.5. Thao tác riêng cần liền mạch",
+      "sourceLines": [
+        2054,
+        2073
+      ],
+      "scope": "included",
+      "sourceMapping": "`lib/app.dart`, source/detail/reader/download/backup/migration screens, `deep_links/`",
+      "testAndLimits": "`library_opaque_navigation_test.dart`, `deep_link_reader_handoff_test.dart`, `sync_backup_integration_test.dart`, các flow tests tương ứng; không thay thế một vòng dùng thật trên iPhone.",
+      "mappingIsRuntimeAcceptance": false
+    }
+  ],
+  "mechanismSections": [
+    {
+      "section": "1",
+      "heading": "Phát hiện kiến trúc cốt lõi từ IPA",
+      "result": "Original OpenJ9/JDK17 vs current Zero/Java8; existing API/VM architecture retained, no VM equivalence claim."
+    },
+    {
+      "section": "2",
+      "heading": "Tachimanga nhận và cài extension như thế nào?",
+      "result": "APK gate1.3-1.6, hash/staging/DEX/factory/atomic registry/reinstall recovery reviewed; direct JAR import UI absent."
+    },
+    {
+      "section": "3",
+      "heading": "Sau khi cài extension, Tachimanga tạo nguồn truyện như thế nào?",
+      "result": "Factory/multiple sources/stable64bit string IDs/preferences/restart reviewed; removal retains cache, GC absent."
+    },
+    {
+      "section": "4",
+      "heading": "Tachimanga lấy và hiển thị danh sách truyện",
+      "result": "CataloguePage retains hasNextPage/capabilities; browse/search/migration stop at metadata boundary; legacy List fallback kept."
+    },
+    {
+      "section": "5",
+      "heading": "Cơ chế lấy và hiển thị ảnh bìa",
+      "result": "Cover follows source headers/client/cookies, bounded disk cache and serial/source locks; device latency not measured."
+    },
+    {
+      "section": "6",
+      "heading": "Tachimanga lấy thông tin chi tiết truyện",
+      "result": "Detail/TOC preserve IDs and old numeric remap requires unique exact-source saved chapter URL evidence."
+    },
+    {
+      "section": "7",
+      "heading": "Tachimanga lấy và hiển thị trang truyện",
+      "result": "Original Page bytecode lazy-resolution compared directly; current page resolver/request hooks/retry/offline/native locator guards tested."
+    },
+    {
+      "section": "8",
+      "heading": "Tachimanga tải và lưu chương truyện như thế nào?",
+      "result": "Durable chapter queue/partial image bytes/pause/retry/revision guard; no byte/page-progress Flutter contract, HTTP Range or parallel page downloads."
+    },
+    {
+      "section": "9",
+      "heading": "Những thành phần Codex cần xây dựng để tái tạo hệ thống",
+      "result": "Suggested APIs are design guidance; existing public contracts kept. Java host tests do not execute original app or iOS JVM."
+    },
+    {
+      "section": "10",
+      "heading": "Kết luận kỹ thuật dành cho dự án",
+      "result": "Final parity remains incomplete; distinguish package presence, source inspection, host tests, iOS compile and physical-device acceptance."
+    }
+  ],
+  "fixedFindings": [
+    {
+      "id": "H1",
+      "priority": "P1",
+      "trigger": "Legacy read=null chapters + lastRead and sequential progress; clear history",
+      "before": "read count2 ->0",
+      "after": "count2 ->2; explicit flags/empty history/cache/bookmarks/progress unchanged",
+      "source": "lib/features/library/presentation/library_view_model.dart:232",
+      "before_log": ".tools/audit_history_legacy_test.log",
+      "after_log": ".tools/audit_history_after.log"
+    },
+    {
+      "id": "E4",
+      "priority": "P2",
+      "trigger": "Own Dart staging/{sha}.apk corrupt; reimport intact same APK",
+      "before": "PACKAGE_CORRUPT before host invocation",
+      "after": "bounded regular exact-hash reuse or fresh verified separate path; old bytes not overwritten; host error still error",
+      "source": "lib/features/sources/data/native_tachi_repository.dart:441",
+      "before_log": ".tools/audit_dart_staging_test.log",
+      "after_log": ".tools/audit_dart_staging_after.log",
+      "tradeoff": "Repair inputs retained; no new package GC"
+    },
+    {
+      "id": "S1",
+      "priority": "P2",
+      "trigger": "Explicit readingState=completed then uncomplete/reset/unread",
+      "before": "completed=false but effective state/detail/stats still completed",
+      "after": "Only conflicting completed string cleared; planned/reading/paused preserved",
+      "source": "lib/features/library/presentation/library_view_model.dart:154",
+      "before_log": ".tools/audit_status_migration_test.log",
+      "after_log": ".tools/audit_status_migration_after.log"
+    },
+    {
+      "id": "M1",
+      "priority": "P2",
+      "trigger": "Nonempty final CataloguePage in migration; mixed final A and unfinished B",
+      "before": "metadata dropped and final A queried again",
+      "after": "Metadata retained, final source removed from page participants; new query resets eligibility; canceled/late response cannot alter it",
+      "source": "lib/features/sources/presentation/source_migration_screen.dart:90",
+      "before_logs": [
+        ".tools/audit_status_migration_test.log",
+        ".tools/audit_migration_mixed_before.log"
+      ],
+      "after_logs": [
+        ".tools/audit_status_migration_after.log",
+        ".tools/audit_migration_mixed_after.log"
+      ]
+    },
+    {
+      "id": "E5",
+      "priority": "P1",
+      "trigger": "Ordinary add starts HTTP; backup restore publishes restored.test and invalidates controller; old HTTP completes",
+      "before": "restored.test overwritten by old.test+pending.test in persisted preferences and UI, no error. Explicit caller-generation guard control rejects safely.",
+      "after": "Mandatory default generation guard on controller queue/save/state publication preserves restored list for delayed add/rename/remove/refresh success/error; fresh operations succeed.",
+      "source": "lib/features/sources/presentation/extension_catalogue_controller.dart:28",
+      "before_log": ".tools/audit_repo_restore_test.log",
+      "after_log": ".tools/audit_repo_restore_after.log",
+      "proof": "verification/full_build_second_repo_restore_probe.json"
+    },
+    {
+      "id": "R6",
+      "trigger": "Quick settings show app-default background despite custom or per-title ReaderOptions",
+      "after": "Labels reflect merged global/per-title options and actual custom RGB; advanced note no longer contradicts selection",
+      "tests": [
+        "test/reader_ui_test.dart",
+        "test/reader_advanced_settings_layout_test.dart"
+      ],
+      "evidence": "verification/full_audit_reader_background_clock_tests.log"
+    },
+    {
+      "id": "V1",
+      "trigger": "Git Windows checkout CRLF rewrites pinned bundled CryptoJS bytes",
+      "beforeSha256": "877d2f9ef67193b4a6d6a0cacc4d64e5eef2bd32ad09121baabacb955d6c3e46",
+      "afterSha256": "ee02257ffbaf0a9b481c7039b0f3bb20c360c9674fe4be8b38ae709b2ea59bbe",
+      "after": "Restored exact pinned Git blob; .gitattributes disables text normalization for this upstream asset",
+      "scope": "Checkout/build-resource integrity, not a reproduced iPhone runtime failure",
+      "evidence": "verification/full_build_second_crypto_line_endings_after.json"
+    }
+  ],
+  "testReliabilityChange": {
+    "trigger": "Widget fake timers advanced while auto-scroll used real DateTime.now, intermittently producing zero elapsed time",
+    "change": "ReaderAutoScroll clock injected via provider; production default unchanged; UI tests use tester.binding.clock.now",
+    "unperformedClaim": "No production iPhone auto-scroll bug inferred from this test mismatch"
+  },
+  "traceability": {
+    "rows": 1113,
+    "uniqueIds": 1113,
+    "kinds": {
+      "product_constraint": 4,
+      "feature_requirement": 999,
+      "ui_section": 98,
+      "ui_global_rule": 2,
+      "mechanism_reference": 10
+    },
+    "scopes": {
+      "included": 1031,
+      "excluded_by_user": 82
+    },
+    "uiSections": 98,
+    "uiSectionsEqualActual": true,
+    "invalidLineRanges": [],
+    "semantics": "Traceability/range integrity only; no per-requirement acceptance inferred"
+  },
+  "backendReview": {
+    "path": "verification/full_build_second_backend_review.json",
+    "sha256": "698a3caec0904350451a07c2beb283a1953f5d0a05ed6fd7317a1874843de0fc",
+    "bytes": 67373
+  },
+  "rootReview": {
+    "path": "verification/full_build_second_root_review.json",
+    "sha256": "f0db43ce549cf1f8c5d1aa5d10e84160496e676e39420deffed718d86b766440",
+    "bytes": 55471
+  },
+  "additionalReviewedSourceExamples": [
+    {
+      "path": "lib/features/reader/presentation/reader_screen.dart",
+      "sha256": "2355826a2bcc61b2d955adf58faaff710b67053a29896fa01350e4ea7a894a95",
+      "bytes": 71697
+    },
+    {
+      "path": "lib/features/reader/domain/reader_options.dart",
+      "sha256": "e4384895985eea4ef66b472465f349e1acc44c1e900dc09dd259c6d85465dac3",
+      "bytes": 7524
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_auto_scroll.dart",
+      "sha256": "c917299d769c5709c439fa47d56d64d71edc5d095d90e52dbedad55190c5514a",
+      "bytes": 2389
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_settings_sheet.dart",
+      "sha256": "d880973aefbfefce40ae3328224e874209c2d29d0d1931ae3e2bf01c56915ca2",
+      "bytes": 9490
+    },
+    {
+      "path": "lib/features/downloads/presentation/download_queue_controller.dart",
+      "sha256": "de806a42f2daba4f6e6a658c6353728ffa904c58187af1891c1e8fe283f74bfc",
+      "bytes": 25478
+    },
+    {
+      "path": "lib/features/downloads/domain/download_job.dart",
+      "sha256": "d8f8a9c20832df88e54ce75b3a1620c13a4bcab36158e8f34d2fd465e92c7319",
+      "bytes": 1260
+    },
+    {
+      "path": "lib/features/library/data/document_importer.dart",
+      "sha256": "efbaae7b1aa139f05a4eab65cb7ce03d9f4d4f7f6e1af7838976bfc20a23326e",
+      "bytes": 21927
+    },
+    {
+      "path": "lib/features/library/data/folder_comic_importer.dart",
+      "sha256": "3c709c674fee371eaa1b84aa104fcf715abb157beba654e6eb8cf28c0d6b49f3",
+      "bytes": 11836
+    },
+    {
+      "path": "lib/features/library/data/local_comic_metadata.dart",
+      "sha256": "b24fe074ab58ecc2cc6a724d688d723f46635fb2256cd78447ae3a54db57ac87",
+      "bytes": 3183
+    },
+    {
+      "path": "lib/features/library/data/backup_service.dart",
+      "sha256": "c72ae7bcca6ba6b23b7bc218f0be3b9d8a74968edec7ad889fa19978f0dd14bf",
+      "bytes": 12905
+    },
+    {
+      "path": "lib/features/library/data/automatic_backup_store.dart",
+      "sha256": "19232d457ca7c27201369cf7fc8977daddf6a1968811b2728658b98c55ba5fd7",
+      "bytes": 4396
+    },
+    {
+      "path": "lib/features/library/data/external_automatic_backup_store.dart",
+      "sha256": "84e9a918fd0b5e0876376914c95ac078b2dec49dac38f1060949fcaa0f1c2425",
+      "bytes": 3257
+    },
+    {
+      "path": "lib/features/library/data/backup_compatibility/backup_reader.dart",
+      "sha256": "7e0b40d71d8a79d0317d43a673da8fe05674757ffa3d9db40e5692c021cecd82",
+      "bytes": 1764
+    },
+    {
+      "path": "lib/features/settings/navigation_preferences.dart",
+      "sha256": "59910b701984e0942a5c2bf29212dcf21e719813f7733fe8f9ac32d93c8d59d6",
+      "bytes": 4295
+    },
+    {
+      "path": "lib/features/privacy/presentation/privacy_gate.dart",
+      "sha256": "a66e578b3bcc3430e62127a99cac7b85f7a8548eac16038143531c7e380ccaf0",
+      "bytes": 6479
+    },
+    {
+      "path": "lib/features/privacy/application/app_lock_controller.dart",
+      "sha256": "9afb587e8dd3f63e3d6d3033e4a0d4c72761aed5865f56a8bdf99f14e9dce7ab",
+      "bytes": 12460
+    },
+    {
+      "path": "lib/features/sync/domain/sync_engine.dart",
+      "sha256": "37423044b244cabfb5ec10710ed513c17a769b0030d8260639d0b2c0fae84e51",
+      "bytes": 11206
+    },
+    {
+      "path": "lib/features/sync/application/sync_controller.dart",
+      "sha256": "83a20a962c951f5e6d1bad171463ffa3400af02a81d3f5fdfa38cd961a8e8198",
+      "bytes": 11857
+    },
+    {
+      "path": "lib/features/sync/application/sync_lifecycle.dart",
+      "sha256": "2b83c9e5ac5eb383e27ed121757af28dad98737a6b6ec059c21f6c968d3e4c50",
+      "bytes": 6781
+    },
+    {
+      "path": "lib/features/sync/data/backup_sync_local.dart",
+      "sha256": "274c82126c5f214b7a7b709ed56f1b5608eed0927dc275c8c49e383c42c37d54",
+      "bytes": 2555
+    },
+    {
+      "path": "lib/features/deep_links/domain/app_deep_link.dart",
+      "sha256": "bedae0d675deaba4b99ad41ec760922a3acf49dd90e4ef0f5d5f7c43cd1b6221",
+      "bytes": 7910
+    },
+    {
+      "path": "lib/features/deep_links/presentation/deep_link_gate.dart",
+      "sha256": "b4541bfdbd5d21f5e4011b2e66e4d4398d38e816abc1f596730b46abae71ee7e",
+      "bytes": 7588
+    },
+    {
+      "path": "ios/Runner/AppDelegate.swift",
+      "sha256": "afd497346cba9367c132b1401d28ffefb92dfc4aacedb667c9030bd7847d823b",
+      "bytes": 12744
+    },
+    {
+      "path": "ios/Runner/DeviceToolsBridge.swift",
+      "sha256": "be501f098a6e88fb66b78fdadd16139e75a44d5ce6ad30ae1b5f5659a7450b3e",
+      "bytes": 6162
+    },
+    {
+      "path": "ios/Runner/TaskPlatformBridge.swift",
+      "sha256": "b1615305b73bc9994a4d9de5765693b7ecbe5718d345ff2b4d69d58fea18668c",
+      "bytes": 33692
+    },
+    {
+      "path": "ios/Runner/Info.plist",
+      "sha256": "2159a14554434b438516d05d62ec2098360f6693441444fee7b34dddaa8c694d",
+      "bytes": 3926
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Classes/VbookRuntimePlugin.swift",
+      "sha256": "a66034b4aec322effbc6b0beb6bf4bcc355267c5cc2841369c4a9361bb47e63b",
+      "bytes": 9582
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Resources/host.js",
+      "sha256": "a13674a48f6f4a28aa6f34915d664e98f8fe1e4f61e344b0a4805fc0f4c97c62",
+      "bytes": 9896
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Resources/crypto-js.js",
+      "sha256": "ee02257ffbaf0a9b481c7039b0f3bb20c360c9674fe4be8b38ae709b2ea59bbe",
+      "bytes": 219092
+    },
+    {
+      "path": "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.m",
+      "sha256": "83e520911631bd359206a95c033864a32b3d506b3bec3ca82810b71032a9aabb",
+      "bytes": 11161
+    },
+    {
+      "path": ".github/workflows/ios-build.yml",
+      "sha256": "161f6fd4381b887734be99ae1f32855534d74b9280284d0e5d94a21e1244a361",
+      "bytes": 5198
+    },
+    {
+      "path": "tools/build_ios.sh",
+      "sha256": "9dc402eb6f4030cb19e1153cdb177a8c8549745efdce1d00add283eebfbeeea0",
+      "bytes": 6275
+    }
+  ],
+  "checks": {
+    "flutterFull": {
+      "passed": 1110,
+      "skipped": 6,
+      "failed": 0,
+      "exitCode": 0,
+      "isar": "real Windows Isar3.3.2 DLL",
+      "log": "verification/full_build_second_flutter_tests.log"
+    },
+    "analyze": {
+      "exitCode": 0,
+      "result": "No issues found",
+      "log": "verification/full_build_second_analyze.log"
+    },
+    "pythonHelpers": {
+      "total": 77,
+      "passed": 62,
+      "skipped": 15,
+      "failed": 0,
+      "skipReason": "Firestore emulator unavailable",
+      "actualOriginalApkLoopbackFlows": [
+        "Komga1.4.47 from original IPA",
+        "Observed Komga1.6.73"
+      ],
+      "log": "verification/full_build_second_helpers.log"
+    },
+    "referenceTools": {
+      "total": 67,
+      "passed": 67,
+      "skipped": 0,
+      "failed": 0,
+      "log": "verification/full_build_second_reference_tests.log"
+    },
+    "javascript": {
+      "total": 23,
+      "passed": 18,
+      "skipped": 5,
+      "failed": 0,
+      "skipReason": "Four live-vBook-package tests and live external Suwayomi test opt-in",
+      "scope": "Actual bundled native JS/CryptoJS with SwiftSoup/URLSession replaced at JSON boundary plus companion tests; not iOS execution",
+      "log": "verification/full_build_second_vbook_tests.log"
+    },
+    "gitDiffCheck": {
+      "exitCode": 0
+    },
+    "previousRuns": [
+      {
+        "log": "verification/full_build_second_flutter_tests_before.log",
+        "status": "failed: legacy raw-null history assertion and mixed-source pagination before correction"
+      },
+      {
+        "log": "verification/full_build_second_flutter_tests_interrupted.log",
+        "status": "stopped at611pass/5skip to fix newly reproduced repository-restore race; not full acceptance"
+      },
+      {
+        "log": "verification/full_audit_reader_background_after.log",
+        "status": "40pass1fail: real-clock/fake-timer mismatch in preexisting auto-scroll test; deterministic clock subsequently added"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "path": "verification/full_build_second_artifact_check.json",
+      "sha256": "66f7499dc1db4934f80f1698fb82312094cdd94d2bf26d2c7730b851337ccfaf",
+      "bytes": 3720
+    },
+    {
+      "path": "verification/full_build_second_ipa_feature_markers.json",
+      "sha256": "db73423ca9ce75470afae066b3d3f7f17967d78765db1c99cb9dd51368f52ecc",
+      "bytes": 21319
+    },
+    {
+      "path": "verification/full_build_second_backend_review.json",
+      "sha256": "698a3caec0904350451a07c2beb283a1953f5d0a05ed6fd7317a1874843de0fc",
+      "bytes": 67373
+    },
+    {
+      "path": "verification/full_build_second_root_review.json",
+      "sha256": "f0db43ce549cf1f8c5d1aa5d10e84160496e676e39420deffed718d86b766440",
+      "bytes": 55471
+    },
+    {
+      "path": "verification/full_build_second_traceability_check.json",
+      "sha256": "daaee5deb7a3290380b86e4e29c4e7d96ba3b96794b9d657c635fc55aabe0826",
+      "bytes": 455
+    },
+    {
+      "path": "verification/full_build_second_configuration_check.json",
+      "sha256": "47e628436cc0e4ebd09fe0394ff7e27c51a7c649126d2153b861c8319d7e9789",
+      "bytes": 1190
+    },
+    {
+      "path": "verification/full_build_second_source_freeze.json",
+      "sha256": "74658794079fbb64e417f5e31d7de271c4c677c37491a3e0a04b4093f907ba2e",
+      "bytes": 74267
+    },
+    {
+      "path": "verification/full_build_second_history_before.log",
+      "sha256": "de91be12066fd6a6bd444ea3bf16f10a9b90c794c438adbabd2b23b08e59e5a4",
+      "bytes": 2547
+    },
+    {
+      "path": "verification/full_build_second_staging_before.log",
+      "sha256": "8088c5478d28444823cf34922423c4e35005707cc02ad3b300f5d5c1f3df288d",
+      "bytes": 673
+    },
+    {
+      "path": "verification/full_build_second_state_migration_before.log",
+      "sha256": "5efa0860864f569bb4ece46e3a48eed7542c7c5a0b00c36eb76e87a95aca813d",
+      "bytes": 3336
+    },
+    {
+      "path": "verification/full_build_second_mixed_pagination_before.log",
+      "sha256": "8b9a977d3a7042c8a437abc0e24fff9bc748d8cd75dd01a775e79dcbd6985d72",
+      "bytes": 2487
+    },
+    {
+      "path": "verification/full_build_second_repo_restore_probe.json",
+      "sha256": "59a1da63902196387507d671d9a9fd1db77f60dd353495d95849de9e86f2dac8",
+      "bytes": 5535
+    },
+    {
+      "path": "verification/full_build_second_repo_restore_before.log",
+      "sha256": "33b45241c45ba13d6fd684edd9a75114a062c9063fa23d76da6feab9a09477f5",
+      "bytes": 2080
+    },
+    {
+      "path": "verification/full_build_second_repo_restore_targeted.log",
+      "sha256": "04a04d6420e012f0fab5bc836ee7ab2d231d5064de9fe1a726e93030a29db535",
+      "bytes": 5796
+    },
+    {
+      "path": "verification/full_build_second_crypto_line_endings_before.json",
+      "sha256": "1269c9812987b249460c14db8448dcdabf892a7e039df6d24cce1d3371ef7030",
+      "bytes": 517
+    },
+    {
+      "path": "verification/full_build_second_crypto_line_endings_after.json",
+      "sha256": "2f9f5836593504c909b2bde054aa1a44227ac8ad884bbbf6e3a46afbe0df711e",
+      "bytes": 268
+    },
+    {
+      "path": "verification/full_audit_reader_background_before.log",
+      "sha256": "2854e9732dabe13f4569e2db14ecc111e11e407f19d82483253adf924d36b959",
+      "bytes": 2517
+    },
+    {
+      "path": "verification/full_audit_reader_background_clock_tests.log",
+      "sha256": "4baf24f8c18d2e8f497192a5d91213c8a7b51f09d6531757cd8f0a141c8c7db0",
+      "bytes": 6323
+    },
+    {
+      "path": "verification/full_build_second_flutter_tests_before.log",
+      "sha256": "a26187819b25570e3234a2115c19737d8280206b55e4e5f692c442a267eeb722",
+      "bytes": 191863
+    },
+    {
+      "path": "verification/full_build_second_flutter_tests_interrupted.log",
+      "sha256": "f039b1dce2882f27f7512705c683da56e47e97db8636e9cb273be488ac27533a",
+      "bytes": 102523
+    },
+    {
+      "path": "verification/full_build_second_flutter_tests.log",
+      "sha256": "1a34f322d3a5da14ad429254942ae659822e8a645da9e8386c1b03979af20f7c",
+      "bytes": 183814
+    },
+    {
+      "path": "verification/full_build_second_analyze.log",
+      "sha256": "eca2df092e013ad9aaa2d91648a0a0b65555c4d1cdad5b5924ace3e3cbb87ccf",
+      "bytes": 99
+    },
+    {
+      "path": "verification/full_build_second_helpers.log",
+      "sha256": "ff3f16ee14fb186afa9543d3fcde2a4484d217a78e8066265d72743a640c5cd3",
+      "bytes": 19395
+    },
+    {
+      "path": "verification/full_build_second_reference_tests.log",
+      "sha256": "63cc08142efa16dc0af0c316f1670f90be822323e2eba31b88e3e87e7c48bc6a",
+      "bytes": 10159
+    },
+    {
+      "path": "verification/full_build_second_vbook_tests.log",
+      "sha256": "0f94546e71b81bb82061f7ddf3e5327f0c87d7a161d543b18bb333a7c6d00a8d",
+      "bytes": 2370
+    },
+    {
+      "path": "verification/full_build_second_vbook_tests_before.log",
+      "sha256": "7d7ea27b918dc8974ab53c689fe43991945006a8804044bb51f94c112983cacd",
+      "bytes": 3607
+    }
+  ],
+  "auditDocument": {
+    "path": "docs/SOURCE_SPEC_PARITY_AUDIT.md",
+    "sha256": "7865ab98c003c6aa916350b2343e00740dc5e8c275d73fa51e8b063e38de4c7a",
+    "bytes": 61438
+  },
+  "limits": [
+    "Mapping all1113rows/98UIsections and reading relevant paths is not testing every branch or every combination.",
+    "Original AOT identifiers and javap are static evidence. Original app/mod native binaries were not executed.",
+    "All new fixes are source-only. IPA11 still has old host and predates this audit.",
+    "Reader other modes/two-page/crop/expanded tap profiles/region OCR/chapter separator remain absent or partial.",
+    "Java-to-WK seed, click/OAuth preferences, vBook dynamic config/encrypted/browser APIs and hard native cancellation remain absent or unverified.",
+    "Native device runtime, original visual/gesture parity, iPad/Pencil, permission/codec/background/performance and production two-device sync require additional evidence.",
+    "Folders are globally keyed by book ID; replacing a book in source migration does not transfer time/folder preference assignments to new ID.",
+    "Outside-library detail preview, independent per-category folder assignment and per-book/per-day time series are not implemented.",
+    "External trackers excluded by user; local state/history/rating/bookmarks/opaque backup data preserved."
+  ]
+}

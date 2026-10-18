@@ -5,14 +5,17 @@ import '../data/backup_compatibility/protobuf_reader.dart';
 import 'library_book.dart';
 import 'library_reading.dart';
 import 'book_reading_times.dart';
+import 'book_daily_reading_times.dart';
 
 class ReadingStatistics {
   ReadingStatistics(
     Iterable<LibraryBook> values, {
     Map<String, Set<int>>? cachedChapters,
     BookReadingTimes? readingTimes,
+    BookDailyReadingTimes? dailyReadingTimes,
   }) : books = List.unmodifiable(values),
        readingTimes = readingTimes ?? BookReadingTimes(),
+       dailyReadingTimes = dailyReadingTimes ?? BookDailyReadingTimes(),
        cachedChapters = cachedChapters == null
            ? null
            : Map.unmodifiable(
@@ -23,6 +26,12 @@ class ReadingStatistics {
              );
   final List<LibraryBook> books;
   final BookReadingTimes readingTimes;
+  final BookDailyReadingTimes dailyReadingTimes;
+  RecordedReadingTime timeByDay(String bookId, {required DateTime now}) =>
+      RecordedReadingTime({
+        for (final entry in dailyReadingTimes.days.entries)
+          'readSeconds:${entry.key}': entry.value[bookId] ?? 0,
+      }, now: now);
   int readingSecondsOf(LibraryBook book) => readingTimes.of(book.id);
   List<LibraryBook> get longestReadBooks =>
       sortedBooks(ReadingStatisticsOrder.duration)

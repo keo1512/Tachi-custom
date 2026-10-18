@@ -1,10 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tachi_books/core/theme/app_theme.dart';
+import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
+import 'package:tachi_books/features/library/domain/reading_statistics.dart';
 import 'package:tachi_books/features/library/presentation/book_detail_header.dart';
+import 'package:tachi_books/features/library/presentation/library_view_model.dart';
+import 'package:tachi_books/features/settings/settings_controller.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  for (final action in ['metadata', 'chapter', 'chapters', 'many', 'reset']) {
+    for (final status in ['', 'planned', 'reading', 'paused', 'completed']) {
+      test(
+        '$action uncomplete clears only the explicit completed status ($status)',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final preferences = await SharedPreferences.getInstance();
+          final repository = MemoryLibraryRepository();
+          final original = _book(
+            readingState: status,
+            completed: true,
+            progress: .25,
+          ).copyWith(notes: 'Giữ ghi chú', bookmarks: ['0:0.2000']);
+          await repository.save(original);
+          final content = ReaderContent(kind: 'novel', html: '<p>Đã tải</p>');
+          await repository.saveChapter(original.id, 0, content);
+          final container = ProviderContainer(
+            overrides: [
+              preferencesProvider.overrideWithValue(preferences),
+              libraryRepositoryProvider.overrideWithValue(repository),
+            ],
+          );
+          addTearDown(container.dispose);
+          await container.read(libraryProvider.future);
+          final vm = container.read(libraryProvider.notifier);
+          switch (action) {
+            case 'metadata':
+              await vm.updateMetadata(original.id, completed: false);
+            case 'chapter':
+              await vm.markChapterRead(original.id, 'first', false);
+            case 'chapters':
+              await vm.markChaptersRead(original.id, ['first'], false);
+            case 'many':
+              await vm.markManyChaptersRead(
+                {
+                  original.id: ['first'],
+                },
+                false,
+                expectedRevision: 0,
+              );
+            case 'reset':
+              await vm.resetBookReading(original.id);
+          }
+          final after = (await repository.find(original.id))!;
+          expect(after.completed, false);
+          expect(after.readingState, status == 'completed' ? '' : status);
+          expect(readingStateOf(after), isNot('completed'));
+          expect(after.notes, original.notes);
+          expect(after.bookmarks, original.bookmarks);
+          expect(after.progress, action == 'reset' ? 0 : original.progress);
+          expect(await repository.readChapter(original.id, 0), content);
+        },
+      );
+    }
+  }
   final cases = <({String name, LibraryBook book, String label})>[
     (
       name: 'explicit planned keeps existing reading progress',

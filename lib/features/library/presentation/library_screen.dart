@@ -55,6 +55,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   bool searching = false, importing = false;
   LibraryGrouping get grouping => ref.read(libraryGroupingProvider);
   String? selectedGroup;
+  String? get folderCategory => selectedGroup?.startsWith('value:') == true
+      ? selectedGroup!.substring(6)
+      : null;
   String? selectedFolder;
   bool selecting = false, groupingBusy = false;
   int? selectionRevision;
@@ -225,13 +228,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   Future<void> groupSelected(List<LibraryBook> books, Set<String> ids) async {
     final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    final category = folderCategory;
     final name = await folderName();
     if (name == null || !mounted) return;
     setState(() => groupingBusy = true);
     final saved = await perform(context, () async {
       await ref
           .read(libraryFoldersProvider.notifier)
-          .assign(ids, name, expectedRevision: revision);
+          .assign(ids, name, expectedRevision: revision, category: category);
       return true;
     });
     if (!mounted) return;
@@ -248,11 +252,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   Future<void> manageFolder(LibraryGroup folder) async {
     final revision = ref.read(libraryRepositoryProvider).replacementRevision;
-    final names = ref.read(libraryFoldersProvider).names;
-    final ids = (ref.read(libraryProvider).value ?? <LibraryBook>[])
-        .where((book) => names[book.id] == folder.label)
-        .map((book) => book.id)
-        .toList();
+    final category = folderCategory;
+    final ids = folder.bookIds.toList();
     final action = await showModalBottomSheet<String>(
       context: context,
       useSafeArea: true,
@@ -289,7 +290,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       context,
       () => ref
           .read(libraryFoldersProvider.notifier)
-          .assign(ids, name, expectedRevision: revision),
+          .assign(ids, name, expectedRevision: revision, category: category),
     );
     if (mounted) setState(() => selectedFolder = null);
   }
@@ -418,7 +419,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         context,
         () => ref
             .read(libraryFoldersProvider.notifier)
-            .assign(ids, null, expectedRevision: revision),
+            .assign(
+              ids,
+              null,
+              expectedRevision: revision,
+              category: folderCategory,
+            ),
       );
       return;
     }
@@ -614,7 +620,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final inCategory = visibleBooks(books, groups);
     final folders = ref
         .watch(libraryFoldersProvider)
-        .groups(inCategory, grouping);
+        .groups(inCategory, grouping, category: folderCategory);
     final openFolder = folders
         .where((folder) => folder.key == selectedFolder)
         .firstOrNull;

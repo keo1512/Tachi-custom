@@ -14,6 +14,7 @@ import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/reader/presentation/reader_screen.dart';
+import 'package:tachi_books/features/reader/presentation/reader_auto_scroll.dart';
 import 'package:tachi_books/features/reader/presentation/reader_options_controller.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
 
@@ -45,6 +46,11 @@ void main() {
       );
       await _waitForImages(tester);
       expect(_scaffold(tester).backgroundColor, const Color(0xfff5ebdc));
+      await tester.tap(find.byTooltip('Giao diện đọc'));
+      await tester.pumpAndSettle();
+      expect(find.text('Màu tùy chọn #F5EBDC'), findsOneWidget);
+      await tester.tap(find.text('Xong'));
+      await tester.pumpAndSettle();
       expect(tester.getRect(find.byType(Image).first).left, 8);
       expect(tester.getRect(find.byType(Image).first).width, 430 - 24);
       tester.view.physicalSize = const Size(932, 430);
@@ -54,6 +60,36 @@ void main() {
       expect(tester.getRect(find.byType(Image).first).width, 932 - 48);
       expect(find.byType(PageView), findsNothing);
       expect(tester.takeException(), isNull);
+      await _dispose(tester, fixture);
+    },
+  );
+
+  testWidgets(
+    'quick reader settings describe the current per-title background',
+    (tester) async {
+      final fixture = await _open(
+        tester,
+        stored: {
+          'readerOptionsV1': jsonEncode({'backgroundMode': 'light'}),
+        },
+      );
+      await _waitForImages(tester);
+      final current = (await fixture.repo.find('reader'))!;
+      await fixture.repo.save(
+        current.copyWith(readerPreferences: const {'backgroundMode': 'dark'}),
+      );
+      await fixture.container.read(libraryProvider.notifier).refresh();
+      await tester.pumpAndSettle();
+      expect(_scaffold(tester).backgroundColor, Colors.black);
+      await tester.tap(find.byTooltip('Giao diện đọc'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nền tối'), findsOneWidget);
+      expect(
+        find.text('Theo giao diện sáng hoặc tối của ứng dụng.'),
+        findsNothing,
+      );
+      await tester.tap(find.text('Xong'));
+      await tester.pumpAndSettle();
       await _dispose(tester, fixture);
     },
   );
@@ -252,7 +288,187 @@ void main() {
     await _dispose(tester, fixture);
   });
 
-  for (final layout in ['horizontal', 'vertical']) {
+  for (final mode in [
+    'leftToRight',
+    'rightToLeft',
+    'verticalPages',
+    'doublePage',
+  ]) {
+    testWidgets(
+      '$mode uses original page order, seeks, restores and returns to continuous mode',
+      (tester) async {
+        final fixture = await _open(
+          tester,
+          images: [
+            for (var i = 0; i < 5; i++) await _png(tester, height: 40 + i * 15),
+          ],
+          stored: {
+            'readerOptionsV1': jsonEncode({'mangaLayout': mode, 'zoom': false}),
+          },
+        );
+        await _waitForImages(tester);
+        final view = tester.widget<PageView>(find.byType(PageView));
+        expect(view.reverse, mode == 'rightToLeft');
+        expect(
+          view.scrollDirection,
+          mode == 'verticalPages' ? Axis.vertical : Axis.horizontal,
+        );
+        final perView = mode == 'doublePage' ? 2 : 1;
+        expect(view.controller!.page, closeTo(0, .001));
+        final rect = tester.getRect(
+          find.byKey(const ValueKey('reader-content')),
+        );
+        // Hide controls before swiping so the entire viewport receives the gesture.
+        await tester.tapAt(rect.center);
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+        await tester.drag(
+          find.byType(PageView),
+          mode == 'verticalPages'
+              ? const Offset(0, -500)
+              : Offset(mode == 'rightToLeft' ? 350 : -350, 0),
+        );
+        await tester.pumpAndSettle();
+        expect(view.controller!.page, closeTo(1, .001));
+        await tester.pump(const Duration(milliseconds: 550));
+        expect(
+          (await fixture.repo.find('reader'))!.progress,
+          closeTo(perView / 5 / 2, .001),
+        );
+        expect((await fixture.repo.find('reader'))!.chapters.first.read, false);
+        // Seek to the odd final page through the real bottom slider.
+        await tester.tapAt(rect.center);
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+        final slider = tester.widget<CupertinoSlider>(
+          find.byType(CupertinoSlider),
+        );
+        slider.onChanged!(4);
+        await tester.pumpAndSettle();
+        await _waitForImages(tester);
+        expect(view.controller!.page, closeTo(4 ~/ perView, .001));
+        expect((await fixture.repo.find('reader'))!.chapters.first.read, true);
+        await fixture.container.read(readerOptionsProvider.notifier).patch({
+          'mangaLayout': 'continuous',
+        });
+        await tester.pumpAndSettle();
+        await _waitForImages(tester);
+        expect(find.byType(PageView), findsNothing);
+        expect(_verticalScroll(tester).offset, greaterThan(0));
+        await _dispose(tester, fixture);
+      },
+    );
+  }
+
+  testWidgets(
+    'double page inversion preserves source IDs and the unpaired last page',
+    (tester) async {
+      final fixture = await _open(
+        tester,
+        images: [
+          for (var i = 0; i < 3; i++) await _png(tester, height: 60 + i * 10),
+        ],
+        stored: {
+          'readerOptionsV1': jsonEncode({
+            'mangaLayout': 'doublePage',
+            'invertDoublePages': true,
+            'zoom': true,
+          }),
+        },
+      );
+      await _waitForImages(tester);
+      final keyed = find.byWidgetPredicate(
+        (widget) =>
+            widget.key is ValueKey<String> &&
+            (widget.key as ValueKey<String>).value.startsWith('paged-image:'),
+      );
+      final first = keyed
+          .evaluate()
+          .map((e) => e.widget.key as ValueKey<String>)
+          .toList();
+      final zero = first.firstWhere((key) => key.value.endsWith(':0'));
+      final one = first.firstWhere((key) => key.value.endsWith(':1'));
+      expect(
+        tester.getRect(find.byKey(one)).left,
+        lessThan(tester.getRect(find.byKey(zero)).left),
+      );
+      final view = tester.widget<PageView>(find.byType(PageView));
+      view.controller!.jumpToPage(1);
+      await tester.pumpAndSettle();
+      await _waitForImages(tester);
+      expect((await fixture.repo.find('reader'))!.chapters.first.read, true);
+      expect(find.byType(PageView), findsOneWidget);
+      await _dispose(tester, fixture);
+    },
+  );
+
+  testWidgets(
+    'chapter boundary stays on this chapter until explicit next and describes the final chapter',
+    (tester) async {
+      final fixture = await _open(tester);
+      await _waitForImages(tester);
+      _verticalScroll(tester)
+          .jumpTo(_verticalScroll(tester).position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(find.text('Hết chương'), findsOneWidget);
+      expect(find.text('Chương tiếp theo: Chương sau'), findsOneWidget);
+      expect(find.text('Chương đầu'), findsOneWidget);
+      await tester.ensureVisible(find.text('Đọc chương tiếp'));
+      await tester.tap(find.text('Đọc chương tiếp'));
+      await tester.pumpAndSettle();
+      await _waitForImages(tester);
+      _verticalScroll(tester)
+          .jumpTo(_verticalScroll(tester).position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(find.text('Chương sau'), findsOneWidget);
+      expect(
+        find.text('Đây là chương cuối trong danh sách hiện tại.'),
+        findsOneWidget,
+      );
+      expect(find.text('Đọc chương tiếp'), findsNothing);
+      await _dispose(tester, fixture);
+    },
+  );
+
+  testWidgets(
+    'an old chapter boundary cannot open replacement content after restore',
+    (tester) async {
+      final fixture = await _open(tester);
+      await _waitForImages(tester);
+      final scroll = _verticalScroll(tester);
+      scroll.jumpTo(scroll.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      final replacement = (await fixture.repo.find('reader'))!
+          .copyWith(title: 'Restored only', progress: .1);
+      await fixture.repo.clear();
+      await fixture.repo.save(replacement);
+      await tester.tap(find.text('Đọc chương tiếp'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Thư viện đã thay đổi. Hãy mở lại truyện trước khi chuyển chương.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('reader-chapter-boundary')),
+        findsOneWidget,
+      );
+      expect(
+        (await fixture.repo.find('reader'))!.toJson(),
+        replacement.toJson(),
+      );
+      await _dispose(tester, fixture);
+    },
+  );
+
+  for (final layout in [
+    'horizontal',
+    'vertical',
+    'edges',
+    'kindle',
+    'lShape',
+  ]) {
     for (final inverted in [false, true]) {
       testWidgets(
         '$layout taps scroll the viewport with inverse=$inverted and center toggles chrome',
@@ -276,13 +492,13 @@ void main() {
             find.byKey(const ValueKey('reader-content')),
           );
           // Stay above the bottom controls while still inside the lower third.
-          final early = layout == 'horizontal'
+          final early = layout != 'vertical'
               ? Offset(30, contentBounds.top + contentBounds.height * .4)
               : Offset(
                   contentBounds.center.dx,
                   contentBounds.top + contentBounds.height * .2,
                 );
-          final late = layout == 'horizontal'
+          final late = layout != 'vertical'
               ? Offset(
                   contentBounds.right - 30,
                   contentBounds.top + contentBounds.height * .4,
@@ -303,7 +519,14 @@ void main() {
           await tester.pump(const Duration(milliseconds: 350));
           await tester.pumpAndSettle();
           expect(scroll.offset, closeTo(0, 1));
-          await tester.tapAt(contentBounds.center);
+          await tester.tapAt(
+            layout == 'kindle'
+                ? Offset(
+                    contentBounds.center.dx,
+                    contentBounds.top + contentBounds.height * .1,
+                  )
+                : contentBounds.center,
+          );
           await tester.pump(const Duration(milliseconds: 350));
           await tester.pumpAndSettle();
           expect(find.byType(AppBar), findsNothing);
@@ -788,6 +1011,7 @@ Future<_Fixture> _open(
     overrides: [
       preferencesProvider.overrideWithValue(preferences),
       libraryRepositoryProvider.overrideWithValue(repo),
+      readerAutoScrollClockProvider.overrideWithValue(tester.binding.clock.now),
       if (executor != null)
         downloadJobExecutorProvider.overrideWithValue(executor),
     ],

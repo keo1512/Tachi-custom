@@ -42,6 +42,113 @@ final class TachiSourceBrowserTests: XCTestCase {
   private var animationsEnabled = true
   private let sourceURL = "https://reader.source.test/story"
 
+  @MainActor
+  func testBrowserOptionsRejectMismatchedSeedBeforePresentation() {
+    let invalid: [[String: Any]] = [
+      ["url": "https://other.source.test/", "cookies": []],
+      ["url": "https://reader.source.test/story", "cookies": NSNull()],
+    ]
+    for seed in invalid {
+      var calls = 0
+      TachiSourceBrowser.open(options: ["url": sourceURL, "automatic": true, "seed": seed]) { result in
+        XCTAssertEqual((result as? FlutterError)?.code, "INVALID_BROWSER_SESSION")
+        calls += 1
+      }
+      XCTAssertEqual(calls, 1)
+      XCTAssertNil(host.presentedViewController)
+    }
+  }
+
+  @MainActor
+  func testBrowserSeedImportsAllPathsAndKeepsUnrelatedCookies() throws {
+    let cancelled = expectation(description: "Seed test closed")
+    let (navigation, browser, _) = try open { value in
+      XCTAssertEqual((value as? [String: Any])?["cancelled"] as? Bool, true)
+      cancelled.fulfill()
+    }
+    let webView = readyPage()
+    try replaceWebView(browser, with: webView)
+    let stored = expectation(description: "Old source and unrelated cookies stored")
+    stored.expectedFulfillmentCount = 2
+    for domain in ["reader.source.test", "other.source.test"] {
+      let cookie = try XCTUnwrap(HTTPCookie(properties: [.name: "old", .value: "old", .domain: domain, .path: "/"]))
+      webView.configuration.websiteDataStore.httpCookieStore.setCookie(cookie) { stored.fulfill() }
+    }
+    wait(for: [stored], timeout: 5)
+    browser.setValue(["url": sourceURL, "cookies": [[
+      "name": "path-session", "value": "new", "domain": "reader.source.test", "path": "/chapter",
+      "hostOnly": true, "secure": true, "httpOnly": true,
+    ]]], forKey: "seed")
+    let loaded = expectation(description: "Seeded source requested")
+    webView.onRequest = { request in
+      XCTAssertEqual(request.url?.absoluteString, self.sourceURL)
+      loaded.fulfill()
+    }
+    browser.perform(NSSelectorFromString("seedAndLoad"))
+    wait(for: [loaded], timeout: 5)
+    let checked = expectation(description: "Real WebKit seed inspected")
+    webView.configuration.websiteDataStore.httpCookieStore.getAllCookies { cookies in
+      XCTAssertFalse(cookies.contains { $0.name == "old" && $0.domain == "reader.source.test" })
+      XCTAssertTrue(cookies.contains { $0.name == "old" && $0.domain == "other.source.test" })
+      let imported = cookies.first { $0.name == "path-session" }
+      XCTAssertEqual(imported?.path, "/chapter")
+      XCTAssertEqual(imported?.value, "new")
+      XCTAssertEqual(imported?.isSecure, true)
+      XCTAssertEqual(imported?.isHTTPOnly, true)
+      XCTAssertNil(imported?.expiresDate)
+      checked.fulfill()
+    }
+    wait(for: [checked], timeout: 5)
+    navigation.dismiss(animated: false)
+    wait(for: [cancelled], timeout: 3)
+  }
+
+  @MainActor
+  func testAutomaticClearanceNeedsSuccessfulMainPageAndCompletesOnce() throws {
+    let finished = expectation(description: "Verified session automatically completed")
+    var completions = 0
+    let (_, browser, _) = try open { value in
+      let result = value as? [String: Any]
+      XCTAssertEqual(result?["verified"] as? Bool, true)
+      XCTAssertEqual(result?["cancelled"] as? Bool, false)
+      completions += 1
+      finished.fulfill()
+    }
+    let webView = readyPage()
+    try replaceWebView(browser, with: webView)
+    browser.setValue(true, forKey: "automatic")
+    browser.setValue(true, forKey: "pageReady")
+    browser.setValue(false, forKey: "mainResponseAllowed")
+    let stored = expectation(description: "Clearance stored")
+    let cookie = try XCTUnwrap(HTTPCookie(properties: [
+      .name: "cf_clearance", .value: "local-fixture", .domain: "reader.source.test", .path: "/", .secure: "TRUE",
+    ]))
+    webView.configuration.websiteDataStore.httpCookieStore.setCookie(cookie) { stored.fulfill() }
+    wait(for: [stored], timeout: 5)
+    browser.perform(NSSelectorFromString("checkClearance"))
+    XCTAssertEqual(completions, 0)
+    browser.setValue(true, forKey: "mainResponseAllowed")
+    browser.perform(NSSelectorFromString("checkClearance"))
+    browser.perform(NSSelectorFromString("checkClearance"))
+    wait(for: [finished], timeout: 5)
+    XCTAssertEqual(completions, 1)
+  }
+
+  @MainActor
+  func testAutomaticBrowserCancelsWhenAppGoesToBackground() throws {
+    let cancelled = expectation(description: "Automatic browser cancelled")
+    var calls = 0
+    let (_, browser, _) = try open { value in
+      XCTAssertEqual((value as? [String: Any])?["cancelled"] as? Bool, true)
+      calls += 1
+      cancelled.fulfill()
+    }
+    browser.setValue(true, forKey: "automatic")
+    NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+    wait(for: [cancelled], timeout: 3)
+    XCTAssertEqual(calls, 1)
+  }
+
   override func setUpWithError() throws {
     XCTAssertTrue(Thread.isMainThread)
     try MainActor.assumeIsolated { try setUpBrowserWindow() }
@@ -102,6 +209,10 @@ final class TachiSourceBrowserTests: XCTestCase {
   @MainActor
   private func replaceWebView(_ browser: TachiSourceBrowser, with fixture: WKWebView) throws {
     let original = try XCTUnwrap(browser.view.subviews.compactMap { $0 as? WKWebView }.first)
+    if let observer = browser as? WKHTTPCookieStoreObserver {
+      original.configuration.websiteDataStore.httpCookieStore.remove(observer)
+      browser.setValue(false, forKey: "observingCookies")
+    }
     fixture.navigationDelegate = original.navigationDelegate
     fixture.uiDelegate = original.uiDelegate
     original.stopLoading()

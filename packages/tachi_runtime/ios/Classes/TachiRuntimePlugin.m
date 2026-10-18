@@ -30,6 +30,14 @@ static NSString *tachiStartupError;
 }
 
 - (void)handleMethodCall:(FlutterMethodCall *)call result:(FlutterResult)result {
+  if ([call.method isEqualToString:@"openSourceBrowser"]) {
+    if (![call.arguments isKindOfClass:NSDictionary.class]) {
+      result([FlutterError errorWithCode:@"INVALID_SOURCE_URL" message:@"Thiếu phiên nguồn." details:nil]);
+      return;
+    }
+    [TachiSourceBrowser openOptions:call.arguments result:result];
+    return;
+  }
   if ([call.method isEqualToString:@"openBrowser"]) {
     if (![call.arguments isKindOfClass:NSString.class]) {
       result([FlutterError errorWithCode:@"INVALID_SOURCE_URL" message:@"Thiếu địa chỉ nguồn." details:nil]);

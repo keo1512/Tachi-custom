@@ -12,6 +12,7 @@ import '../../library/presentation/library_view_model.dart';
 import '../../library/presentation/library_source_label.dart';
 import '../domain/catalogue.dart';
 import '../domain/source_migration.dart';
+import '../application/source_migration_service.dart';
 import 'migration_source_selection.dart';
 import 'source_cover_image.dart';
 
@@ -103,7 +104,7 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
       builder: (ctx) => CupertinoActionSheet(
         title: Text('Xác nhận chuyển ${ready.length} truyện'),
         message: Text(
-          'Chỉ chuyển các kết quả bạn đã xem trước. ${selected.length - ready.length} truyện chưa có kết quả sẽ được bỏ qua. $offline chương offline vẫn thuộc truyện cũ; nguồn mới cần tải lại. Dữ liệu được ghi cùng lúc và có bản phục hồi.',
+          'Chỉ chuyển các kết quả bạn đã xem trước. ${selected.length - ready.length} truyện chưa có kết quả sẽ được bỏ qua. $offline chương offline vẫn thuộc truyện cũ; nguồn mới cần tải lại. Thư mục được giữ. Thời lượng đọc chỉ chuyển khi thay thế; giữ cả hai thì thời lượng vẫn ở truyện cũ để không cộng hai lần. Dữ liệu được ghi cùng lúc và có bản phục hồi.',
         ),
         actions: [
           CupertinoActionSheetAction(
@@ -136,7 +137,8 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
     });
     try {
       final repository = ref.read(libraryRepositoryProvider);
-      final completed = await SourceMigration(repository)
+      final completed = await ref
+          .read(sourceMigrationProvider)
           .commitBatch(ready, replaceOld: choice, expectedRevision: revision);
       if (!mounted) return;
       final committedRevision = repository.replacementRevision;
@@ -157,8 +159,22 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
         SnackBar(content: Text('Đã chuyển ${completed.length} truyện.')),
       );
     } catch (e) {
+      if (e is SourceMigrationRecoveryRequired && mounted) {
+        setState(() {
+          selectionRevision = ref
+              .read(libraryRepositoryProvider)
+              .replacementRevision;
+          selected.clear();
+          previews.clear();
+        });
+        await ref.read(libraryProvider.notifier).refresh();
+      }
       if (mounted) {
-        setState(() => error = 'Chưa chuyển truyện nào. ${userFacingError(e)}');
+        setState(
+          () => error = e is SourceMigrationRecoveryRequired
+              ? userFacingError(e)
+              : 'Chưa chuyển truyện nào. ${userFacingError(e)}',
+        );
       }
     } finally {
       if (mounted) setState(() => busy = false);

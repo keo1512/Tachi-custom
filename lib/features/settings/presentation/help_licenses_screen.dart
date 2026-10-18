@@ -91,8 +91,8 @@ const helpTopics = <HelpTopic>[
     'Thiết lập giao diện cho phép theo hệ thống, sáng hoặc tối. Reader có nền đồng bộ và tùy chọn đọc riêng. Khóa app dùng Face ID/Touch ID hoặc mật mã thiết bị với thời gian tự khóa. Reader hỗ trợ phím điều hướng; hai ngón zoom tạm chặn cuộn cha để không làm lệch vị trí đọc.',
   ),
   HelpTopic(
-    'Dịch vụ theo dõi và phạm vi hỗ trợ',
-    'Tiến độ đọc cục bộ đã có. Các tích hợp tracker bên ngoài như MyAnimeList/AniList và các dịch vụ khác chưa có trong app. Việc thấy nguồn hoặc cài được gói không bảo đảm mọi truyện từ nguồn đều đọc được; báo lỗi nguồn cần phân biệt với lỗi thư viện hoặc nội dung offline.',
+    'Phạm vi hỗ trợ nguồn truyện',
+    'Việc thấy nguồn hoặc cài được gói không bảo đảm mọi truyện từ nguồn đều đọc được; báo lỗi nguồn cần phân biệt với lỗi thư viện hoặc nội dung offline. Khi báo lỗi, ghi rõ nguồn, thao tác và phiên bản app để kiểm tra đúng trường hợp.',
   ),
 ];
 

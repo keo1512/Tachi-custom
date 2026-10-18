@@ -1,0 +1,31 @@
+﹣ original MangaDex ZIP executes metadata search/detail/TOC/image-URL chapter (1.1953ms) # SKIP
+﹣ original encrypted Hako ZIP produces capability error without executing or decrypting it (0.2218ms) # SKIP
+﹣ original Syosetu ZIP executes search/detail/TOC and requires nonempty chapter output (0.1725ms) # SKIP
+﹣ original TruyenFull ZIP executes complete novel search/detail/TOC/chapter flow (0.1851ms) # SKIP
+✔ plaintext package identity is stable across version updates and original ZIP preserved (114.7147ms)
+✔ ZIP malformed/path/count/size/duplicate/encrypted packages are rejected before execution (10.9516ms)
+✔ legacy chinese_novel normalizes to novel (1.8815ms)
+✔ Jsoup-style HTML collection chains include first/get/map/remove and safe empty selectors (15.3194ms)
+✔ original script semantics: local load, config, Response, persistent storage and synchronous HTTP (2184.8477ms)
+✔ capability errors and script Response.error are explicit (729.8303ms)
+✔ non-terminating script process is bounded by timeout (1019.5953ms)
+✔ failed HTTP cannot silently become an empty successful catalogue (542.3449ms)
+✔ HTTP API installs ZIP, registry, sources and complete search/detail/TOC/chapter flow (1627.9649ms)
+✔ comic chapter URLs and request headers normalize without downloading image data (425.2029ms)
+﹣ original Komga APK executes search/detail/TOC/page metadata and real image bytes (2.0075ms) # SKIP
+✔ bundled host executes search/detail/TOC/chapter fixture scripts through synchronous JSON bridges (60.4515ms)
+✔ HTML proxy supports numeric access, iteration, mutations, attributes and empty selections (34.8325ms)
+✔ hosted XCTest HTML fixture also executes through the bundled JavaScript boundary (26.3222ms)
+✔ local load, static config and localStorage are preserved without copying app core.js (11.4375ms)
+✔ unsupported native features and source errors fail explicitly (16.6991ms)
+✔ pinned built-in CryptoJS hashes and AES use upstream bytes; local crypto.js cannot override it (9.5574ms)
+✔ script load rejects path traversal, missing files and circular imports (12.247ms)
+✔ response json/text/base64/blob and Http builder pass bodies and headers to native HTTP (6.3897ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 5
+ℹ todo 0
+ℹ duration_ms 12206.7984

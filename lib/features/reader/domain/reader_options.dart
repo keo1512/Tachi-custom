@@ -23,6 +23,9 @@ class ReaderOptions {
     this.autoPageSeconds = 8,
     this.holdScroll = false,
     this.imageScale = 'width',
+    this.mangaLayout = 'continuous',
+    this.invertDoublePages = false,
+    this.pagedTapZones = 'horizontal',
     this.tapZones = 'off',
     this.invertTapZones = false,
     this.orientationMargins = false,
@@ -56,6 +59,18 @@ class ReaderOptions {
       fullScreen,
       hideStatusBar,
       disableBackSwipe;
+  final bool invertDoublePages;
+  final String mangaLayout, pagedTapZones;
+  bool get isPaged => mangaLayout != 'continuous';
+  int get pagesPerView => mangaLayout == 'doublePage' ? 2 : 1;
+  String get activeTapZones => isPaged ? pagedTapZones : tapZones;
+  String get mangaLayoutLabel => switch (mangaLayout) {
+    'leftToRight' => 'Lật trang từ trái sang phải',
+    'rightToLeft' => 'Lật trang từ phải sang trái',
+    'verticalPages' => 'Lật trang theo chiều dọc',
+    'doublePage' => 'Hai trang cạnh nhau',
+    _ => 'Cuộn dọc liên tục',
+  };
   final double? portraitLeft, portraitRight, landscapeLeft, landscapeRight;
   final int tint, backgroundColor;
   final String orientation,
@@ -96,13 +111,36 @@ class ReaderOptions {
       ]),
       autoPageSeconds: number('autoPageSeconds', 8, 2, 120),
       holdScroll: flag('holdScroll', false),
+      mangaLayout: choice('mangaLayout', 'continuous', [
+        'continuous',
+        'leftToRight',
+        'rightToLeft',
+        'verticalPages',
+        'doublePage',
+      ]),
+      invertDoublePages: flag('invertDoublePages', false),
+      pagedTapZones: choice('pagedTapZones', 'horizontal', [
+        'off',
+        'horizontal',
+        'vertical',
+        'edges',
+        'kindle',
+        'lShape',
+      ]),
       imageScale: choice('imageScale', 'width', [
         'width',
         'height',
         'screen',
         'original',
       ]),
-      tapZones: choice('tapZones', 'off', ['off', 'horizontal', 'vertical']),
+      tapZones: choice('tapZones', 'off', [
+        'off',
+        'horizontal',
+        'vertical',
+        'edges',
+        'kindle',
+        'lShape',
+      ]),
       invertTapZones: flag('invertTapZones', false),
       orientationMargins: flag('orientationMargins', false),
       portraitLeft: optionalMargin('portraitLeft'),
@@ -165,6 +203,9 @@ class ReaderOptions {
     'autoPageSeconds': autoPageSeconds,
     'holdScroll': holdScroll,
     'imageScale': imageScale,
+    'mangaLayout': mangaLayout,
+    'invertDoublePages': invertDoublePages,
+    'pagedTapZones': pagedTapZones,
     'tapZones': tapZones,
     'invertTapZones': invertTapZones,
     'orientationMargins': orientationMargins,

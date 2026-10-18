@@ -24,8 +24,32 @@ class ReaderPlatform {
     await channel.invokeMethod<void>('saveImage', bytes);
   }
 
-  static Future<String> recognizeText(Uint8List bytes) async {
+  static Future<String> recognizeText(Uint8List bytes, {Rect? region}) async {
     if (!supported) throw UnsupportedError('Nhận dạng chữ cần thiết bị iOS.');
+    if (region != null) {
+      if (!region.isFinite ||
+          region.isEmpty ||
+          region.left < 0 ||
+          region.top < 0 ||
+          region.right > 1 ||
+          region.bottom > 1) {
+        throw ArgumentError.value(
+          region,
+          'region',
+          'Vùng ảnh phải nằm trong khoảng 0–1.',
+        );
+      }
+      return await channel.invokeMethod<String>('recognizeTextRegion', {
+            'bytes': bytes,
+            'region': {
+              'left': region.left,
+              'top': region.top,
+              'width': region.width,
+              'height': region.height,
+            },
+          }) ??
+          '';
+    }
     return await channel.invokeMethod<String>('recognizeText', bytes) ?? '';
   }
 

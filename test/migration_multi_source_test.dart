@@ -43,6 +43,178 @@ class Sources extends SourceRepository {
 }
 
 void main() {
+  testWidgets(
+    'cancelled migration page cannot close a source from a late result',
+    (tester) async {
+      final repository = MemoryLibraryRepository();
+      await repository.save(
+        LibraryBook(
+          id: 'old',
+          title: 'Tên cũ',
+          engine: 'vbook',
+          sourceId: 'old',
+        ),
+      );
+      final pending = Completer<List<CatalogueBook>>();
+      var calls = 0;
+      final sources = Sources((s) async {
+        calls++;
+        if (calls == 2) return pending.future;
+        return CataloguePage([target(1)], hasNextPage: calls == 1);
+      });
+      addTearDown(sources.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            libraryRepositoryProvider.overrideWithValue(repository),
+            sourceRepositoryProvider.overrideWithValue(sources),
+          ],
+          child: MaterialApp(
+            home: SourceMigrationScreen(bookId: 'old', source: source(1)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tải thêm'));
+      await tester.pump();
+      expect(calls, 2);
+      await tester.tap(find.text('Hủy tìm kiếm'));
+      await tester.pump();
+      pending.complete(CataloguePage([], hasNextPage: false));
+      await tester.pumpAndSettle();
+      expect(find.text('Tải thêm'), findsOneWidget);
+      await tester.tap(find.text('Tải thêm'));
+      await tester.pumpAndSettle();
+      expect(calls, 3);
+      expect(find.text('Tải thêm'), findsNothing);
+      expect(find.widgetWithText(ListTile, 'Truyện 1'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+  testWidgets(
+    'mixed migration sources request more only from unfinished sources',
+    (tester) async {
+      final repository = MemoryLibraryRepository();
+      await repository.save(
+        LibraryBook(
+          id: 'old',
+          title: 'Tên cũ',
+          engine: 'vbook',
+          sourceId: 'old',
+        ),
+      );
+      final requests = <String, int>{};
+      final sources = Sources((s) async {
+        final count = requests.update(
+          s.id,
+          (count) => count + 1,
+          ifAbsent: () => 1,
+        );
+        return CataloguePage([
+          target(int.parse(s.id)),
+        ], hasNextPage: s.id == '2' && count == 1);
+      });
+      addTearDown(sources.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            libraryRepositoryProvider.overrideWithValue(repository),
+            sourceRepositoryProvider.overrideWithValue(sources),
+          ],
+          child: MaterialApp(
+            home: SourceMigrationScreen(
+              bookId: 'old',
+              source: source(1),
+              alternatives: [source(2)],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(requests, {'1': 1, '2': 1});
+      await tester.tap(find.text('Tải thêm'));
+      await tester.pumpAndSettle();
+      expect(requests, {'1': 1, '2': 2});
+      expect(find.text('Tải thêm'), findsNothing);
+      expect(find.widgetWithText(ListTile, 'Truyện 1'), findsOneWidget);
+      expect(find.widgetWithText(ListTile, 'Truyện 2'), findsOneWidget);
+      // Submitting another query resets the set of eligible source identities.
+      await tester.enterText(find.byType(TextField), 'Tên khác');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      expect(requests, {'1': 2, '2': 3});
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+  test('multi-source migration retains explicit page flags without inventing metadata for legacy results or errors', () async {
+    final repository = Sources((s) async {
+      if (s.id == '1') return CataloguePage([target(1)], hasNextPage: false);
+      if (s.id == '2') return CataloguePage([], hasNextPage: true);
+      if (s.id == '3') return [target(3)];
+      throw StateError('Fixture error');
+    });
+    addTearDown(repository.dispose);
+    final result = (await MigrationSearch(repository)
+        .search([for (var id = 1; id <= 4; id++) source(id)], 'Tên'))!;
+    expect(result.results[0].hasNextPage, false);
+    expect(result.results[1].hasNextPage, true);
+    expect(result.results[1].books, isEmpty);
+    expect(result.results[2].hasNextPage, isNull);
+    expect(result.results[3].hasNextPage, isNull);
+    expect(result.results[3].error, contains('Fixture error'));
+  });
+  for (final finalFlag in [false, true, null]) {
+    testWidgets(
+      'migration page control honors $finalFlag and legacy nonempty fallback',
+      (tester) async {
+        final repository = MemoryLibraryRepository();
+        await repository.save(
+          LibraryBook(
+            id: 'old',
+            title: 'Tên cũ',
+            engine: 'vbook',
+            sourceId: 'old',
+          ),
+        );
+        var count = 0;
+        final sources = Sources((s) async {
+          count++;
+          if (count > 1) return CataloguePage([], hasNextPage: false);
+          return finalFlag == null
+              ? [target(1)]
+              : CataloguePage([target(1)], hasNextPage: finalFlag);
+        });
+        addTearDown(sources.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              libraryRepositoryProvider.overrideWithValue(repository),
+              sourceRepositoryProvider.overrideWithValue(sources),
+            ],
+            child: MaterialApp(
+              home: SourceMigrationScreen(bookId: 'old', source: source(1)),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Tải thêm'),
+          finalFlag == false ? findsNothing : findsOneWidget,
+        );
+        if (finalFlag != false) {
+          await tester.tap(find.text('Tải thêm'));
+          await tester.pumpAndSettle();
+          expect(find.text('Tải thêm'), findsNothing);
+          expect(find.widgetWithText(ListTile, 'Truyện 1'), findsOneWidget);
+        }
+        expect(count, finalFlag == false ? 1 : 2);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
   test('multi-source search keeps successful sources, deduplicates results and isolates failures', () async {
     final repository = Sources((source) async {
       if (source.id == '2') throw StateError('Nguồn đang bảo trì');

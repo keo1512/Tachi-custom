@@ -6,6 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tachi_books/features/library/application/backup_service_provider.dart';
+import 'package:tachi_books/features/library/data/backup_configuration.dart';
+import 'package:tachi_books/features/library/data/coordinated_preferences.dart';
+import 'package:tachi_books/features/library/data/library_repository.dart';
+import 'package:tachi_books/features/library/data/library_snapshot.dart';
+import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
 import 'package:tachi_books/features/sources/data/extension_index.dart';
 import 'package:tachi_books/features/sources/domain/catalogue.dart';
@@ -41,8 +47,206 @@ Future<ProviderContainer> mount(
   );
 }
 
+String _repositories(String host) => jsonEncode([
+  {'url': 'https://$host/plugin.json', 'engine': 'vbook'},
+]);
+
+Future<void> _restoreRepositories(
+  ProviderContainer container,
+  LibraryRepository repository,
+  CoordinatedPreferences preferences,
+  String host,
+) async {
+  final before = LibrarySnapshot(
+    (await repository.snapshot()).entries,
+    configuration: BackupConfiguration.capture(preferences),
+  );
+  final incoming = LibrarySnapshot(
+    before.entries,
+    configuration: BackupConfiguration.fromJson({
+      'version': 1,
+      'preferences': {
+        ExtensionCatalogueController.preferenceKey: _repositories(host),
+      },
+    }),
+  );
+  // Use the production service and its controller invalidation callback.
+  await container
+      .read(backupServiceProvider)
+      .replace(incoming.encode(), expectedFingerprint: before.fingerprint);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  for (final action in ['add', 'rename', 'remove', 'refresh']) {
+    for (final httpFailure in [false, true]) {
+      test(
+        'restore rejects pending $action after delayed HTTP ${httpFailure ? 'error' : 'success'}',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            ExtensionCatalogueController.preferenceKey: _repositories(
+              'old.test',
+            ),
+          });
+          final repository = MemoryLibraryRepository();
+          final preferences = await CoordinatedPreferences.open(
+            await SharedPreferences.getInstance(),
+            repository,
+          );
+          final entered = Completer<void>(),
+              response = Completer<http.Response>();
+          // Rename/remove can await the initial catalogue fetch. Refresh waits
+          // for its next fetch; add waits for the newly requested repository.
+          var hold = action == 'rename' || action == 'remove';
+          final client = MockClient((request) async {
+            if (hold &&
+                (request.url.host == 'pending.test' ||
+                    request.url.host == 'old.test')) {
+              if (!entered.isCompleted) entered.complete();
+              return response.future;
+            }
+            return registry(request.url.host);
+          });
+          addTearDown(client.close);
+          final container = ProviderContainer(
+            overrides: [
+              preferencesProvider.overrideWithValue(preferences),
+              libraryRepositoryProvider.overrideWithValue(repository),
+              extensionIndexRepositoryProvider.overrideWithValue(
+                ExtensionIndexRepository(client),
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          final subscription = container.listen(
+            extensionCatalogueProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          if (!hold) await container.read(extensionCatalogueProvider.future);
+          hold = true;
+          final controller = container.read(
+            extensionCatalogueProvider.notifier,
+          );
+          final work = switch (action) {
+            'add' => controller.add(
+              SourceEngine.vbook,
+              'https://pending.test/plugin.json',
+              isCurrent: () => true,
+            ),
+            'rename' => controller.rename(
+              'vbook:https://old.test/plugin.json',
+              'Old edit',
+            ),
+            'remove' => controller.remove('vbook:https://old.test/plugin.json'),
+            _ => controller.refresh(),
+          };
+          final rejected = expectLater(work, throwsFormatException);
+          await entered.future;
+          await _restoreRepositories(
+            container,
+            repository,
+            preferences,
+            'restored.test',
+          );
+          final restored = preferences.getString(
+            ExtensionCatalogueController.preferenceKey,
+          );
+          await container.read(extensionCatalogueProvider.future);
+          response.complete(
+            httpFailure
+                ? http.Response('Unavailable', 503)
+                : registry('Old response'),
+          );
+          await rejected;
+          expect(
+            preferences.getString(ExtensionCatalogueController.preferenceKey),
+            restored,
+          );
+          expect(
+            (await container.read(extensionCatalogueProvider.future))
+                .map((item) => item.url),
+            ['https://restored.test/plugin.json'],
+          );
+          expect((await repository.list()), isEmpty);
+        },
+      );
+    }
+  }
+
+  test('restore invalidates edits already queued behind a pending add, then permits fresh edits', () async {
+    SharedPreferences.setMockInitialValues({
+      ExtensionCatalogueController.preferenceKey: _repositories('old.test'),
+    });
+    final repository = MemoryLibraryRepository();
+    final preferences = await CoordinatedPreferences.open(
+      await SharedPreferences.getInstance(),
+      repository,
+    );
+    final entered = Completer<void>(), response = Completer<http.Response>();
+    final client = MockClient((request) async {
+      if (request.url.host == 'pending.test') {
+        entered.complete();
+        return response.future;
+      }
+      return registry(request.url.host);
+    });
+    addTearDown(client.close);
+    final container = ProviderContainer(
+      overrides: [
+        preferencesProvider.overrideWithValue(preferences),
+        libraryRepositoryProvider.overrideWithValue(repository),
+        extensionIndexRepositoryProvider.overrideWithValue(
+          ExtensionIndexRepository(client),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    final subscription = container.listen(
+      extensionCatalogueProvider,
+      (_, _) {},
+    );
+    addTearDown(subscription.close);
+    await container.read(extensionCatalogueProvider.future);
+    final controller = container.read(extensionCatalogueProvider.notifier);
+    final first = expectLater(
+      controller.add(SourceEngine.vbook, 'https://pending.test/plugin.json'),
+      throwsFormatException,
+    );
+    await entered.future;
+    final rename = expectLater(
+      controller.rename('vbook:https://old.test/plugin.json', 'Stale'),
+      throwsFormatException,
+    );
+    final remove = expectLater(
+      controller.remove('vbook:https://restored.test/plugin.json'),
+      throwsFormatException,
+    );
+    final refresh = expectLater(controller.refresh(), throwsFormatException);
+    await _restoreRepositories(
+      container,
+      repository,
+      preferences,
+      'restored.test',
+    );
+    await container.read(extensionCatalogueProvider.future);
+    response.complete(registry('Late'));
+    await Future.wait([first, rename, remove, refresh]);
+    expect(
+      preferences.getString(ExtensionCatalogueController.preferenceKey),
+      _repositories('restored.test'),
+    );
+    // The old queue settles normally; a later operation captures the new
+    // generation and can persist in the same notifier without restarting it.
+    await controller.add(SourceEngine.vbook, 'https://fresh.test/plugin.json');
+    await controller.rename('vbook:https://fresh.test/plugin.json', 'Fresh');
+    await controller.remove('vbook:https://restored.test/plugin.json');
+    await controller.refresh();
+    final saved = (await container.read(extensionCatalogueProvider.future))
+        .single;
+    expect(saved.url, 'https://fresh.test/plugin.json');
+    expect(saved.label, 'Fresh');
+  });
   test('custom repository name survives refresh, restart and clearing restores metadata name', () async {
     final client = MockClient(
       (_) async => http.Response(

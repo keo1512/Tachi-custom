@@ -147,9 +147,10 @@ void main() {
       );
       expect(folder, findsOneWidget);
       expect(
-        LibraryFolders.decode(
+        LibraryFolders.decodeWithCategories(
           preferences.getString(LibraryFolders.preferenceKey),
-        ).names.length,
+          preferences.getString(LibraryFolders.categoryPreferenceKey),
+        ).namesIn('Manga').length,
         2,
       );
       await tester.tap(folder);

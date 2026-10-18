@@ -12,6 +12,7 @@ import '../../library/presentation/library_locations.dart';
 import '../domain/catalogue.dart';
 import '../domain/source_migration.dart';
 import '../application/migration_search.dart';
+import '../application/source_migration_service.dart';
 import 'migration_source_selection.dart';
 import 'source_cover_image.dart';
 
@@ -38,6 +39,7 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
   bool busy = false, hasMore = false, committing = false;
   int generation = 0, page = 0;
   String submittedQuery = '';
+  Set<String> moreSourceIdentities = {};
   late final MigrationSearch searches = MigrationSearch(
     ref.read(sourceRepositoryProvider),
   );
@@ -90,6 +92,12 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
   Future<void> search({bool more = false}) async {
     final text = more ? submittedQuery : query.text.trim();
     if (busy || text.isEmpty) return;
+    final participants = more
+        ? selectedSources
+              .where((source) => moreSourceIdentities.contains(source.identity))
+              .toList()
+        : selectedSources;
+    if (participants.isEmpty) return;
     final request = ++generation, nextPage = more ? page + 1 : 1;
     setState(() {
       busy = true;
@@ -98,7 +106,7 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
     });
     try {
       final outcome = await searches.search(
-        selectedSources,
+        participants,
         text,
         page: nextPage,
         onProgress: (value) {
@@ -122,7 +130,13 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
               ]
             : incoming;
         page = nextPage;
-        hasMore = incoming.isNotEmpty;
+        moreSourceIdentities = {
+          for (final result in outcome.results)
+            if (result.error.isEmpty &&
+                (result.hasNextPage ?? result.books.isNotEmpty))
+              result.source.identity,
+        };
+        hasMore = moreSourceIdentities.isNotEmpty;
         submittedQuery = text;
       });
     } catch (e) {
@@ -157,7 +171,7 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
       }
       final chapters = await sources.chapters(item);
       if (!mounted || request != generation) return;
-      final service = SourceMigration(ref.read(libraryRepositoryProvider));
+      final service = ref.read(sourceMigrationProvider);
       checkLibraryRevision(repository.replacementRevision, revision);
       final preview = await service.preview(
         widget.bookId,
@@ -212,6 +226,9 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
       await ref.read(libraryProvider.notifier).refresh();
       if (mounted) context.replace(libraryBookLocation(saved.id));
     } catch (e) {
+      if (e is SourceMigrationRecoveryRequired && mounted) {
+        await ref.read(libraryProvider.notifier).refresh();
+      }
       if (mounted && request == generation) {
         setState(() => error = userFacingError(e));
       }
@@ -417,6 +434,9 @@ class _MigrationPreviewState extends ConsumerState<_MigrationPreview> {
             const SizedBox(height: 12),
             const Text(
               'Danh mục, yêu thích, ghi chú, thiết lập đọc và lần đọc gần nhất được giữ. Vị trí đọc và dấu trang ở nguồn mới bắt đầu từ đầu chương vì số trang giữa hai nguồn có thể khác nhau.',
+            ),
+            const Text(
+              'Thư mục được giữ cho truyện ở nguồn mới. Khi thay thế, thời lượng đọc chuyển sang truyện mới; khi giữ cả hai, thời lượng đã ghi vẫn thuộc truyện cũ để không cộng hai lần.',
             ),
             Text(
               '${value.oldOfflineChapters} chương offline vẫn thuộc truyện cũ. Cần tải lại từ nguồn mới để đọc offline.',

@@ -21,7 +21,7 @@ import '../../library/data/library_repository.dart';
 import '../../library/data/library_mutation.dart';
 import '../../library/domain/library_book.dart';
 import '../../library/domain/library_reading.dart';
-import '../../library/domain/book_reading_times.dart';
+import '../../library/application/reading_time_recorder.dart';
 import '../../library/application/reading_statistics_controller.dart';
 import '../../library/data/coordinated_preferences.dart';
 import '../../library/presentation/library_preference_writes.dart';
@@ -29,6 +29,7 @@ import '../../library/presentation/library_view_model.dart';
 import '../../settings/settings_controller.dart';
 import '../../settings/presentation/log_diagnostics_screen.dart';
 import '../../sources/domain/catalogue.dart';
+import '../../sources/domain/native_page_locator.dart';
 import 'reader_settings_sheet.dart';
 import 'reader_controls.dart';
 import 'native_manga_image_window.dart';
@@ -41,6 +42,9 @@ import 'reader_keyboard_controls.dart';
 import 'reader_hold_scroll.dart';
 import 'manga_page_layout.dart';
 import 'reader_tap_zones.dart';
+import 'reader_image_region.dart';
+import 'reader_chapter_boundary.dart';
+import 'paged_manga_reader.dart';
 import 'reader_pinch_scroll_guard.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
@@ -82,6 +86,7 @@ class _ReadingLocation {
 class _ReaderState extends ConsumerState<ReaderScreen>
     with WidgetsBindingObserver {
   final scroll = ScrollController();
+  final pageController = PageController();
   final systemUi = ReaderSystemUiLease();
   bool allowBack = false;
   Orientation? layoutOrientation;
@@ -125,6 +130,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   bool closing = false;
   int modalDepth = 0;
   double heldSpeed = 40;
+  bool get paged => content?.kind == 'manga' && options.isPaged;
 
   @override
   void initState() {
@@ -132,6 +138,11 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     readingClock = ref.read(readingStatisticsClockProvider);
     autoScroll = ReaderAutoScroll(
       scroll,
+      clock: ref.read(readerAutoScrollClockProvider),
+      pageReady: () => paged
+          ? pageController.hasClients &&
+                !pageController.position.isScrollingNotifier.value
+          : scroll.hasClients && !scroll.position.isScrollingNotifier.value,
       canScroll: () =>
           mounted &&
           !loading &&
@@ -143,7 +154,11 @@ class _ReaderState extends ConsumerState<ReaderScreen>
       onNextPage: () {
         final data = content;
         if (data?.kind == 'manga') {
-          if (page + 1 < data!.images.length) seek((page + 1).toDouble());
+          if (paged) {
+            movePaged(1);
+          } else if (page + 1 < data!.images.length) {
+            seek((page + 1).toDouble());
+          }
         } else if (scroll.hasClients) {
           scroll.jumpTo(
             (scroll.offset + scroll.position.viewportDimension * .9).clamp(
@@ -258,47 +273,13 @@ class _ReaderState extends ConsumerState<ReaderScreen>
             if (!isCurrent()) return;
             final seconds = end.difference(start).inSeconds;
             if (seconds <= 0) return;
-            final times = BookReadingTimes.decode(
-              preferences.getString(BookReadingTimes.preferenceKey),
+            await recordReadingTime(
+              preferences,
+              bookId: bookId,
+              start: start,
+              end: end,
+              isCurrent: isCurrent,
             );
-            final encoded = BookReadingTimes({
-              ...times.seconds,
-              bookId: times.of(bookId) + seconds,
-            }).encode();
-            final saved = preferences is CoordinatedPreferences
-                ? await (preferences as CoordinatedPreferences)
-                      .setStringIfCurrent(
-                        BookReadingTimes.preferenceKey,
-                        encoded,
-                        isCurrent,
-                      )
-                : await preferences.setString(
-                    BookReadingTimes.preferenceKey,
-                    encoded,
-                  );
-            if (!saved) {
-              throw StateError('Không lưu được thời lượng đọc truyện.');
-            }
-            var cursor = start;
-            while (cursor.isBefore(end)) {
-              if (!isCurrent()) return;
-              final midnight = DateTime(
-                cursor.year,
-                cursor.month,
-                cursor.day + 1,
-              );
-              final until = end.isBefore(midnight) ? end : midnight;
-              final seconds = until.difference(cursor).inSeconds;
-              if (seconds > 0) {
-                final key =
-                    'readSeconds:${cursor.year}-${cursor.month}-${cursor.day}';
-                await preferences.setInt(
-                  key,
-                  (preferences.getInt(key) ?? 0) + seconds,
-                );
-              }
-              cursor = until;
-            }
           }),
         )
         .catchError((Object e) {
@@ -463,6 +444,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   }
 
   void captureScroll() {
+    if (paged) return;
     if (!scroll.hasClients || content == null) return;
     if (content!.kind == 'manga' && imageKeys.isNotEmpty) {
       final viewportBox = viewport.currentContext?.findRenderObject();
@@ -479,8 +461,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
           break;
         }
       }
-      if (scroll.position.maxScrollExtent > 0 &&
-          scroll.offset >= scroll.position.maxScrollExtent - 1) {
+      if (lastMangaPageVisible) {
         position = 1;
         page = imageKeys.length - 1;
       }
@@ -496,6 +477,18 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || request != generation || content == null) return;
       final manga = content!.kind == 'manga';
+      if (paged && content!.images.isNotEmpty) {
+        if (!pageController.hasClients) return;
+        final ordinal =
+            (pendingPageSeek ?? (position * content!.images.length).floor())
+                .clamp(0, content!.images.length - 1);
+        pageController.jumpToPage(ordinal ~/ options.pagesPerView);
+        page = ordinal;
+        pendingPageSeek = null;
+        restoring = false;
+        if (mangaChapterCompleted) unawaited(persist());
+        return;
+      }
       if (scroll.hasClients) {
         if (manga && imageKeys.isNotEmpty) {
           // Native pages have stable estimated/cached heights outside a bounded
@@ -561,14 +554,32 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     }
   }
 
+  bool get lastMangaPageVisible {
+    if (paged) {
+      return content!.images.isNotEmpty &&
+          page >=
+              ((content!.images.length - 1) ~/ options.pagesPerView) *
+                  options.pagesPerView;
+    }
+    if (imageKeys.isEmpty) return false;
+    final last = imageKeys.last.currentContext?.findRenderObject();
+    final view = viewport.currentContext?.findRenderObject();
+    if (last is! RenderBox ||
+        view is! RenderBox ||
+        !last.hasSize ||
+        !view.hasSize) {
+      return false;
+    }
+    return last.localToGlobal(Offset(0, last.size.height)).dy <=
+        view.localToGlobal(Offset(0, view.size.height)).dy + 1;
+  }
+
   bool get mangaChapterCompleted =>
       !restoring &&
       content?.kind == 'manga' &&
       content!.images.isNotEmpty &&
-      scroll.hasClients &&
-      (scroll.position.maxScrollExtent > 1
-          ? scroll.offset >= scroll.position.maxScrollExtent - 1
-          : decodedImages.length == content!.images.length) &&
+      (paged ? pageController.hasClients : scroll.hasClients) &&
+      lastMangaPageVisible &&
       decodedImages.contains(content!.images.length - 1) &&
       failedImages.isEmpty;
 
@@ -854,7 +865,8 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     unawaited(persist());
   }
 
-  Future<void> changeChapter(int offset) async {
+  int? nextChapter(int offset) {
+    if (offset != -1 && offset != 1) return null;
     var target = current + offset;
     final item = book;
     final seen = <String>{
@@ -869,10 +881,83 @@ class _ReaderState extends ConsumerState<ReaderScreen>
       }
       target += offset;
     }
-    if (item == null || target < 0 || target >= item.chapters.length) return;
+    return item == null || target < 0 || target >= item.chapters.length
+        ? null
+        : target;
+  }
+
+  Future<void> changeChapter(int offset) async {
+    final revision = loadedRevision, request = generation;
+    if (revision == null || repository.replacementRevision != revision) {
+      if (mounted) {
+        message(
+          context,
+          'Thư viện đã thay đổi. Hãy mở lại truyện trước khi chuyển chương.',
+        );
+      }
+      return;
+    }
+    final target = nextChapter(offset);
+    final item = book;
+    if (item == null) return;
+    if (target == null) {
+      if (mounted) {
+        message(
+          context,
+          offset < 0
+              ? 'Không còn chương trước phù hợp.'
+              : 'Không còn chương tiếp theo phù hợp.',
+        );
+      }
+      return;
+    }
     final chapterId = item.chapters[target].id;
     await persist();
-    if (mounted) await load(target, chapterId: chapterId);
+    if (!mounted || closing || request != generation) return;
+    if (repository.replacementRevision != revision) {
+      message(
+        context,
+        'Thư viện đã thay đổi. Hãy mở lại truyện trước khi chuyển chương.',
+      );
+      return;
+    }
+    await load(target, chapterId: chapterId);
+  }
+
+  Future<void> openSourceWebsite() async {
+    final opened = book;
+    if (opened == null) return;
+    final request = generation;
+    final revision = loadedRevision;
+    final failedChapter = error != null;
+    final retryIndex = failedChapter ? requestedChapter : current;
+    final retryChapterId = failedChapter
+        ? requestedChapterId ??
+              (retryIndex >= 0 && retryIndex < opened.chapters.length
+                  ? opened.chapters[retryIndex].id
+                  : null)
+        : opened.chapters[current].id;
+    final retryPosition = failedChapter ? requestedPosition : position;
+    await ref.read(sourceRepositoryProvider).openWebsite(vm.catalogue(opened));
+    if (!mounted || request != generation) return;
+    checkLibraryRevision(repository.replacementRevision, revision);
+    if (error == null && failedImages.isEmpty) return;
+    final latest = await repository.find(opened.id);
+    if (!mounted || request != generation) return;
+    checkLibraryRevision(repository.replacementRevision, revision);
+    if (latest == null ||
+        bookSourceIdentity(latest) != bookSourceIdentity(opened)) {
+      throw StateError('Sách hoặc nguồn đã thay đổi. Hãy mở lại chương.');
+    }
+    if (retryChapterId == null) {
+      throw StateError('Chương không còn trong mục lục.');
+    }
+    await load(
+      retryIndex,
+      resume: true,
+      offset: retryPosition,
+      chapterId: retryChapterId,
+    );
   }
 
   Future<void> pageActions(int index) => readerModal(() => _pageActions(index));
@@ -899,6 +984,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
             'copy': 'Sao chép ảnh',
             'share': 'Chia sẻ ảnh',
             'ocr': 'Nhận dạng chữ trong ảnh',
+            'ocrRegion': 'Chọn vùng nhận dạng chữ',
           }.entries)
             CupertinoActionSheetAction(
               onPressed: () => Navigator.pop(ctx, pair.key),
@@ -969,9 +1055,22 @@ class _ReaderState extends ConsumerState<ReaderScreen>
       } else if (action == 'photos') {
         await ReaderPlatform.saveImageToPhotos(imageData.bytes);
         if (mounted) message(context, 'Đã lưu vào Ảnh.');
-      } else if (action == 'ocr') {
-        final text = await ReaderPlatform.recognizeText(imageData.bytes);
+      } else if (action == 'ocr' || action == 'ocrRegion') {
+        final region = action == 'ocrRegion'
+            ? await showReaderImageRegion(context, imageData.bytes)
+            : null;
+        if (!mounted ||
+            request != generation ||
+            (action == 'ocrRegion' && region == null)) {
+          return;
+        }
+        checkLibraryRevision(repository.replacementRevision, revision);
+        final text = await ReaderPlatform.recognizeText(
+          imageData.bytes,
+          region: region,
+        );
         if (!mounted || request != generation) return;
+        checkLibraryRevision(repository.replacementRevision, revision);
         if (text.trim().isEmpty) {
           message(context, 'Không nhận dạng được chữ trong trang này.');
           return;
@@ -1039,7 +1138,8 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         error == null) {
       if (holdingScroll) {
         autoScroll.start(heldSpeed);
-      } else if (next.autoScrollMode == 'page') {
+      } else if (next.autoScrollMode == 'page' ||
+          (content?.kind == 'manga' && next.isPaged)) {
         autoScroll.startTimed(next.autoPageSeconds);
       } else {
         autoScroll.start(next.autoScrollSpeed);
@@ -1190,6 +1290,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
       unawaited(SystemChrome.setPreferredOrientations([]));
     }
     scroll.dispose();
+    pageController.dispose();
     super.dispose();
   }
 
@@ -1225,7 +1326,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     final viewportBox = viewport.currentContext?.findRenderObject();
     final action = content?.kind == 'manga' && viewportBox is RenderBox
         ? readerTapAction(
-            layout: options.tapZones,
+            layout: options.activeTapZones,
             point: viewportBox.globalToLocal(globalPosition),
             viewport: viewportBox.size,
             inverted: options.invertTapZones,
@@ -1237,6 +1338,8 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         restoring = true;
       });
       restoreLocation(generation);
+    } else if (paged) {
+      movePaged(action == ReaderTapAction.next ? 1 : -1);
     } else if (scroll.hasClients && !restoring && !loading) {
       final direction = action == ReaderTapAction.next ? 1 : -1;
       unawaited(
@@ -1248,6 +1351,95 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         ),
       );
     }
+  }
+
+  void movePaged(int direction) {
+    if (!paged ||
+        !pageController.hasClients ||
+        restoring ||
+        loading ||
+        modalDepth > 0 ||
+        closing) {
+      return;
+    }
+    final count = (content!.images.length / options.pagesPerView).ceil();
+    final currentView = (pageController.page ?? 0).round();
+    final target = (currentView + direction).clamp(0, count);
+    if (target == currentView) return;
+    unawaited(
+      pageController.animateToPage(
+        target,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  void pagedChanged(int view, int request) {
+    if (!mounted ||
+        restoring ||
+        loading ||
+        request != generation ||
+        !paged ||
+        content!.images.isEmpty) {
+      return;
+    }
+    setState(() {
+      page = (view * options.pagesPerView).clamp(0, content!.images.length - 1);
+      position = lastMangaPageVisible ? 1 : page / content!.images.length;
+    });
+    nativeImages?.focus(page);
+    debounce?.cancel();
+    debounce = Timer(
+      const Duration(milliseconds: 500),
+      () => unawaited(persist()),
+    );
+  }
+
+  Widget chapterBoundary() => ReaderChapterBoundary(
+    complete:
+        failedImages.isEmpty &&
+        decodedImages.contains(content!.images.length - 1),
+    finalChapter: current >= book!.chapters.length - 1,
+    nextTitle: switch (nextChapter(1)) {
+      final int index => book!.chapters[index].title,
+      null => null,
+    },
+    onNext: () => changeChapter(1),
+  );
+
+  Widget pagedContent() {
+    final request = generation;
+    return PagedMangaReader(
+      viewportKey: viewport,
+      controller: pageController,
+      options: options,
+      pageCount: content!.images.length,
+      onChanged: (view) => pagedChanged(view, request),
+      boundary: chapterBoundary(),
+      page: (index, width, height) => GestureDetector(
+        onLongPress: () => pageActions(index),
+        child: ZoomableMangaPage(
+          key: ValueKey('paged-image:$request:$index'),
+          enabled: options.zoom,
+          child: ColorFiltered(
+            colorFilter: options.imageFilter,
+            child: ColorFiltered(
+              colorFilter: ColorFilter.mode(
+                Color(options.tint).withValues(alpha: options.tintOpacity),
+                options.blendMode,
+              ),
+              child: image(
+                content!.images[index],
+                index,
+                width: width,
+                height: height,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget image(String url, int index, {double? width, double? height}) {
@@ -1323,6 +1515,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         return failed(e);
       }
     }
+    if (isNativePageLocator(url)) return failed(nativePageRuntimeRequiredError);
     return Image.network(
       url,
       width: width,
@@ -1365,7 +1558,9 @@ class _ReaderState extends ConsumerState<ReaderScreen>
             (layoutOrientation != null &&
                 layoutOrientation != screenOrientation) ||
             options.gap != nextOptions.gap ||
-            options.imageScale != nextOptions.imageScale)) {
+            options.imageScale != nextOptions.imageScale ||
+            options.mangaLayout != nextOptions.mangaLayout ||
+            options.invertDoublePages != nextOptions.invertDoublePages)) {
       restoring = true;
       restoreLocation(generation);
     }
@@ -1453,6 +1648,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
             error == null &&
             lifecycle == AppLifecycleState.resumed,
         onChapter: (direction) => changeChapter(direction),
+        onPage: paged ? movePaged : null,
         child: Scaffold(
           key: const ValueKey('reader-scaffold'),
           backgroundColor: background,
@@ -1511,16 +1707,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                             .canOpenNativeWebsite(vm.catalogue(book!)))
                       IconButton(
                         tooltip: 'Xem trang web',
-                        onPressed: () => perform(context, () async {
-                          final currentBook = book!;
-                          await ref
-                              .read(sourceRepositoryProvider)
-                              .openWebsite(vm.catalogue(currentBook));
-                          if (mounted &&
-                              (error != null || failedImages.isNotEmpty)) {
-                            await load(current);
-                          }
-                        }),
+                        onPressed: () => perform(context, openSourceWebsite),
                         icon: const Icon(CupertinoIcons.globe),
                       ),
                     if (!manga && content != null)
@@ -1589,7 +1776,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                         onTapUp: (details) =>
                             tapContent(details.globalPosition),
                         child: ReaderHoldScroll(
-                          enabled: manga && options.holdScroll,
+                          enabled: manga && options.holdScroll && !paged,
                           speed: options.autoScrollSpeed,
                           onSpeed: (speed) {
                             holdingScroll = true;
@@ -1602,50 +1789,58 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                           },
                           child: ReaderPinchScrollGuard(
                             child: LayoutBuilder(
-                              builder: (context, bounds) => SingleChildScrollView(
-                                key: viewport,
-                                controller: scroll,
-                                padding: manga
-                                    ? EdgeInsets.zero
-                                    : const EdgeInsets.fromLTRB(
-                                        26,
-                                        24,
-                                        26,
-                                        140,
-                                      ),
-                                child: manga
-                                    ? Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: List.generate(
-                                          content!.images.length,
-                                          (i) => Padding(
-                                            key: imageKeys[i],
-                                            padding: EdgeInsets.fromLTRB(
-                                              pageMargins.left,
-                                              0,
-                                              pageMargins.right,
-                                              i == content!.images.length - 1
-                                                  ? 0
-                                                  : options.gap,
+                              builder: (context, bounds) => paged
+                                  ? pagedContent()
+                                  : SingleChildScrollView(
+                                      key: viewport,
+                                      controller: scroll,
+                                      padding: manga
+                                          ? EdgeInsets.zero
+                                          : const EdgeInsets.fromLTRB(
+                                              26,
+                                              24,
+                                              26,
+                                              140,
                                             ),
-                                            child: GestureDetector(
-                                              onLongPress: options.holdScroll
-                                                  ? null
-                                                  : () => pageActions(i),
-                                              child: MangaPageLayout(
-                                                mode: options.imageScale,
-                                                viewportHeight:
-                                                    bounds.maxHeight,
-                                                image: (width, height) =>
-                                                    ZoomableMangaPage(
-                                                      enabled: options.zoom,
-                                                      child: ColorFiltered(
-                                                        colorFilter:
-                                                            options.imageFilter,
-                                                        child: ColorFiltered(
-                                                          colorFilter:
-                                                              ColorFilter.mode(
+                                      child: manga
+                                          ? Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.stretch,
+                                              children: [
+                                                ...List.generate(
+                                                  content!.images.length,
+                                                  (i) => Padding(
+                                                    key: imageKeys[i],
+                                                    padding: EdgeInsets.fromLTRB(
+                                                      pageMargins.left,
+                                                      0,
+                                                      pageMargins.right,
+                                                      i ==
+                                                              content!
+                                                                      .images
+                                                                      .length -
+                                                                  1
+                                                          ? 0
+                                                          : options.gap,
+                                                    ),
+                                                    child: GestureDetector(
+                                                      onLongPress:
+                                                          options.holdScroll
+                                                          ? null
+                                                          : () =>
+                                                                pageActions(i),
+                                                      child: MangaPageLayout(
+                                                        mode:
+                                                            options.imageScale,
+                                                        viewportHeight:
+                                                            bounds.maxHeight,
+                                                        image: (width, height) => ZoomableMangaPage(
+                                                          enabled: options.zoom,
+                                                          child: ColorFiltered(
+                                                            colorFilter: options
+                                                                .imageFilter,
+                                                            child: ColorFiltered(
+                                                              colorFilter: ColorFilter.mode(
                                                                 Color(
                                                                   options.tint,
                                                                 ).withValues(
@@ -1655,55 +1850,65 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                                                                 options
                                                                     .blendMode,
                                                               ),
-                                                          child: image(
-                                                            content!.images[i],
-                                                            i,
-                                                            width: width,
-                                                            height: height,
+                                                              child: image(
+                                                                content!
+                                                                    .images[i],
+                                                                i,
+                                                                width: width,
+                                                                height: height,
+                                                              ),
+                                                            ),
                                                           ),
                                                         ),
                                                       ),
                                                     ),
+                                                  ),
+                                                ),
+                                                chapterBoundary(),
+                                              ],
+                                            )
+                                          : Center(
+                                              child: ConstrainedBox(
+                                                constraints:
+                                                    const BoxConstraints(
+                                                      maxWidth: 720,
+                                                    ),
+                                                child: SelectionArea(
+                                                  child: HtmlWidget(
+                                                    content!.html,
+                                                    customWidgetBuilder: (element) {
+                                                      if (element.localName ==
+                                                          'img') {
+                                                        final source = element
+                                                            .attributes['src'];
+                                                        if (source != null) {
+                                                          return image(
+                                                            source,
+                                                            -1,
+                                                          );
+                                                        }
+                                                      }
+                                                      return null;
+                                                    },
+                                                    textStyle: TextStyle(
+                                                      fontFamily:
+                                                          settings.font ==
+                                                                  'Arial' ||
+                                                              settings.font ==
+                                                                  'NotoSans'
+                                                          ? 'NotoSans'
+                                                          : 'NotoSerif',
+                                                      fontSize:
+                                                          settings.fontSize,
+                                                      height:
+                                                          settings.lineHeight,
+                                                      color: foreground,
+                                                    ),
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ),
-                                      )
-                                    : Center(
-                                        child: ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                            maxWidth: 720,
-                                          ),
-                                          child: SelectionArea(
-                                            child: HtmlWidget(
-                                              content!.html,
-                                              customWidgetBuilder: (element) {
-                                                if (element.localName ==
-                                                    'img') {
-                                                  final source =
-                                                      element.attributes['src'];
-                                                  if (source != null) {
-                                                    return image(source, -1);
-                                                  }
-                                                }
-                                                return null;
-                                              },
-                                              textStyle: TextStyle(
-                                                fontFamily:
-                                                    settings.font == 'Arial' ||
-                                                        settings.font ==
-                                                            'NotoSans'
-                                                    ? 'NotoSans'
-                                                    : 'NotoSerif',
-                                                fontSize: settings.fontSize,
-                                                height: settings.lineHeight,
-                                                color: foreground,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                              ),
+                                    ),
                             ),
                           ),
                         ),
@@ -1753,7 +1958,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                       (chrome ? 146 : 48),
                   child: ReaderAutoScrollStatus(
                     paused: autoScrollPaused,
-                    mode: options.autoScrollMode,
+                    mode: paged ? 'page' : options.autoScrollMode,
                     speed: options.autoScrollSpeed,
                     pageSeconds: options.autoPageSeconds,
                     onToggle: () {

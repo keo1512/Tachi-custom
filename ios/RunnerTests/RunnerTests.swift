@@ -5,6 +5,27 @@ import vbook_runtime
 @testable import Runner
 
 final class RunnerTests: XCTestCase {
+  func testReaderRecognitionRegionConvertsOriginAndRejectsInvalidPayloads() throws {
+    let region = try XCTUnwrap(ReaderRecognitionRegion.visionRect([
+      "left": 0.1, "top": 0.2, "width": 0.4, "height": 0.5,
+    ]))
+    XCTAssertEqual(region.minX, 0.1, accuracy: 0.000001)
+    XCTAssertEqual(region.minY, 0.3, accuracy: 0.000001)
+    XCTAssertEqual(region.width, 0.4, accuracy: 0.000001)
+    XCTAssertEqual(region.height, 0.5, accuracy: 0.000001)
+    XCTAssertEqual(ReaderRecognitionRegion.visionRect([
+      "left": 0, "top": 0, "width": 1, "height": 1,
+    ]), CGRect(x: 0, y: 0, width: 1, height: 1))
+    let invalid: [[String: Any]] = [
+      ["left": -0.1, "top": 0, "width": 1, "height": 1],
+      ["left": 0, "top": 0, "width": 0, "height": 1],
+      ["left": 0.9, "top": 0, "width": 0.2, "height": 1],
+      ["left": 0, "top": Double.nan, "width": 1, "height": 1],
+      ["left": false, "top": 0, "width": 1, "height": 1],
+      ["left": "0", "top": 0, "width": 1, "height": 1],
+    ]
+    for payload in invalid { XCTAssertNil(ReaderRecognitionRegion.visionRect(payload)) }
+  }
   func testNativeVbookCryptoUsesPinnedLibraryAndSecureRandom() throws {
     let payload: [String: Any] = [
       "manifest": ["metadata": ["source": "https://fixture.test"]],

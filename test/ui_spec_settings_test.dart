@@ -126,7 +126,7 @@ void main() {
           'Thống kê',
           'Quản lý danh mục',
           'Chuyển nguồn',
-          'Theo dõi',
+          'Trạng thái và đánh giá',
           'Đồng bộ',
           'Lưu trữ',
           'Cài đặt',

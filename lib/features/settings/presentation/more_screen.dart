@@ -61,7 +61,7 @@ class MoreScreen extends ConsumerWidget {
         ),
         SettingsRow(
           icon: CupertinoIcons.arrow_2_circlepath,
-          title: 'Theo dõi',
+          title: 'Trạng thái và đánh giá',
           subtitle: 'Trạng thái và điểm đọc lưu trong thư viện',
           onTap: () => open(const TrackingSettingsScreen()),
         ),

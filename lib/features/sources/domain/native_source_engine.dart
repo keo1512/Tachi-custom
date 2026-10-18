@@ -57,6 +57,11 @@ abstract interface class NativeSourceMaintenanceEngine {
   Future<void> clearCookies();
 }
 
+/// Optional so existing runtimes keep their maintenance contracts.
+abstract interface class NativeUserAgentResetEngine {
+  Future<void> resetUserAgents();
+}
+
 /// Optional operations implemented by runtimes that expose catalogue browsing.
 abstract interface class NativeCatalogueBrowserEngine {
   Future<List<CatalogueBook>> browse(

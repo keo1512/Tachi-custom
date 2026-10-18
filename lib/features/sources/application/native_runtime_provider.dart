@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/native_tachi_repository.dart';
@@ -8,6 +10,9 @@ import '../domain/catalogue.dart';
 import '../domain/native_source_engine.dart';
 import '../presentation/extension_catalogue_controller.dart';
 import '../../settings/settings_controller.dart';
+import '../../privacy/application/app_lock_controller.dart';
+import '../../library/data/coordinated_preferences.dart';
+import '../../library/presentation/library_view_model.dart';
 
 typedef NativeRuntimeFactory = NativeSourceEngine Function();
 
@@ -23,6 +28,27 @@ final nativeRuntimeFactoriesProvider =
       return {
         SourceEngine.vbook: NativeVbookRepository.new,
         SourceEngine.tachimanga: () => NativeTachiRepository(
+          automaticallyVerifyChallenges: true,
+          canVerifyChallenge: () {
+            final lock = ref.read(appLockProvider);
+            final lifecycle = WidgetsBinding.instance.lifecycleState;
+            return (lifecycle == null ||
+                    lifecycle == AppLifecycleState.resumed) &&
+                lock.initialized &&
+                lock.configurationValid &&
+                !lock.authenticating &&
+                !lock.locked &&
+                !lock.obscured;
+          },
+          browserSessionRevision: () {
+            final preferences = ref.read(preferencesProvider);
+            return (
+              ref.read(libraryRepositoryProvider).replacementRevision,
+              preferences is CoordinatedPreferences
+                  ? preferences.mutationGeneration
+                  : 0,
+            );
+          },
           canCacheCover: () => !ref.read(settingsProvider).incognitoMode,
           coverCacheEpoch: () => coverCacheEpoch,
           iconForPackage: (packageUrl) {

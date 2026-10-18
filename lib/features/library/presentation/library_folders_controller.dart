@@ -13,8 +13,11 @@ final libraryFoldersProvider =
     );
 
 class LibraryFoldersController extends Notifier<LibraryFolders> {
-  LibraryFolders _read() => LibraryFolders.decode(
+  LibraryFolders _read() => LibraryFolders.decodeWithCategories(
     ref.read(preferencesProvider).getString(LibraryFolders.preferenceKey),
+    ref
+        .read(preferencesProvider)
+        .getString(LibraryFolders.categoryPreferenceKey),
   );
   @override
   LibraryFolders build() {
@@ -31,6 +34,7 @@ class LibraryFoldersController extends Notifier<LibraryFolders> {
     Iterable<String> ids,
     String? name, {
     required int expectedRevision,
+    String? category,
   }) {
     final selected = ids.toSet();
     final preferences = ref.read(preferencesProvider);
@@ -61,25 +65,32 @@ class LibraryFoldersController extends Notifier<LibraryFolders> {
       if (!current() || !existing.containsAll(selected)) {
         throw StateError('Thư viện đã thay đổi. Chọn lại truyện để tiếp tục.');
       }
-      final names = Map<String, String>.of(_read().names);
+      final currentFolders = _read();
+      final names = Map<String, String>.of(currentFolders.names);
+      final scoped = <String, Map<String, String?>>{
+        for (final entry in currentFolders.categoryNames.entries)
+          entry.key: Map.of(entry.value),
+      };
       for (final id in selected) {
-        if (trimmed == null) {
+        if (category != null) {
+          (scoped[category] ??= {})[id] = trimmed;
+        } else if (trimmed == null) {
           names.remove(id);
         } else {
           names[id] = trimmed;
         }
       }
-      final next = LibraryFolders.decode(LibraryFolders(names).encode());
+      final next = LibraryFolders.decodeWithCategories(
+        LibraryFolders(names, scoped).encode(),
+        LibraryFolders(names, scoped).encodeCategories(),
+      );
+      final key = category == null
+          ? LibraryFolders.preferenceKey
+          : LibraryFolders.categoryPreferenceKey;
+      final raw = category == null ? next.encode() : next.encodeCategories();
       final saved = preferences is CoordinatedPreferences
-          ? await preferences.setStringIfCurrent(
-              LibraryFolders.preferenceKey,
-              next.encode(),
-              current,
-            )
-          : await preferences.setString(
-              LibraryFolders.preferenceKey,
-              next.encode(),
-            );
+          ? await preferences.setStringIfCurrent(key, raw, current)
+          : await preferences.setString(key, raw);
       if (!saved) throw StateError('Không lưu được thư mục truyện.');
       if (!current()) throw StateError('Thư viện đã thay đổi. Mở lại thư mục.');
       state = next;

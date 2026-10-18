@@ -12,6 +12,7 @@ import '../../library/domain/book_reading_times.dart';
 import '../../library/presentation/library_view_model.dart';
 import '../../privacy/application/app_lock_controller.dart';
 import 'settings_widgets.dart';
+import 'book_reading_time_screen.dart';
 
 class ReadingStatisticsBookList extends ConsumerStatefulWidget {
   const ReadingStatisticsBookList({super.key, this.initialBookId});
@@ -288,6 +289,19 @@ class _BookStatisticsState extends ConsumerState<ReadingStatisticsBookList> {
                             Wrap(
                               spacing: 8,
                               children: [
+                                TextButton(
+                                  key: ValueKey('statistics-daily-${book.id}'),
+                                  onPressed: () =>
+                                      Navigator.of(context).push<void>(
+                                        MaterialPageRoute(
+                                          builder: (_) => BookReadingTimeScreen(
+                                            bookId: book.id,
+                                            title: book.title,
+                                          ),
+                                        ),
+                                      ),
+                                  child: const Text('Thời gian theo ngày'),
+                                ),
                                 TextButton(
                                   key: ValueKey('statistics-state-${book.id}'),
                                   onPressed: saving

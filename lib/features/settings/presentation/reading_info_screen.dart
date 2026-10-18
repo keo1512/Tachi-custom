@@ -65,7 +65,8 @@ class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
         _count('Tổng thời gian', '${time.totalSeconds ~/ 60} phút'),
         const SettingsNote(
           'Chỉ tính thời gian reader đang ở màn hình trước và phiên đọc không ẩn danh. '
-          'Số liệu được lưu theo ngày, không suy đoán thời gian của từng truyện. '
+          'Mở thống kê từng truyện để xem các ngày đọc đã ghi cùng mã truyện. '
+          'Số liệu lịch sử thiếu mã truyện không được tự phân bổ. '
           'Thời gian và mục tiêu được mang theo trong sao lưu/đồng bộ TachiBooks.',
         ),
         if (time.ignoredRecords > 0)
@@ -148,7 +149,6 @@ class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
       _count('Đã hoàn thành', '${stats.completed}'),
       _count('Đang tạm dừng', '${stats.paused}'),
       _count('Dự định đọc', '${stats.planned}'),
-      _count('Truyện có hồ sơ theo dõi', '${stats.trackedBooks}'),
       _count('Chương có nội dung offline', '${stats.downloaded}'),
       _count('Truyện có chương offline', '${stats.offlineBooks}'),
       _count('Yêu thích', '${stats.favorites}'),
@@ -166,9 +166,7 @@ class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
             : '${stats.averageRating!.toStringAsFixed(1)}/10',
       ),
       SettingsNote(
-        'Tính từ ${stats.ratedBooks} đánh giá bạn đã lưu theo thang 0–10. '
-        'Điểm từ tracker có thang khác nhau được giữ nguyên trong bản sao lưu '
-        'và không được tự gộp vào điểm trung bình.',
+        'Tính từ ${stats.ratedBooks} đánh giá bạn đã lưu theo thang 0–10.',
       ),
       SettingsRow(
         key: const ValueKey('statistics-manage-books'),
@@ -186,11 +184,6 @@ class _ReadingInfoState extends ConsumerState<ReadingInfoScreen> {
       ..._groups('Theo danh mục', stats.categories),
       const SettingsNote(
         'Một truyện thuộc nhiều danh mục được tính một lần trong từng danh mục.',
-      ),
-      ..._groups('Theo dịch vụ theo dõi', stats.trackers),
-      const SettingsNote(
-        'Hồ sơ tracker là dữ liệu có trong bản sao lưu đã nhập. '
-        'Thống kê không đăng nhập, gọi dịch vụ hoặc khẳng định tài khoản đang kết nối.',
       ),
       const SettingsHeading('Thời lượng đọc theo truyện'),
       const SettingsNote(

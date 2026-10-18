@@ -20,6 +20,7 @@ class LibraryBulkActions {
         for (final chapter in book.chapters) chapter.copyWith(read: read),
       ],
       completed: read && book.chapters.isNotEmpty,
+      readingState: !read && book.readingState == 'completed' ? '' : null,
       currentChapter: read && book.chapters.isNotEmpty
           ? book.chapters.length - 1
           : 0,

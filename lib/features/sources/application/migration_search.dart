@@ -6,10 +6,13 @@ class MigrationSourceResult {
     this.source,
     List<CatalogueBook> books, {
     this.error = '',
+    this.hasNextPage,
   }) : books = List.unmodifiable(books);
   final CatalogueSource source;
   final List<CatalogueBook> books;
   final String error;
+  // Null keeps the nonempty-page fallback of older source adapters.
+  final bool? hasNextPage;
 }
 
 class MigrationSearchProgress {
@@ -76,6 +79,7 @@ class MigrationSearch {
           result = MigrationSourceResult(
             source,
             books.where((book) => identities.add(book.identity)).toList(),
+            hasNextPage: books is CataloguePage ? books.hasNextPage : null,
           );
         } catch (error) {
           result = MigrationSourceResult(source, const [], error: '$error');

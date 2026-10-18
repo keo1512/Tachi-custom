@@ -107,6 +107,9 @@ void main() {
             true,
           );
           await choose('Vùng chạm để cuộn', 'Trên / giữa / dưới');
+          await choose('Vùng chạm để cuộn', 'Cạnh màn hình');
+          await choose('Vùng chạm để cuộn', 'Kiểu Kindle');
+          await choose('Vùng chạm để cuộn', 'Hình chữ L');
           await choose('Cách tự cuộn', 'Cuộn tới trang kế theo thời gian');
           await choose('Pha trộn màu', 'Giữ màu sáng hơn');
           await choose('Hướng màn hình', 'Dọc ngược');
@@ -122,7 +125,7 @@ void main() {
 
           final options = container.read(readerOptionsProvider);
           expect(options.imageScale, 'original');
-          expect(options.tapZones, 'vertical');
+          expect(options.tapZones, 'lShape');
           expect(options.autoScrollMode, 'page');
           expect(options.blend, 'lighten');
           expect(options.orientation, 'reversePortrait');

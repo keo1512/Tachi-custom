@@ -5,3 +5,7 @@ ios/Podfile text eol=lf
 # Keep pinned upstream license bytes unchanged, including their line endings.
 assets/licenses/unrarkit-2.10-unrar-license.txt -text whitespace=-blank-at-eol
 packages/vbook_runtime/ios/Resources/crypto-js.LICENSE -text whitespace=-blank-at-eol
+packages/vbook_runtime/ios/Resources/crypto-js.js -text
+
+# Host fingerprints and reviewed upstream hashes use canonical source bytes.
+tools/native_extension_engine/**/*.java text eol=lf

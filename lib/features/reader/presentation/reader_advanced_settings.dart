@@ -129,6 +129,50 @@ class _ReaderPreferencesState extends ConsumerState<_ReaderPreferencesSheet> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: DropdownButtonFormField<String>(
+                key: ValueKey('manga-layout-${options.mangaLayout}'),
+                initialValue: options.mangaLayout,
+                isExpanded: true,
+                isDense: false,
+                itemHeight: null,
+                decoration: const InputDecoration(
+                  labelText: 'Chế độ đọc truyện tranh',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'continuous',
+                    child: Text('Cuộn dọc liên tục'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'leftToRight',
+                    child: Text('Lật trang từ trái sang phải'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'rightToLeft',
+                    child: Text('Lật trang từ phải sang trái'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'verticalPages',
+                    child: Text('Lật trang theo chiều dọc'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'doublePage',
+                    child: Text('Hai trang cạnh nhau'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) change({'mangaLayout': value});
+                },
+              ),
+            ),
+            if (options.mangaLayout == 'doublePage')
+              flag(
+                'Đảo vị trí hai trang',
+                options.invertDoublePages,
+                'invertDoublePages',
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: DropdownButtonFormField<String>(
                 isExpanded: true,
                 isDense: false,
                 itemHeight: null,
@@ -161,7 +205,7 @@ class _ReaderPreferencesState extends ConsumerState<_ReaderPreferencesSheet> {
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Text(
-                'Trang vẫn xếp dọc liên tục. Ở chế độ vừa chiều dọc hoặc 100%, kéo ngang để xem phần ảnh rộng hơn màn hình.',
+                'Cuộn dọc hỗ trợ tỷ lệ ảnh phía trên. Chế độ lật trang hiển thị trọn ảnh; dùng hai ngón hoặc chạm đúp để phóng to.',
               ),
             ),
             Padding(
@@ -170,8 +214,10 @@ class _ReaderPreferencesState extends ConsumerState<_ReaderPreferencesSheet> {
                 isExpanded: true,
                 isDense: false,
                 itemHeight: null,
-                key: ValueKey('tap-zones-${options.tapZones}'),
-                initialValue: options.tapZones,
+                key: ValueKey(
+                  'tap-zones-${options.mangaLayout}-${options.activeTapZones}',
+                ),
+                initialValue: options.activeTapZones,
                 decoration: const InputDecoration(
                   labelText: 'Vùng chạm để cuộn',
                 ),
@@ -185,13 +231,21 @@ class _ReaderPreferencesState extends ConsumerState<_ReaderPreferencesSheet> {
                     value: 'vertical',
                     child: Text('Trên / giữa / dưới'),
                   ),
+                  DropdownMenuItem(
+                    value: 'edges',
+                    child: Text('Cạnh màn hình'),
+                  ),
+                  DropdownMenuItem(value: 'kindle', child: Text('Kiểu Kindle')),
+                  DropdownMenuItem(value: 'lShape', child: Text('Hình chữ L')),
                 ],
                 onChanged: (v) {
-                  if (v != null) change({'tapZones': v});
+                  if (v != null) {
+                    change({options.isPaged ? 'pagedTapZones' : 'tapZones': v});
+                  }
                 },
               ),
             ),
-            if (options.tapZones != 'off')
+            if (options.activeTapZones != 'off')
               flag(
                 'Đảo hướng vùng chạm',
                 options.invertTapZones,
@@ -200,7 +254,7 @@ class _ReaderPreferencesState extends ConsumerState<_ReaderPreferencesSheet> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: ReaderTapZoneDiagram(
-                layout: options.tapZones,
+                layout: options.activeTapZones,
                 inverted: options.invertTapZones,
               ),
             ),
@@ -359,7 +413,7 @@ class _ReaderPreferencesState extends ConsumerState<_ReaderPreferencesSheet> {
             const Padding(
               padding: EdgeInsets.all(16),
               child: Text(
-                'Trang truyện vẫn cuộn dọc. Nền đọc theo giao diện ứng dụng; bộ lọc chỉ tác động ảnh. Thiết lập riêng được lưu cùng sách trong sao lưu và đồng bộ.',
+                'Trang truyện vẫn cuộn dọc. Nền đọc áp dụng theo lựa chọn ở trên; bộ lọc chỉ tác động ảnh. Thiết lập riêng được lưu cùng sách trong sao lưu và đồng bộ.',
               ),
             ),
           ],

@@ -7,6 +7,7 @@ import 'package:tachi_books/core/theme/app_theme.dart';
 import 'package:tachi_books/features/downloads/presentation/downloads_screen.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
+import 'package:tachi_books/features/library/domain/library_reading.dart';
 import 'package:tachi_books/features/library/presentation/activity_book_cover.dart';
 import 'package:tachi_books/features/library/presentation/activity_screens.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
@@ -174,8 +175,22 @@ void main() {
       expect(saved.progress, first.progress);
       expect(saved.bookmarks, first.bookmarks);
       expect(
-        saved.chapters.map((chapter) => chapter.toJson()).toList(),
-        first.chapters.map((chapter) => chapter.toJson()).toList(),
+        [
+          for (var index = 0; index < saved.chapters.length; index++)
+            chapterIsRead(saved, index),
+        ],
+        [
+          for (var index = 0; index < first.chapters.length; index++)
+            chapterIsRead(first, index),
+        ],
+      );
+      expect(
+        saved.chapters
+            .map((chapter) => chapter.toJson()..remove('read'))
+            .toList(),
+        first.chapters
+            .map((chapter) => chapter.toJson()..remove('read'))
+            .toList(),
       );
       expect(
         (await repo.readChapter(first.id, 1))!.html,

@@ -8,7 +8,7 @@ class TrackingSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SettingsPage(
-    title: 'Theo dõi',
+    title: 'Trạng thái và đánh giá',
     children: [
       const SettingsHeading('Tiến độ trong thư viện'),
       SettingsRow(
@@ -21,12 +21,6 @@ class TrackingSettingsScreen extends StatelessWidget {
       const SettingsNote(
         'Trạng thái, điểm, chương đã đọc và dấu trang được lưu cùng thư viện. '
         'Bạn có thể sửa trạng thái và điểm của từng truyện ở danh sách trên.',
-      ),
-      const SettingsHeading('Dịch vụ theo dõi bên ngoài'),
-      const SettingsNote(
-        'Dịch vụ theo dõi bên ngoài chưa được kết nối. Hồ sơ theo dõi đã nhập '
-        'từ bản sao lưu vẫn được giữ và có trong thống kê; việc nhập hồ sơ '
-        'không đăng nhập hoặc tự liên kết tài khoản dịch vụ.',
       ),
     ],
   );

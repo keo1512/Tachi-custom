@@ -1,0 +1,43 @@
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+test_browser_apply_keeps_concurrent_http_refresh (__main__.NativeSourceBoundaryTests.test_browser_apply_keeps_concurrent_http_refresh) ... ok
+test_browser_seed_snapshot_and_token_are_one_atomic_capture (__main__.NativeSourceBoundaryTests.test_browser_seed_snapshot_and_token_are_one_atomic_capture) ... ok
+test_browser_snapshot_cannot_replace_a_refreshed_http_cookie (__main__.NativeSourceBoundaryTests.test_browser_snapshot_cannot_replace_a_refreshed_http_cookie) ... ok
+test_browser_user_agents_are_isolated_through_real_redirects (__main__.NativeSourceBoundaryTests.test_browser_user_agents_are_isolated_through_real_redirects) ... ok
+test_existing_cover_headers_bounds_parallelism_and_page_hook_isolation (__main__.NativeSourceBoundaryTests.test_existing_cover_headers_bounds_parallelism_and_page_hook_isolation) ... ok
+test_explicit_browser_save_rolls_back_both_private_stores_on_error (__main__.NativeSourceBoundaryTests.test_explicit_browser_save_rolls_back_both_private_stores_on_error) ... ok
+test_http_cookies_survive_reload_expiry_cold_jvm_and_storage_failures (__main__.NativeSourceBoundaryTests.test_http_cookies_survive_reload_expiry_cold_jvm_and_storage_failures) ... ok
+test_later_page_request_hook_cannot_break_chapter_opening (__main__.NativeSourceBoundaryTests.test_later_page_request_hook_cannot_break_chapter_opening) ... ok
+test_original_apk_browser_seed_preserves_scope_and_rejects_stale_sessions (__main__.NativeSourceBoundaryTests.test_original_apk_browser_seed_preserves_scope_and_rejects_stale_sessions) ... ok
+test_original_apk_reinstall_repairs_cache_and_preserves_failed_update (__main__.NativeSourceBoundaryTests.test_original_apk_reinstall_repairs_cache_and_preserves_failed_update) ... ok
+test_original_ipa_extension_library_version_boundaries (__main__.NativeSourceBoundaryTests.test_original_ipa_extension_library_version_boundaries) ... ok
+test_rotated_cdn_retry_keeps_source_page_identity_and_negative_guards (__main__.NativeSourceBoundaryTests.test_rotated_cdn_retry_keeps_source_page_identity_and_negative_guards) ... ok
+test_source_constructor_failure_rolls_back_preference_and_keeps_source_usable (__main__.NativeSourceBoundaryTests.test_source_constructor_failure_rolls_back_preference_and_keeps_source_usable) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 84.223s
+
+OK
+BROWSER_COOKIE_ATOMIC_OK mode=apply assertions=5 deterministic-http-callback private-file-rollback
+BROWSER_COOKIE_ATOMIC_OK mode=seed assertions=5 deterministic-http-callback private-file-rollback
+REFRESHED_COOKIE_RETAINED=true
+BROWSER_SESSION_ISOLATION_OK mode=refresh assertions=6
+SOURCE_A_AGENT=Fixture-Agent-A
+BROWSER_SESSION_ISOLATION_OK mode=user-agent assertions=27
+JAVA8_COVER_IMAGE_PROOF_OK assertions=44 loopback-only headers client cookies relative-urls bounds page-hook-isolation
+BROWSER_COOKIE_ATOMIC_OK mode=persistence assertions=17 deterministic-http-callback private-file-rollback
+PERSISTENT_COOKIE_RESTART_OK mode=restart assertions=8
+PERSISTENT_COOKIE_RESTART_OK mode=cleared assertions=5
+PERSISTENT_COOKIE_RESTART_OK mode=cleared assertions=5
+PERSISTENT_COOKIE_RESTART_OK mode=cleared assertions=5
+PERSISTENT_COOKIE_PROOF_OK assertions=92 real-files cold-jvm expiry flags legacy-import corruption clear write-failure no-http
+PAGE_REQUEST_HOOK_ISOLATION_OK assertions=9
+made a Toast: "Restart Tachiyomi to apply new setting."
+BROWSER_UA_RESET_COLD_OK assertions=6
+BROWSER_SEED_PROOF_OK assertions=48 original-apk all-paths scoped stale-refresh replay logout flags
+EXTENSION_CACHE_REPAIR_OK mode=malformed assertions=26 original-apk immutable-cache user-preferences conversion-failure registry-write-failure
+EXTENSION_CACHE_REPAIR_OK mode=validzip assertions=26 original-apk immutable-cache user-preferences conversion-failure registry-write-failure
+EXTENSION_CACHE_REPAIR_OK mode=apk assertions=23 original-apk immutable-cache user-preferences conversion-failure registry-write-failure
+EXTENSION_VERSION_PROOF_OK assertions=12
+ROTATED_PAGE_RETRY_PROOF_OK assertions=30 no-network fixture
+PREFERENCE_RELOAD_ROLLBACK_OK assertions=8

@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "date_local": "2026-10-18",
+  "type": "migration_configuration_and_per_book_daily_time_implementation_verification",
+  "authorized_scope": "Continue existing app; fill source migration duration/folder identity gap and per-book daily statistics; preserve6UIKit/Isar/public contracts. No new IPA/CI/push/signing.",
+  "original_reference": {
+    "ipa_sha256": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+    "matches_pinned_original": true,
+    "static_evidence": "verification/full_build_second_backend_review.json and .tools/audit_original_models_javap.txt",
+    "proven_original_contract": "Original StatsTable has day/mangaId/readDuration; ReadTimeDataClass totalSeconds/mangaList; Flutter bytes include read_time_stats_screen and migrate_manga.",
+    "limits": "These are original class signatures/identifier bytes only; original UI/runtime/source migration algorithm was not executed. Local additive preference design is not asserted to match original database/behavior byte-for-byte."
+  },
+  "documents": [
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\tinh nang phai co.md",
+      "sha256": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c"
+    },
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md",
+      "sha256": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083"
+    },
+    {
+      "path": "C:\\Users\\Nosgnoh\\Downloads\\TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md",
+      "sha256": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0"
+    }
+  ],
+  "feature_links": {
+    "migration": "Feature10.1-10.3/UI11.1-11.5: preserve matched reading state/history/bookmarks/categories plus existing TachiBooks folder/time additions.",
+    "statistics": "Feature14.1-14.2/UI15.1-15.2: duration per title and measured local day; chart/range drilldown. UI15.2 extra charts explicitly proposed, not original pixel parity."
+  },
+  "migration": {
+    "before": "SourceMigration published book entries alone. Preference maps with old book ID did not follow replacement.",
+    "after": [
+      "Optional AppConfigurationStore and callback keep old constructor library-only compatible. Production provider wires both single and bulk callers.",
+      "Preview captures config+library under coordinated preference queue; full config/library fingerprint plus configuration generation/library revision reject changed or same-byte-restored previews.",
+      "Joint restoreLocked + repository CAS/recovery hook commits library and config; hydrated recovery includes original offline data and configuration.",
+      "replaceOld moves aggregate and daily time IDs, adding any existing orphan target durations without changing total; old IDs removed. keepOld leaves time only on original to avoid double-count, copies folder membership to new title.",
+      "LibraryFolders.migrateBookIds handles legacy flat and additive category maps/tombstones; conflicting target assignment rejects. Missing old config keys remain absent.",
+      "Post-library-commit journal failure produces SourceMigrationRecoveryRequired; callback/UI refresh occurs and message explains reopening instead of falsely claiming nothing changed."
+    ],
+    "public_storage_contract": "No Isar/schema/sourceID/chapterID/reader-content format changed. Configuration includes only existing portable keys plus additive daily/scoped folder keys; source cookies/secrets remain excluded.",
+    "recovery_tests": [
+      "Single replace and keep with scope/tombstone/duration/cache/bookmarks/notes",
+      "Batch replace/keep; preview mismatch after config edit or same-byte restore",
+      "Time/folder/unrelated config/library edits after preview reject without overwrite",
+      "Queued preference write before commit wins; stale write during commit rejects",
+      "Memory DB fail before/after config application rolls config back and preserves newer library edit",
+      "Preference setter failure; post-commit journal failure and fresh preference-handle recovery",
+      "Actual Isar3.3.2 migration and ordinary BackupService restores original config+offline chapter"
+    ]
+  },
+  "daily_reading_time": {
+    "key": "bookDailyReadingTimesV1",
+    "shape": "Canonical local YYYY-MM-DD -> {bookID: integer seconds}; additive JSON string preference",
+    "bounds": {
+      "encoded_bytes": 2097152,
+      "days": 10000,
+      "book_day_records": 100000,
+      "max_integer_seconds": 9007199254740991
+    },
+    "no_legacy_inference": "Absent daily key stays empty. Existing BookReadingTimesV1 and readSeconds: totals are retained and not split into invented per-book dates.",
+    "recording": [
+      "Existing Reader start/stop lifecycle and immutable incognito-session policy retained.",
+      "stopReadingTime records total book seconds, daily book seconds and aggregate day seconds as one guarded portable update.",
+      "Sessions crossing midnight or over one day partition integer seconds consistently; fractional-second remainder is assigned to final local day so index totals agree.",
+      "Library revision/configuration generation guard prevents old session from writing after restore.",
+      "CoordinatedPreferences.updatePortableValuesIfCurrent sync transform sees latest queued config, validates portable patch/combined bounds, uses raw rollback + existing durable atomic checkpoint; checks guard again after checkpoint.",
+      "Plain legacy SharedPreferences fallback retains API and restores affected attempted keys on setter/guard failure; production uses coordinated checkpoint storage."
+    ],
+    "ui": [
+      "Per-book statistics row exposes Thoi gian theo ngay button; drilldown shows total recorded time, time with a known date,7/30day chart and dated rows.",
+      "Only selected book is plotted. Future dates ignored by RecordedReadingTime; unknown old totals do not appear as daily data.",
+      "BackupConfiguration key allowlist/validator carries additive daily JSON through existing backup/sync configuration contract."
+    ],
+    "error_and_recovery_tests": [
+      "Malformed date/key/value/overflow/size",
+      "Failure at each of3index keys on plain/coordinated stores preserves previous data",
+      "Guard becomes stale inside a setter; no partial index publication",
+      "Queued update reads current latest aggregate value",
+      "Checkpoint write failure with raw rollback and cold preference reopen",
+      "Backup old absence/new daily roundtrip",
+      "Reader pause/background/resume/chapter/incognito/library restore/config-only restore; no duplicated or stale daily recording",
+      "Per-book7/30day chart route at320/430px and150percent text"
+    ]
+  },
+  "verification": {
+    "final_targeted": {
+      "tests": 107,
+      "passed": 107,
+      "skipped": 0,
+      "failed": 0,
+      "log": "verification/migration_daily_final_tests.log",
+      "command": "flutter test --no-pub test/book_daily_reading_times_test.dart test/book_reading_times_test.dart test/incognito_reader_test.dart test/backup_configuration_test.dart test/reading_statistics_extended_test.dart test/reading_info_extended_widget_test.dart test/source_migration_configuration_test.dart test/source_migration_test.dart test/source_migration_widget_test.dart test/migration_multi_source_test.dart --reporter expanded"
+    },
+    "analyze": {
+      "files": 17,
+      "result": "No issues found",
+      "log": "verification/migration_daily_analyze.log"
+    },
+    "native_isar_library": "C:/Users/Nosgnoh/AppData/Local/Pub/Cache/hosted/pub.dev/isar_community_flutter_libs-3.3.2/windows/libisar.dll",
+    "diff_check": "Passed for owned files",
+    "aggregate_warning": "Earlier focused53/76runs overlap this final107; do not sum. Parent owns whole-project fullsuite/analyze.",
+    "log_hashes": {
+      "verification\\migration_daily_final_tests.log": "f25f422e7ac46f447fb5c7c49989596ad8b1023a9f8d44ec4f69b3da8693071a",
+      "verification\\migration_daily_analyze.log": "d1b35c7254ef58b635dbaa03c4524b12232ec3d6da81258f78a47f795a834ffe"
+    }
+  },
+  "file_sha256": {
+    "lib/features/sources/domain/source_migration.dart": "ae8afad74886bffe5279fe0fd3b21156e595ad316684e29f1e02df074a5c145e",
+    "lib/features/sources/application/source_migration_service.dart": "4ae13b75bdb23dfe63bcd9c98d0c9f59b8a568e8fa781d2c2eb4fe7ede256780",
+    "lib/features/sources/presentation/source_migration_screen.dart": "7ed31ac7de14ea93c240b7415416b4c076ff8fde41e3eb87b3040b2b68595e18",
+    "lib/features/sources/presentation/source_bulk_migration_screen.dart": "6806aa6dc947994516e936f5bcd7afadb299551ef159756555ae499d493003e9",
+    "lib/features/library/domain/book_daily_reading_times.dart": "feeef1538aed351d6466bb0b90658f5b7b0e2624f6cc9532f589a63eaa9d1439",
+    "lib/features/library/application/reading_time_recorder.dart": "83ec5e5aac0600c1034787ae710c9240ca662623fe92fcd77e4db174a3cae833",
+    "lib/features/library/data/coordinated_preferences.dart": "edc10428d4ed3b513ccdc2ddd2ca6c4cc0c308272a1aeca20348a2c368dbd703",
+    "lib/features/library/data/backup_configuration.dart": "53fd4c4d8904c93080751be9c10ac2378f2330f82e5a5abead3897e9523e64c6",
+    "lib/features/library/domain/reading_statistics.dart": "a52f5a9ea135291bf3c9debc285dc521290ee0e5ca4d7c4acfb6c60c4d2f637d",
+    "lib/features/library/application/reading_statistics_controller.dart": "69398846595903ca048b3f33bd513f834ed1586947a45aeead831986603ef07a",
+    "lib/features/settings/presentation/book_reading_time_screen.dart": "14a0257312fd80c5eafba8163fd6b62c9d8c767b8e2a09d71b53739938e124db",
+    "lib/features/settings/presentation/reading_statistics_book_list.dart": "bcd2af7c65f3bb44373aaab2187b53ff7daab9ce4fd4ebcc67617f55cbc50ed1",
+    "lib/features/settings/presentation/reading_info_screen.dart": "e22cdf61a19578e393e11af2276f8c4c333a59a4cb74b012a25483fcee1770a6",
+    "lib/features/reader/presentation/reader_screen.dart": "a287339fd740ab7239f0b170f7a25993dc538543d8a24ed11f58d7ed63675075",
+    "test/book_daily_reading_times_test.dart": "5494fed2a590a8d442c3c9f39ce04de3c3c468fddd51a2cebb0d37aa501c8f91",
+    "test/source_migration_configuration_test.dart": "87b1e976d8f87c3cfd6210b9286cfb711b296425ac43e441f0d726ac72de2fce",
+    "test/source_migration_widget_test.dart": "0b5e75b1f9ab2770d32926ac489c6c548a300e595a1b6860f252896cb0113da2",
+    "test/incognito_reader_test.dart": "6ebbc004969c6745cdba683ad875316eafe5b8adb91751374f1fe486cfeea2bf"
+  },
+  "shared_reader_ownership": {
+    "scope": "Only import and reading-time start/stop implementation; parent simultaneously edits Reader UI/render/options and may change whole-file hash later.",
+    "start_to_stopSpeech_chunk_sha256": "b3456f7b4a3ea6ea62e9eec6066d8a037210bd91ef376d8066a4103f5ac6a859"
+  },
+  "limits": [
+    "No new IPA/native build or iPhone runtime acceptance; changes are not in IPA11.",
+    "No pixel/gesture matching of original app. Charts add project functionality, not proof original layouts are identical.",
+    "Production two-device sync/Google and device clock/timezone behavior not tested here; existing sync conflict semantics apply.",
+    "Integer-second accounting cannot recover subsecond precision or original per-day data absent bookID.",
+    "Time/folder preservation when using SourceMigration without optional config is intentionally unavailable for old library-only API; production callers are wired to coordinated provider."
+  ]
+}
