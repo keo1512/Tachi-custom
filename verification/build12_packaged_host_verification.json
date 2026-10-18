@@ -1,0 +1,10 @@
+{
+  "hostFromActualIpa": true,
+  "hostSha256": "6c7260acc3eba1aed73f904a099565d7da0225dfc7ada1b227e5f667f75974b1",
+  "tests": 13,
+  "failed": 0,
+  "errors": 0,
+  "skipped": 0,
+  "java": "Java8 -Xint on Windows",
+  "physicalIOS": false
+}

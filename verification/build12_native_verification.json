@@ -1,0 +1,35 @@
+{
+  "runId": 39097205883,
+  "sourceCommit": "51709220d061b4b3470111c626155d1a21a63e08",
+  "artifactId": 12125428614,
+  "artifactZipSha256": "fc4b146aa367fca4dec4837e829b25d2f081bbfb2e92f9eab4d0886346456022",
+  "artifactZipCrc": "passed",
+  "nativeStep": "success",
+  "metricsFromXcresultRoot": {
+    "testsCount": 42,
+    "testsFailedCount": 0,
+    "testsSkippedCount": 0,
+    "errorCount": 0,
+    "warningCount": 49
+  },
+  "newRegressionIdentifiersInResult": {
+    "testReaderRecognitionRegionConvertsOriginAndRejectsInvalidPayloads": true,
+    "testBrowserOptionsRejectMismatchedSeedBeforePresentation": true,
+    "testBrowserSeedImportsAllPathsAndKeepsUnrelatedCookies": true,
+    "testAutomaticClearanceNeedsSuccessfulMainPageAndCompletesOnce": true,
+    "testAutomaticBrowserCancelsWhenAppGoesToBackground": true
+  },
+  "simulator": {
+    "name": "iPhone Air",
+    "runtime": "27.0",
+    "sdk": "27.0"
+  },
+  "nativeStepSeconds": 1353,
+  "physicalDeviceTested": false,
+  "warningNotes": [
+    "Swift5 mode concurrency/actor warnings for future Swift6 migration",
+    "Test framework linking minimum version warnings",
+    "Dependency/deprecated API and script phase warnings"
+  ],
+  "sourceForMetrics": "Zstandard-decoded xcresult root ActionsInvocationRecord aggregate ResultMetrics; identifiers cross-checked in result blobs"
+}

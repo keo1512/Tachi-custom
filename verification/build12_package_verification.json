@@ -1,0 +1,110 @@
+{
+  "buildNumber": 12,
+  "commit": "51709220d061b4b3470111c626155d1a21a63e08",
+  "runId": 39097205883,
+  "actionsUrl": "https://github.com/keo1512/Tachi-custom/actions/runs/39097205883",
+  "workflowConclusion": "success",
+  "ipaPath": "D:\\Codex\\TachiBooks\\artifacts\\TachiBooks-unsigned-build12.ipa",
+  "downloadsPath": "C:\\Users\\Nosgnoh\\Downloads\\TachiBooks-build12.ipa",
+  "bytes": 94189206,
+  "sha256": "ddd7627baae60288dbaf4c9830c4fb6d1af9299745d1f090c86d0d637ee52332",
+  "ciArtifactZipSha256": "d6eb6607a092f6294436cadbd03a9fb7e9b9c9288e487cfd7b438ea2d850317b",
+  "artifactId": 12126405890,
+  "artifactDigestVerified": true,
+  "package": {
+    "nativeAliases": 9,
+    "nativeLayoutVersion": 2,
+    "arrayDecoderSha256": "34aaebb87071092ceb06033a016a19be38d3882b21094b2acbaec7694c60da73",
+    "zipIntegrityVerified": true,
+    "deviceRuntimeVerified": false
+  },
+  "app": {
+    "CFBundleIdentifier": "dev.tachibooks.tachiBooks",
+    "CFBundleDisplayName": "TachiBooks",
+    "CFBundleShortVersionString": "1.0.0",
+    "CFBundleVersion": "12",
+    "MinimumOSVersion": "15.0",
+    "UIDeviceFamily": [
+      1,
+      2
+    ],
+    "CFBundleSupportedPlatforms": [
+      "iPhoneOS"
+    ]
+  },
+  "host": {
+    "sha256": "6c7260acc3eba1aed73f904a099565d7da0225dfc7ada1b227e5f667f75974b1",
+    "sourceSha256": "bc2d23fdeb49cb06ffc197a9a191e31df4bc5e72daa4978a224353d712bd7608",
+    "sourceFiles": 26,
+    "entrypoint": "dev.tachibooks.engine.ExtensionHost.invoke",
+    "jniSignature": "(Ljava/lang/String;)Ljava/lang/String;"
+  },
+  "hostClassCount": 57,
+  "sourceFingerprintMatchesAuditedHost": true,
+  "dependenciesSha256": "b77d955a79745d300b7522e224327d6bcc5a108399231dce7fe708150c2ee2bb",
+  "cryptoJsSha256": "ee02257ffbaf0a9b481c7039b0f3bb20c360c9674fe4be8b38ae709b2ea59bbe",
+  "cryptoJsMatchesCommit": true,
+  "hostJarMatchesWindowsCompile": false,
+  "hostClassBytesMatchWindowsCompile": false,
+  "hostClassDifferences": [
+    "android/os/Handler.class",
+    "android/os/Looper$Main.class",
+    "android/os/Looper$Pending.class",
+    "android/os/Looper.class",
+    "android/os/Message$1.class",
+    "dev/tachibooks/engine/EnginePreferences$Pending.class",
+    "dev/tachibooks/engine/ExtensionHost$3.class",
+    "dev/tachibooks/engine/ExtensionHost.class",
+    "dev/tachibooks/engine/SourceFilterCodec.class",
+    "dev/tachibooks/engine/SuspendBridge$1.class",
+    "dev/tachibooks/engine/SuspendBridge$2.class",
+    "eu/kanade/tachiyomi/network/NetworkHelper$1.class",
+    "eu/kanade/tachiyomi/network/NetworkHelper.class",
+    "eu/kanade/tachiyomi/network/SourceCookieJar$1.class",
+    "eu/kanade/tachiyomi/network/SourceCookieJar$2.class"
+  ],
+  "sourceFingerprintOrdering": {
+    "windowsAudited": "e43a51fbcff34a272d0ec6419c623c00241959b7bb4a3ac9c5346a1311839cc1",
+    "macOsCommitted": "bc2d23fdeb49cb06ffc197a9a191e31df4bc5e72daa4978a224353d712bd7608",
+    "individualSourceBytesMatch": true,
+    "note": "build_host uses platform Path sort order; the aggregate order can differ while each source file is identical."
+  },
+  "firebaseAndGoogleCallbackMatch": true,
+  "referenceInputs": [
+    {
+      "name": "tinh nang phai co.md",
+      "sha256": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c",
+      "unchanged": true
+    },
+    {
+      "name": "# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md",
+      "sha256": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083",
+      "unchanged": true
+    },
+    {
+      "name": "TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md",
+      "sha256": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0",
+      "unchanged": true
+    },
+    {
+      "name": "Tachimanga iOS Mod IPA No Jailbreak Cheats 5.0 Hacked IPA by iOSGods.com.ipa",
+      "sha256": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+      "unchanged": true
+    }
+  ],
+  "unsigned": true,
+  "nativeImplementationMarkers": {
+    "INVALID_BROWSER_SESSION": true,
+    "BROWSER_VERIFICATION_TIMEOUT": true,
+    "openOptions:result:": true
+  },
+  "physicalIPhoneValidated": false,
+  "limitation": "Packaging and native simulator verification do not establish physical device or universal extension/Cloudflare parity.",
+  "packagedHostRegression": {
+    "report": "verification/build12_packaged_host_verification.json",
+    "passed": 13,
+    "failed": 0,
+    "skipped": 0,
+    "physicalIOS": false
+  }
+}

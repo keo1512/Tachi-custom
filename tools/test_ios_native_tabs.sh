@@ -27,7 +27,7 @@ fi
 xcodebuild -version
 xcrun --sdk iphonesimulator --show-sdk-version
 # Discover actual runtime/device identifiers; never guess a model or UUID.
-# Match the user's iOS major version and prefer the selected SDK's runtime.
+# Match the user's iPhone 15 Pro Max and iOS major version.
 tachi_simulator="$(python3 - "$tachi_root/artifacts/native-tabs-simulator.json" <<'PY'
 import json
 import subprocess
@@ -47,6 +47,7 @@ runtimes = {
 device_types = {
     item['identifier']: item for item in inventory.get('devicetypes', [])
 }
+target_name = 'iPhone 15 Pro Max'
 candidates = []
 for runtime_id, devices in inventory.get('devices', {}).items():
     runtime = runtimes.get(runtime_id)
@@ -54,14 +55,29 @@ for runtime_id, devices in inventory.get('devices', {}).items():
         continue
     for device in devices:
         kind = device_types.get(device.get('deviceTypeIdentifier'), {})
-        is_iphone = kind.get('productFamily') == 'iPhone' or device.get('name', '').startswith('iPhone')
-        if device.get('isAvailable') and is_iphone:
+        if device.get('isAvailable') and kind.get('name') == target_name:
             version = tuple(int(part) for part in runtime['version'].split('.'))
             sdk_version = tuple(int(part) for part in sdk.split('.'))
             rank = (version[:2] == sdk_version[:2], device.get('state') == 'Booted', version, device['name'])
             candidates.append((rank, runtime, device))
 if not candidates:
-    raise SystemExit('No available iPhone simulator with an iOS 27 runtime; install one in Xcode.')
+    target_types = [item for item in device_types.values() if item.get('name') == target_name]
+    compatible = []
+    for runtime in runtimes.values():
+        supported = {item['identifier'] for item in runtime.get('supportedDeviceTypes', [])}
+        for kind in target_types:
+            if kind['identifier'] in supported:
+                version = tuple(int(part) for part in runtime['version'].split('.'))
+                rank = (version[:2] == tuple(int(part) for part in sdk.split('.'))[:2], version)
+                compatible.append((rank, runtime, kind))
+    if not compatible:
+        raise SystemExit('iPhone 15 Pro Max is unavailable for iOS 27; install its simulator device type/runtime. No fallback to iPhone Air.')
+    _, runtime, kind = max(compatible, key=lambda item: item[0])
+    udid = subprocess.check_output(['xcrun', 'simctl', 'create', target_name, kind['identifier'], runtime['identifier']], text=True, timeout=60).strip()
+    if not udid:
+        raise SystemExit('Could not create the iPhone 15 Pro Max simulator.')
+    device = {'name': target_name, 'udid': udid, 'state': 'Shutdown', 'isAvailable': True, 'deviceTypeIdentifier': kind['identifier']}
+    candidates.append(((), runtime, device))
 _, runtime, device = max(candidates, key=lambda item: item[0])
 with open(sys.argv[1], 'w', encoding='utf-8') as handle:
     json.dump({'sdkVersion': sdk, 'runtime': runtime, 'device': device}, handle, indent=2)
