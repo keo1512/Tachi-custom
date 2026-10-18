@@ -431,7 +431,20 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
         await tester.pumpAndSettle();
-        expect(requests, hasLength(1));
+        // Names from backup may resolve the installed-source catalogue. Only
+        // the selected title is allowed to fetch chapter data.
+        expect(
+          requests.where((r) => r.url.path.endsWith('/chapters')),
+          hasLength(1),
+        );
+        expect(
+          requests.every(
+            (r) =>
+                r.url.path.endsWith('/chapters') ||
+                r.url.path.endsWith('/sources'),
+          ),
+          isTrue,
+        );
         expect(find.text('Chương new'), findsOneWidget);
         expect(
           find.textContaining('Phát hiện 11/10/2026 12:30'),

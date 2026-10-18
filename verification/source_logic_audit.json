@@ -1,0 +1,383 @@
+{
+  "schema": 1,
+  "recordedAt": "2026-10-18T11:31:52.561506+00:00",
+  "status": "Source regression checks passed; real macOS native compilation and iPhone acceptance pending",
+  "baseCommit": "ced0a008b749e6f71870f0be66861079247c384d",
+  "committed": false,
+  "pushed": false,
+  "newIpaBuilt": false,
+  "sourceFreeze": {
+    "path": "verification/source_logic_source_freeze.json",
+    "files": 654,
+    "sha256": "f28516c5ac4d32a4077bb1bb8533ed8e0c9c4ceaa43c2e7f65cddd016bd9848c"
+  },
+  "inventory": {
+    "path": "verification/source_logic_inventory.json",
+    "bytes": 453157,
+    "sha256": "065d6fc7727457fdfc18b1d7fd32ac3dcacea2c2e98ff78c4124ecdc6fc8f6d2",
+    "files": 604,
+    "localDartLinks": 2294,
+    "missingLocalImports": 0,
+    "channels": 15,
+    "limit": "Static imports/hashes are not a line-by-line semantic or native runtime proof"
+  },
+  "verification": {
+    "flutter": {
+      "path": "artifacts/logic_audit_flutter_full.log",
+      "bytes": 205143,
+      "sha256": "fec2f913c3492f6127c12e60b21e988201aabc80ac238eee47decdbec17983e2",
+      "passed": 1259,
+      "skipped": 6,
+      "failed": 0,
+      "isar": "Isar Community3.3.2 real Windows DLL"
+    },
+    "analyze": {
+      "path": "artifacts/logic_audit_analyze.log",
+      "bytes": 98,
+      "sha256": "0a5e7b8e327a60ca1c571aed11e48ff02552f418f7e588da51b28e90352fbdc9",
+      "issues": 0
+    },
+    "taskFinalFollowup": {
+      "path": "artifacts/logic_audit_tasks_final.log",
+      "bytes": 1540,
+      "sha256": "bb86d15f78714a34d1c79dcc69977162d3d8979c0058e1766b1c5684993cf779"
+    },
+    "pythonHostHelpers": {
+      "path": "artifacts/logic_audit_python.log",
+      "bytes": 22636,
+      "sha256": "0f94ea5a64eee7c8ab6622892e14241a57284a522f606151fe4d3dca1b4d6614",
+      "tests": 86,
+      "passed": 71,
+      "skipped": 15,
+      "failed": 0
+    },
+    "buildPipeline": {
+      "path": "artifacts/logic_audit_build_pipeline.log",
+      "bytes": 12353,
+      "sha256": "a3a47f6601ad75e5080b135b3dfb355f9b27ea998038008e2d1b0ece9108a906",
+      "tests": 61,
+      "passed": 60,
+      "skipped": 1,
+      "failed": 0
+    },
+    "referenceHelpers": {
+      "path": "artifacts/logic_audit_reference_helpers.log",
+      "bytes": 10159,
+      "sha256": "30f6fb82b1757c33b18323bdf3d6231eba2ca60f13de027f54e8b6990528898d",
+      "tests": 67,
+      "passed": 67,
+      "skipped": 0,
+      "failed": 0
+    },
+    "node": {
+      "path": "artifacts/logic_audit_node.log",
+      "bytes": 2377,
+      "sha256": "56b480ec60f290ee0cd73dcdb8ad6e1c2fff396e3f7b676c546accb8aab0f6a0",
+      "tests": 23,
+      "passed": 18,
+      "skipped": 5,
+      "failed": 0
+    },
+    "workflow": {
+      "path": "artifacts/logic_audit_workflow.json",
+      "bytes": 208,
+      "sha256": "8d1d6a932464c1fc24d5690b1964869c9cae54e6cbf2e5d498a5dff3c1d28f4b",
+      "yamlParsed": true,
+      "manualDispatchOnly": true,
+      "orderedPreflightBeforeNative": true,
+      "jobTimeoutMinutes": 55,
+      "boundedBuildSteps": 8,
+      "shellScripts": 9,
+      "nativeCompilationPerformed": false,
+      "bashSyntaxPassed": true
+    },
+    "javaHost": {
+      "sha256": "adbe0aaa991a5b68107035627783fb10fab97fe08d64d36b40948f0ff49377d6",
+      "sourceSha256": "554eeb600359a5106ae465c58b8be5f89071b34ba78942a0666adaf1d8a7edaa",
+      "sourceFiles": 33,
+      "entrypoint": "dev.tachibooks.engine.ExtensionHost.invoke",
+      "jniSignature": "(Ljava/lang/String;)Ljava/lang/String;",
+      "currentSourcesMatch": true,
+      "runtime": "Java8 -Xint Windows, loopback fixtures"
+    },
+    "diffCheck": true
+  },
+  "fixes": [
+    {
+      "issue": "Flutter method handler installed before engine.run asserts in pinned API",
+      "paths": [
+        "ios/Runner/AppDelegate.swift"
+      ],
+      "nativeValidated": false
+    },
+    {
+      "issue": "Riverpod3 pauses root listeners without UI owner; keep active subscription",
+      "paths": [
+        "lib/main.dart",
+        "lib/features/tasks/application/task_lifecycle.dart"
+      ],
+      "regression": "headless completion without a frame"
+    },
+    {
+      "issue": "Previous incognito session blocked future maintenance scheduling after leaving incognito",
+      "paths": [
+        "lib/features/tasks/application/task_lifecycle.dart"
+      ],
+      "regression": "incognito on/off rearms future schedules without executing work"
+    },
+    {
+      "issue": "Safe diagnostics listener was owned only by UI",
+      "paths": [
+        "lib/core/diagnostics/diagnostic_listener.dart"
+      ],
+      "regression": "headless failure logging with privacy and secret redaction"
+    },
+    {
+      "issue": "Cover privacy epoch relied on a paused listener",
+      "paths": [
+        "lib/features/settings/settings_controller.dart",
+        "lib/features/sources/application/native_runtime_provider.dart"
+      ],
+      "regression": "unobserved provider and incognito transitions"
+    },
+    {
+      "issue": "Invalidation and browser changes reused stale in-flight covers",
+      "paths": [
+        "lib/features/sources/data/native_tachi_repository.dart"
+      ],
+      "regression": "old response cannot replace post-invalidation cache"
+    },
+    {
+      "issue": "Two books with a retired shared thumbnail URL could share the wrong refreshed cover",
+      "paths": [
+        "lib/features/sources/data/native_tachi_repository.dart"
+      ],
+      "regression": "book-specific cover cache identity"
+    },
+    {
+      "issue": "Maintenance-only grants could start a manually paused download queue",
+      "paths": [
+        "ios/Runner/TaskPlatformBridge.swift",
+        "lib/features/tasks/data/task_platform.dart",
+        "lib/features/tasks/application/task_lifecycle.dart"
+      ],
+      "compatibility": "optional capability; old numeric tokens remain accepted",
+      "nativeValidated": false
+    },
+    {
+      "issue": "Changing update eligibility did not replace native network requirement on the existing request",
+      "paths": [
+        "ios/Runner/TaskPlatformBridge.swift"
+      ],
+      "nativeValidated": false
+    }
+  ],
+  "buildPipeline": {
+    "workflow": ".github/workflows/ios-build.yml",
+    "manualDispatchOnly": true,
+    "nextDefaultBuildNumber": 13,
+    "simulator": "iPhone 15 Pro Max / iOS major27",
+    "sourceBoundPreflightReuse": true,
+    "swiftRealSdkTypecheckConfigured": true,
+    "objcJniRealSdkSyntaxCheckConfigured": true,
+    "compilerGatesExecutedOnThisWindowsHost": false,
+    "wallLimitsSeconds": {
+      "podsConfiguration": 360,
+      "extensionEngine": 720,
+      "simulatorBuild": 1500,
+      "simulatorTestsWithoutRebuild": 300,
+      "deviceRelease": 1200
+    },
+    "simulatorBuildIdleLimitSeconds": 300,
+    "jobLimitMinutes": 55,
+    "fullLogAndStatusOnPhaseFailure": true,
+    "sourceFingerprintInBuildInfo": true,
+    "observedNewBuildDuration": null,
+    "previousSuccessfulJobSeconds": 2694,
+    "limit": "Timeout ceilings are not measured speed improvements; compile/link/Pods can still fail on macOS"
+  },
+  "references": [
+    {
+      "file": "tinh nang phai co.md",
+      "sha256": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c",
+      "bytes": 43832
+    },
+    {
+      "file": "# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md",
+      "sha256": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083",
+      "bytes": 62663
+    },
+    {
+      "file": "TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md",
+      "sha256": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0",
+      "bytes": 162280
+    },
+    {
+      "file": "Tachimanga iOS Mod IPA No Jailbreak Cheats 5.0 Hacked IPA by iOSGods.com.ipa",
+      "sha256": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+      "bytes": 128494339,
+      "crcValid": true,
+      "entries": 566
+    }
+  ],
+  "originalRequestedExtensions": [
+    {
+      "name": "CuuTruyen",
+      "sourceId": "8222087175453285202",
+      "version": "1.6.1",
+      "sha256": "7645eba9e97f2e38e5c375a2f749f1fd90c045d80e3a4ad3b28ab38aa2855dee",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "LXManga",
+      "sourceId": "6495630445796108150",
+      "version": "1.6.42",
+      "sha256": "e7c565409a956d124bca7e79c6de6a2ab314e68feb94557c8be9f3598256f6f3",
+      "requests": 7,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MiMi",
+      "sourceId": "2558772350527638641",
+      "version": "1.6.7",
+      "sha256": "7747c02c1b84a0c69f0b05b4e85097803524c9dadc507137670b66c386cd4220",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MiMiHentai",
+      "sourceId": "8070257113818912648",
+      "version": "1.6.7",
+      "sha256": "8d210dda9899aa5d18e3b830c9d95b283f2fe88bc151c2347baf22d8e56ddbf5",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MinoTruyen Manga",
+      "sourceId": "1911829101129863006",
+      "version": "1.6.5",
+      "sha256": "f20d6962bb31c31c6a1b3fd6d0537faa499866900234204de2e119e8f97c6ed0",
+      "requests": 7,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MinoTruyen Comics",
+      "sourceId": "3751671803647824606",
+      "version": "1.6.5",
+      "sha256": "f20d6962bb31c31c6a1b3fd6d0537faa499866900234204de2e119e8f97c6ed0",
+      "requests": 7,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MinoTruyen Hentai",
+      "sourceId": "5865133728324986123",
+      "version": "1.6.5",
+      "sha256": "f20d6962bb31c31c6a1b3fd6d0537faa499866900234204de2e119e8f97c6ed0",
+      "requests": 7,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MoeTruyen",
+      "sourceId": "8689080191405841403",
+      "version": "1.6.19",
+      "sha256": "62a0791273cc12ab1c4aad154da398cff6047a320a01b72e120bdd07ea395acf",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "ViHentai",
+      "sourceId": "4004369226840135398",
+      "version": "1.6.5",
+      "sha256": "b54a42cb2c48d8bbeaf67b87df96acd7a8c0c8c9e593ec08cceb452289fcc0de",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "VinaHentai",
+      "sourceId": "4572372176917567711",
+      "version": "1.6.19",
+      "sha256": "78b13ef3ef87df88fa7b6960aea7a177e17d469fa8a7075278f853c3a3c018bf",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    }
+  ],
+  "comparisonLimits": [
+    "Input documents and original IPA remain read-only with matching hashes and archive CRC",
+    "Source/static original-IPA comparison and fixture tests do not prove whole-app visual/runtime parity",
+    "Original requested APKs were executed on a host fixture, not the physical iPhone or live sites"
+  ],
+  "pending": [
+    "Run new compiler gates, split XCTest actions and POSIX descendant cleanup on macOS before accepting the next IPA",
+    "Native shared-engine cold background startup, scene attach, background scheduling and JNI codec/provider on iPhone15ProMax",
+    "Source/Cloudflare/CDN/cookie behavior on actual websites; fixture success is not universal Cloudflare bypass",
+    "Very large update cycle has no durable per-book checkpoint across expired grants; test fairness and download behavior before claiming whole-library cadence",
+    "Podfile.lock is currently untracked; retain actual resolution artifact and pin after verified macOS resolution"
+  ],
+  "primarySources": [
+    "https://raw.githubusercontent.com/flutter/flutter/9584c6713b324636289d067944a46fd6b49df14b/engine/src/flutter/shell/platform/darwin/ios/framework/Source/FlutterEngine.mm",
+    "https://docs.flutter.dev/add-to-app/ios/add-flutter-screen",
+    "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax"
+  ],
+  "lastDeliveredIpa": "Build12 predates this source; no new build/dispatch performed in this audit"
+}

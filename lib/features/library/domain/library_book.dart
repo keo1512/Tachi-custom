@@ -1,4 +1,5 @@
 import 'external_backup_metadata.dart';
+import '../../../core/source_memo.dart' as metadata;
 
 class BookChapter {
   const BookChapter({
@@ -11,6 +12,9 @@ class BookChapter {
     this.discoveredAt,
     this.scanlator = '',
     this.number,
+    this.sourceMemo = const {},
+    this.sourceUrl = '',
+    this.nativeSourceContext = false,
   });
   final String id;
   final String title;
@@ -22,6 +26,9 @@ class BookChapter {
   final DateTime? discoveredAt;
   final String scanlator;
   final double? number;
+  final Map<String, dynamic> sourceMemo;
+  final String sourceUrl;
+  final bool nativeSourceContext;
 
   /// null keeps the existing sequential progress inference for older libraries.
   final bool? read;
@@ -36,6 +43,9 @@ class BookChapter {
     bool clearDiscoveredAt = false,
     String? scanlator,
     double? number,
+    Map<String, dynamic>? sourceMemo,
+    String? sourceUrl,
+    bool? nativeSourceContext,
   }) => BookChapter(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -48,6 +58,9 @@ class BookChapter {
         : (discoveredAt ?? this.discoveredAt),
     scanlator: scanlator ?? this.scanlator,
     number: number ?? this.number,
+    sourceMemo: sourceMemo ?? this.sourceMemo,
+    sourceUrl: sourceUrl ?? this.sourceUrl,
+    nativeSourceContext: nativeSourceContext ?? this.nativeSourceContext,
   );
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -59,6 +72,9 @@ class BookChapter {
     if (discoveredAt != null) 'discoveredAt': discoveredAt!.toIso8601String(),
     if (scanlator.isNotEmpty) 'scanlator': scanlator,
     if (number != null) 'number': number,
+    if (sourceMemo.isNotEmpty) 'sourceMemo': sourceMemo,
+    if (sourceUrl.isNotEmpty) 'sourceUrl': sourceUrl,
+    if (nativeSourceContext) 'nativeSourceContext': true,
   };
   factory BookChapter.fromJson(Map<String, dynamic> json) => BookChapter(
     id: json['id'] as String,
@@ -74,6 +90,9 @@ class BookChapter {
         : DateTime.parse(json['discoveredAt'] as String),
     scanlator: json['scanlator'] as String? ?? '',
     number: (json['number'] as num?)?.toDouble(),
+    sourceMemo: metadata.sourceMemo(json['sourceMemo']),
+    sourceUrl: json['sourceUrl'] as String? ?? '',
+    nativeSourceContext: json['nativeSourceContext'] as bool? ?? false,
   );
 }
 
@@ -94,6 +113,8 @@ class LibraryBook {
     this.sourceId = '',
     this.sourceName = '',
     this.sourceRef = '',
+    Map<String, dynamic> sourceMemo = const {},
+    this.nativeSourceContext = false,
     this.cover = '',
     this.originalCover = '',
     this.customCover = false,
@@ -115,6 +136,7 @@ class LibraryBook {
     List<String> bookmarks = const [],
   }) : alternativeTitles = List.unmodifiable(alternativeTitles),
        genres = List.unmodifiable(genres),
+       sourceMemo = metadata.sourceMemo(sourceMemo),
        categories = List.unmodifiable(_categoryNames(categories, collection)),
        collection = _categoryNames(categories, collection).first,
        readerPreferences = Map.unmodifiable(readerPreferences),
@@ -138,6 +160,8 @@ class LibraryBook {
       readingState,
       collection;
   final List<String> alternativeTitles;
+  final Map<String, dynamic> sourceMemo;
+  final bool nativeSourceContext;
   final bool customCover;
   final double? rating;
   final List<BookChapter> chapters;
@@ -171,6 +195,8 @@ class LibraryBook {
     String? sourceId,
     String? sourceName,
     String? sourceRef,
+    Map<String, dynamic>? sourceMemo,
+    bool? nativeSourceContext,
     String? cover,
     String? originalCover,
     bool? customCover,
@@ -209,6 +235,8 @@ class LibraryBook {
     sourceId: sourceId ?? this.sourceId,
     sourceName: sourceName ?? this.sourceName,
     sourceRef: sourceRef ?? this.sourceRef,
+    sourceMemo: sourceMemo ?? this.sourceMemo,
+    nativeSourceContext: nativeSourceContext ?? this.nativeSourceContext,
     cover: cover ?? this.cover,
     originalCover: originalCover ?? this.originalCover,
     customCover: customCover ?? this.customCover,
@@ -247,6 +275,8 @@ class LibraryBook {
     'sourceId': sourceId,
     if (sourceName.isNotEmpty) 'sourceName': sourceName,
     'sourceRef': sourceRef,
+    if (sourceMemo.isNotEmpty) 'sourceMemo': sourceMemo,
+    if (nativeSourceContext) 'nativeSourceContext': true,
     'cover': cover,
     if (originalCover.isNotEmpty) 'originalCover': originalCover,
     if (customCover) 'customCover': true,
@@ -287,6 +317,8 @@ class LibraryBook {
     sourceId: json['sourceId'] as String? ?? '',
     sourceName: json['sourceName'] as String? ?? '',
     sourceRef: json['sourceRef'] as String? ?? '',
+    sourceMemo: metadata.sourceMemo(json['sourceMemo']),
+    nativeSourceContext: json['nativeSourceContext'] as bool? ?? false,
     cover: json['cover'] as String? ?? '',
     originalCover: json['originalCover'] as String? ?? '',
     customCover: json['customCover'] as bool? ?? false,

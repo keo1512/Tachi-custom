@@ -8,6 +8,19 @@ class SceneDelegate: FlutterSceneDelegate {
     willConnectTo session: UISceneSession,
     options connectionOptions: UIScene.ConnectionOptions
   ) {
+    // The same engine can already be running a scheduled task without a scene.
+    // Never open a second Dart container/Isar owner when the person opens UI.
+    if let scene = scene as? UIWindowScene,
+      let engine = (UIApplication.shared.delegate as? AppDelegate)?.applicationEngine {
+      let window = self.window ?? UIWindow(windowScene: scene)
+      let flutter = engine.viewController ?? FlutterViewController(engine: engine, nibName: nil, bundle: nil)
+      if let tabs = flutter.parent as? NativeTabsController {
+        window.rootViewController = tabs
+      } else {
+        window.rootViewController = flutter
+      }
+      self.window = window
+    }
     super.scene(scene, willConnectTo: session, options: connectionOptions)
     for context in connectionOptions.urlContexts {
       TachiDeepLinkInbox.shared.accept(context.url)
@@ -20,6 +33,7 @@ class SceneDelegate: FlutterSceneDelegate {
       TachiDeepLinkInbox.shared.accept(url)
     }
     installNativeTabsIfNeeded()
+    window?.makeKeyAndVisible()
   }
 
   override func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
@@ -31,6 +45,7 @@ class SceneDelegate: FlutterSceneDelegate {
     super.sceneDidBecomeActive(scene)
     // A storyboard window may become available after willConnectTo.
     installNativeTabsIfNeeded()
+    (UIApplication.shared.delegate as? AppDelegate)?.activateApplicationUI()
   }
 
   private func installNativeTabsIfNeeded() {

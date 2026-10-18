@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 
 import 'backup_service.dart';
+import '../../../core/format/task_intervals.dart';
 
 class StoredBackup {
   const StoredBackup(this.name, this.createdAt, this.size);
@@ -68,11 +69,13 @@ class AutomaticBackupStore {
     DateTime now, {
     int keep = 3,
     void Function()? beforeCapture,
+    void Function()? beforePublish,
   }) => _serialized(() async {
     if (keep < 1 || keep > 10) {
       throw ArgumentError('Giữ từ 1 đến 10 bản sao lưu.');
     }
     final bytes = await backup.export(beforeCapture: beforeCapture);
+    beforePublish?.call();
     await directory.create(recursive: true);
     var stamp = now.microsecondsSinceEpoch;
     while (await _file('tachibooks-auto-$stamp.json').exists()) {
@@ -88,12 +91,14 @@ class AutomaticBackupStore {
         throw const FileSystemException('Không xác minh được dữ liệu sao lưu.');
       }
       backup.validate(stored);
+      beforePublish?.call();
       await pending.rename(destination.path);
     } finally {
       if (await pending.exists()) await pending.delete();
     }
     // Retention happens only after the new backup was flushed and verified.
     for (final old in (await list()).skip(keep)) {
+      beforePublish?.call();
       await _file(old.name).delete();
     }
     return StoredBackup(
@@ -112,12 +117,13 @@ class AutomaticBackupStore {
 class AutomaticBackupPolicy {
   const AutomaticBackupPolicy({this.hours = 0, this.keep = 3});
   final int hours, keep;
+  static const intervals = automaticTaskIntervalHours;
   String encode() => jsonEncode({'hours': hours, 'keep': keep});
   factory AutomaticBackupPolicy.decode(String? raw) {
     if (raw == null) return const AutomaticBackupPolicy();
     final json = jsonDecode(raw);
     if (json is! Map ||
-        ![0, 6, 12, 24, 48, 72].contains(json['hours']) ||
+        !intervals.contains(json['hours']) ||
         json['keep'] is! int ||
         (json['keep'] as int) < 1 ||
         (json['keep'] as int) > 10) {

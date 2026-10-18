@@ -78,13 +78,18 @@ class _PresetState extends ConsumerState<LibraryFilterPresetsBar> {
                 PopupMenuItem(value: name, child: Text(name)),
             ],
             child: const Padding(
-              padding: EdgeInsets.all(12),
-              child: Text('Bộ lọc đã lưu'),
+              padding: EdgeInsets.all(8),
+              child: Text(
+                'Bộ lọc đã lưu',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ),
         IconButton(
           tooltip: 'Lưu bộ lọc hiện tại',
+          visualDensity: VisualDensity.compact,
           onPressed: save,
           icon: const Icon(Icons.bookmark_add_outlined),
         ),

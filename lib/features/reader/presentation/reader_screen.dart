@@ -40,12 +40,13 @@ import 'zoomable_manga_page.dart';
 import 'reader_auto_scroll.dart';
 import 'reader_keyboard_controls.dart';
 import 'reader_hold_scroll.dart';
-import 'manga_page_layout.dart';
 import 'reader_tap_zones.dart';
 import 'reader_image_region.dart';
 import 'reader_chapter_boundary.dart';
 import 'paged_manga_reader.dart';
 import 'reader_pinch_scroll_guard.dart';
+import 'continuous_manga_reader.dart';
+import 'reader_image_loader.dart';
 
 class ReaderScreen extends ConsumerStatefulWidget {
   const ReaderScreen({
@@ -92,6 +93,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   Orientation? layoutOrientation;
   late final ReaderAutoScroll autoScroll;
   final viewport = GlobalKey();
+  GlobalKey<ContinuousMangaReaderState> continuousKey = GlobalKey();
   final tts = FlutterTts();
   late final LibraryRepository repository;
   late final LibraryViewModel vm;
@@ -131,6 +133,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   int modalDepth = 0;
   double heldSpeed = 40;
   bool get paged => content?.kind == 'manga' && options.isPaged;
+  bool get continuous => content?.kind == 'manga' && !options.isPaged;
 
   @override
   void initState() {
@@ -158,6 +161,8 @@ class _ReaderState extends ConsumerState<ReaderScreen>
             movePaged(1);
           } else if (page + 1 < data!.images.length) {
             seek((page + 1).toDouble());
+          } else {
+            continuousKey.currentState?.nextPage();
           }
         } else if (scroll.hasClients) {
           scroll.jumpTo(
@@ -180,6 +185,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed;
     WidgetsBinding.instance.addObserver(this);
     scroll.addListener(() {
+      if (continuous) return;
       if (restoring || loading || !scroll.hasClients) return;
       final previousPage = page;
       final previousPercent = (position * 100).round();
@@ -305,6 +311,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     String? chapterId,
   }) async {
     final request = ++generation;
+    continuousKey = GlobalKey();
     nativeImages?.dispose();
     nativeImages = null;
     final revision = widget.expectedRevision ?? repository.replacementRevision;
@@ -334,6 +341,10 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         index = index.clamp(0, item.chapters.length - 1);
       }
       final openingChapterId = item.chapters[index].id;
+      // Keep source identity available when page-list parsing fails, so the
+      // reader can open its browser and retry the same chapter after clearance.
+      book = item;
+      loadedRevision = revision;
       final fraction =
           offset ??
           (resume && item.currentChapter == index
@@ -372,47 +383,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         memoryImageBytes.clear();
         loading = false;
       });
-      final source = ref.read(sourceRepositoryProvider);
-      if (data.kind == 'manga' &&
-          data.images.isNotEmpty &&
-          (data.images.every((url) => url.startsWith('data:')) ||
-              source.usesNativeImageLoader(vm.catalogue(latest)))) {
-        final chapter = latest.chapters[mapped];
-        final window = NativeMangaImageWindow(
-          count: data.images.length,
-          fetch: (i) async {
-            checkLibraryRevision(repository.replacementRevision, revision);
-            final url = data.images[i];
-            if (url.startsWith('data:')) {
-              return SourceImageData(
-                bytes: base64Decode(url.substring(url.indexOf(',') + 1)),
-                mimeType: 'image/*',
-              );
-            }
-            final image = await source.fetchImage(
-              vm.catalogue(latest),
-              CatalogueChapter(
-                ref: chapter.id,
-                title: chapter.title,
-                index: chapter.index,
-              ),
-              i,
-              url,
-            );
-            checkLibraryRevision(repository.replacementRevision, revision);
-            return image;
-          },
-        );
-        nativeImages = window;
-        window.addListener(() {
-          if (!mounted || request != generation) return;
-          // Keep the logical page and its within-page fraction while natural
-          // heights replace placeholders, including pages above the viewport.
-          setState(() => restoring = true);
-          restoreLocation(request);
-        });
-        window.focus(page);
-      }
+      configurePagedImages(latest, data, mapped, revision, request);
       startReadingTime();
       restoreLocation(request);
       await persist();
@@ -443,7 +414,61 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     }
   }
 
+  void configurePagedImages(
+    LibraryBook item,
+    ReaderContent data,
+    int mapped,
+    int revision,
+    int request,
+  ) {
+    final source = ref.read(sourceRepositoryProvider);
+    if (data.kind == 'manga' &&
+        options.isPaged &&
+        data.images.isNotEmpty &&
+        (data.images.every((url) => url.startsWith('data:')) ||
+            source.usesNativeImageLoader(vm.catalogue(item)))) {
+      final chapter = item.chapters[mapped];
+      final window = NativeMangaImageWindow(
+        count: data.images.length,
+        fetch: (i) async {
+          checkLibraryRevision(repository.replacementRevision, revision);
+          final url = data.images[i];
+          if (url.startsWith('data:')) {
+            return SourceImageData(
+              bytes: base64Decode(url.substring(url.indexOf(',') + 1)),
+              mimeType: 'image/*',
+            );
+          }
+          final image = await source.fetchImage(
+            vm.catalogue(item),
+            CatalogueChapter(
+              ref: chapter.id,
+              title: chapter.title,
+              index: chapter.index,
+              sourceMemo: chapter.sourceMemo,
+              nativeSourceContext: chapter.nativeSourceContext,
+            ),
+            i,
+            url,
+          );
+          checkLibraryRevision(repository.replacementRevision, revision);
+          return image;
+        },
+      );
+      nativeImages = window;
+      window.addListener(() {
+        if (!mounted || request != generation) return;
+        // Keep the logical page and its within-page fraction while natural
+        // heights replace placeholders, including pages above the viewport.
+        setState(() => restoring = true);
+        restoreLocation(request);
+      });
+      window.focus(page);
+    }
+  }
+
   void captureScroll() {
+    if (continuous) return;
     if (paged) return;
     if (!scroll.hasClients || content == null) return;
     if (content!.kind == 'manga' && imageKeys.isNotEmpty) {
@@ -476,6 +501,15 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   void restoreLocation(int request) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || request != generation || content == null) return;
+      if (continuous) {
+        continuousKey.currentState?.seek(
+          fraction: position,
+          page: pendingPageSeek,
+        );
+        pendingPageSeek = null;
+        restoring = false;
+        return;
+      }
       final manga = content!.kind == 'manga';
       if (paged && content!.images.isNotEmpty) {
         if (!pageController.hasClients) return;
@@ -574,14 +608,15 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         view.localToGlobal(Offset(0, view.size.height)).dy + 1;
   }
 
-  bool get mangaChapterCompleted =>
-      !restoring &&
-      content?.kind == 'manga' &&
-      content!.images.isNotEmpty &&
-      (paged ? pageController.hasClients : scroll.hasClients) &&
-      lastMangaPageVisible &&
-      decodedImages.contains(content!.images.length - 1) &&
-      failedImages.isEmpty;
+  bool get mangaChapterCompleted => continuous
+      ? continuousKey.currentState?.location?.completed ?? false
+      : !restoring &&
+            content?.kind == 'manga' &&
+            content!.images.isNotEmpty &&
+            (paged ? pageController.hasClients : scroll.hasClients) &&
+            lastMangaPageVisible &&
+            decodedImages.contains(content!.images.length - 1) &&
+            failedImages.isEmpty;
 
   Future<void> bookmark() async {
     if (book == null || loading) return;
@@ -921,7 +956,115 @@ class _ReaderState extends ConsumerState<ReaderScreen>
       );
       return;
     }
+    if (continuous &&
+        continuousKey.currentState?.jumpToChapter(target) == true) {
+      return;
+    }
     await load(target, chapterId: chapterId);
+  }
+
+  void continuousLocation(ContinuousMangaLocation location) {
+    if (!mounted ||
+        closing ||
+        loadedRevision != repository.replacementRevision) {
+      return;
+    }
+    setState(() {
+      if (current != location.chapter) {
+        imageKeys = List.generate(
+          location.content.images.length,
+          (_) => GlobalKey(),
+        );
+        readyImages.clear();
+        decodedImages.clear();
+      }
+      current = location.chapter;
+      content = location.content;
+      page = location.page;
+      position = location.fraction;
+      failedImages
+        ..clear()
+        ..addAll(location.failedPages);
+      restoring = false;
+    });
+    debounce?.cancel();
+    debounce = Timer(
+      const Duration(milliseconds: 500),
+      () => unawaited(persist()),
+    );
+  }
+
+  Widget continuousContent(EdgeInsets margins) {
+    final item = book!, revision = loadedRevision!, request = generation;
+    final source = ref.read(sourceRepositoryProvider);
+    final catalogue = vm.catalogue(item);
+    return ContinuousMangaReader(
+      key: continuousKey,
+      book: item,
+      initialChapter: current,
+      initialContent: content!,
+      initialFraction: position,
+      options: options,
+      margins: margins,
+      scroll: scroll,
+      viewportKey: viewport,
+      isCurrent: () =>
+          mounted &&
+          !closing &&
+          request == generation &&
+          revision == repository.replacementRevision,
+      onStale: () => message(
+        context,
+        'Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.',
+      ),
+      loadChapter: (index) =>
+          vm.getContent(item, index, expectedRevision: revision),
+      fetchImage: (index, data, p) {
+        if (data.images[p].startsWith('data:') ||
+            !source.usesNativeImageLoader(catalogue)) {
+          return ref.read(ordinaryReaderImageLoaderProvider)(data, p);
+        }
+        final chapter = item.chapters[index];
+        return source.fetchImage(
+          catalogue,
+          CatalogueChapter(
+            ref: chapter.id,
+            title: chapter.title,
+            index: chapter.index,
+            sourceMemo: chapter.sourceMemo,
+            nativeSourceContext: chapter.nativeSourceContext,
+          ),
+          p,
+          data.images[p],
+        );
+      },
+      onLocation: continuousLocation,
+      onProgress: (location) {
+        if (incognitoSession ||
+            request != generation ||
+            revision != repository.replacementRevision) {
+          return;
+        }
+        unawaited(
+          vm
+              .updateProgress(
+                item.id,
+                item.chapters[location.chapter].id,
+                location.fraction,
+                chapterCompleted: location.completed,
+                inferCompletionFromFraction: false,
+                expectedRevision: revision,
+              )
+              .catchError((Object error) {
+                DiagnosticLogs.error('database', error);
+              }),
+        );
+      },
+      onPageActions: (index, p) async {
+        if (index != current) continuousKey.currentState?.jumpToChapter(index);
+        await pageActions(p);
+      },
+    );
   }
 
   Future<void> openSourceWebsite() async {
@@ -939,7 +1082,11 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         : opened.chapters[current].id;
     final retryPosition = failedChapter ? requestedPosition : position;
     await ref.read(sourceRepositoryProvider).openWebsite(vm.catalogue(opened));
-    if (!mounted || request != generation) return;
+    if (!mounted ||
+        request != generation ||
+        current != retryIndex && !failedChapter) {
+      return;
+    }
     checkLibraryRevision(repository.replacementRevision, revision);
     if (error == null && failedImages.isEmpty) return;
     final latest = await repository.find(opened.id);
@@ -1019,6 +1166,8 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                 ref: chapterId,
                 title: item.chapters[current].title,
                 index: current,
+                sourceMemo: item.chapters[current].sourceMemo,
+                nativeSourceContext: item.chapters[current].nativeSourceContext,
               ),
               index,
               url,
@@ -1564,6 +1713,28 @@ class _ReaderState extends ConsumerState<ReaderScreen>
       restoring = true;
       restoreLocation(generation);
     }
+    if (content?.kind == 'manga' && options.isPaged != nextOptions.isPaged) {
+      nativeImages?.dispose();
+      nativeImages = null;
+      if (nextOptions.isPaged && book != null && loadedRevision != null) {
+        final request = generation;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || request != generation || !options.isPaged) return;
+          readyImages.clear();
+          decodedImages.clear();
+          failedImages.clear();
+          configurePagedImages(
+            book!,
+            content!,
+            current,
+            loadedRevision!,
+            request,
+          );
+          setState(() => restoring = true);
+          restoreLocation(request);
+        });
+      }
+    }
     options = nextOptions;
     layoutOrientation = screenOrientation;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1791,6 +1962,8 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                             child: LayoutBuilder(
                               builder: (context, bounds) => paged
                                   ? pagedContent()
+                                  : manga
+                                  ? continuousContent(pageMargins)
                                   : SingleChildScrollView(
                                       key: viewport,
                                       controller: scroll,
@@ -1802,112 +1975,40 @@ class _ReaderState extends ConsumerState<ReaderScreen>
                                               26,
                                               140,
                                             ),
-                                      child: manga
-                                          ? Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.stretch,
-                                              children: [
-                                                ...List.generate(
-                                                  content!.images.length,
-                                                  (i) => Padding(
-                                                    key: imageKeys[i],
-                                                    padding: EdgeInsets.fromLTRB(
-                                                      pageMargins.left,
-                                                      0,
-                                                      pageMargins.right,
-                                                      i ==
-                                                              content!
-                                                                      .images
-                                                                      .length -
-                                                                  1
-                                                          ? 0
-                                                          : options.gap,
-                                                    ),
-                                                    child: GestureDetector(
-                                                      onLongPress:
-                                                          options.holdScroll
-                                                          ? null
-                                                          : () =>
-                                                                pageActions(i),
-                                                      child: MangaPageLayout(
-                                                        mode:
-                                                            options.imageScale,
-                                                        viewportHeight:
-                                                            bounds.maxHeight,
-                                                        image: (width, height) => ZoomableMangaPage(
-                                                          enabled: options.zoom,
-                                                          child: ColorFiltered(
-                                                            colorFilter: options
-                                                                .imageFilter,
-                                                            child: ColorFiltered(
-                                                              colorFilter: ColorFilter.mode(
-                                                                Color(
-                                                                  options.tint,
-                                                                ).withValues(
-                                                                  alpha: options
-                                                                      .tintOpacity,
-                                                                ),
-                                                                options
-                                                                    .blendMode,
-                                                              ),
-                                                              child: image(
-                                                                content!
-                                                                    .images[i],
-                                                                i,
-                                                                width: width,
-                                                                height: height,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                                chapterBoundary(),
-                                              ],
-                                            )
-                                          : Center(
-                                              child: ConstrainedBox(
-                                                constraints:
-                                                    const BoxConstraints(
-                                                      maxWidth: 720,
-                                                    ),
-                                                child: SelectionArea(
-                                                  child: HtmlWidget(
-                                                    content!.html,
-                                                    customWidgetBuilder: (element) {
-                                                      if (element.localName ==
-                                                          'img') {
-                                                        final source = element
-                                                            .attributes['src'];
-                                                        if (source != null) {
-                                                          return image(
-                                                            source,
-                                                            -1,
-                                                          );
-                                                        }
-                                                      }
-                                                      return null;
-                                                    },
-                                                    textStyle: TextStyle(
-                                                      fontFamily:
-                                                          settings.font ==
-                                                                  'Arial' ||
-                                                              settings.font ==
-                                                                  'NotoSans'
-                                                          ? 'NotoSans'
-                                                          : 'NotoSerif',
-                                                      fontSize:
-                                                          settings.fontSize,
-                                                      height:
-                                                          settings.lineHeight,
-                                                      color: foreground,
-                                                    ),
-                                                  ),
-                                                ),
+                                      child: Center(
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 720,
+                                          ),
+                                          child: SelectionArea(
+                                            child: HtmlWidget(
+                                              content!.html,
+                                              customWidgetBuilder: (element) {
+                                                if (element.localName ==
+                                                    'img') {
+                                                  final source =
+                                                      element.attributes['src'];
+                                                  if (source != null) {
+                                                    return image(source, -1);
+                                                  }
+                                                }
+                                                return null;
+                                              },
+                                              textStyle: TextStyle(
+                                                fontFamily:
+                                                    settings.font == 'Arial' ||
+                                                        settings.font ==
+                                                            'NotoSans'
+                                                    ? 'NotoSans'
+                                                    : 'NotoSerif',
+                                                fontSize: settings.fontSize,
+                                                height: settings.lineHeight,
+                                                color: foreground,
                                               ),
                                             ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                             ),
                           ),

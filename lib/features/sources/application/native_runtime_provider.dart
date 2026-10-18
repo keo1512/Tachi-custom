@@ -13,6 +13,7 @@ import '../../settings/settings_controller.dart';
 import '../../privacy/application/app_lock_controller.dart';
 import '../../library/data/coordinated_preferences.dart';
 import '../../library/presentation/library_view_model.dart';
+import '../presentation/source_cover_image.dart';
 
 typedef NativeRuntimeFactory = NativeSourceEngine Function();
 
@@ -20,15 +21,15 @@ typedef NativeRuntimeFactory = NativeSourceEngine Function();
 final nativeRuntimeFactoriesProvider =
     Provider<Map<SourceEngine, NativeRuntimeFactory>>((ref) {
       if (!Platform.isIOS) return const {};
-      var coverCacheEpoch = 0;
-      ref.listen(
-        settingsProvider.select((s) => s.incognitoMode),
-        (_, _) => coverCacheEpoch++,
-      );
       return {
         SourceEngine.vbook: NativeVbookRepository.new,
         SourceEngine.tachimanga: () => NativeTachiRepository(
           automaticallyVerifyChallenges: true,
+          onBrowserSessionChanged: () {
+            if (ref.mounted) {
+              ref.read(coverRefreshRevisionProvider.notifier).invalidate();
+            }
+          },
           canVerifyChallenge: () {
             final lock = ref.read(appLockProvider);
             final lifecycle = WidgetsBinding.instance.lifecycleState;
@@ -50,7 +51,8 @@ final nativeRuntimeFactoriesProvider =
             );
           },
           canCacheCover: () => !ref.read(settingsProvider).incognitoMode,
-          coverCacheEpoch: () => coverCacheEpoch,
+          coverCacheEpoch: () =>
+              ref.read(settingsProvider.notifier).privacyGeneration,
           iconForPackage: (packageUrl) {
             final indexes = ref.read(extensionCatalogueProvider).value;
             for (final index in indexes ?? []) {

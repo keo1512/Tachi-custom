@@ -84,6 +84,31 @@ class RuntimeBundleTest(unittest.TestCase):
         self.assertEqual(result["bootstrapJars"], 6)
         self.assertFalse(result["deviceRuntimeVerified"])
 
+    def test_current_image_host_requires_separate_pinned_signed_crypto_provider(self):
+        path = self.tachi / "engine/extension-host.jar"
+        with zipfile.ZipFile(path, "a") as archive:
+            archive.writestr("dev/tachibooks/engine/ImageCodec.class", b"fixture only")
+        self.provenance["host"]["sha256"] = sha256(path)
+        self.write_provenance()
+        with self.assertRaisesRegex(ValueError, "crypto provider provenance"):
+            verify(self.app)
+        provider = self.tachi / "engine/bcprov.jar"
+        with zipfile.ZipFile(provider, "w") as archive:
+            archive.writestr("org/bouncycastle/jce/provider/BouncyCastleProvider.class", b"fixture only")
+            archive.writestr("META-INF/fixture.SF", b"fixture only; not a runtime signature")
+        record = {"bytes": provider.stat().st_size, "sha256": sha256(provider)}
+        # Only a synthetic pin is overridden in this structural fixture. The
+        # original APK proof runs the untouched upstream signed provider.
+        with mock.patch.dict(bundle_checker.SPEC, {"cryptoProvider": record}):
+            self.provenance["cryptoProvider"] = record
+            self.write_provenance()
+            verify(self.app)
+            data = bytearray(provider.read_bytes())
+            data[-1] ^= 1
+            provider.write_bytes(data)
+            with self.assertRaisesRegex(ValueError, "crypto provider bytes"):
+                verify(self.app)
+
     def test_missing_or_changed_array_decoder_fails_even_with_updated_jar_provenance(self):
         path = self.tachi / "engine/extension-dependencies.jar"
         for payload in (None, b"wrong size", self.array_template[:-1] + b"x", self.array_template[:6] + b"\x00\x3d" + self.array_template[8:]):

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/feedback.dart';
+import '../../../core/format/task_intervals.dart';
 import '../../../core/format/vietnamese_format.dart';
 import '../../library/application/automatic_backup_controller.dart';
 import '../../library/application/backup_activity.dart';
@@ -211,6 +212,9 @@ class _AutomaticBackupScreenState extends ConsumerState<AutomaticBackupScreen> {
     return SettingsPage(
       title: 'Sao lưu tự động',
       children: [
+        const SettingsNote(
+          'Tự sao lưu theo lịch kể cả khi không mở giao diện. iOS chọn thời điểm chạy thực tế nên có thể trễ hơn chu kỳ. Nếu vuốt tắt hẳn app trong đa nhiệm, cần mở lại để tiếp tục lịch nền.',
+        ),
         if (completedRestore case final completed?)
           BackupRestoreCompleted(
             books: completed.count,
@@ -270,9 +274,9 @@ class _AutomaticBackupScreenState extends ConsumerState<AutomaticBackupScreen> {
             '${status.fileName} · ${vietnameseNumber((status.bytes ?? 0) / (1024 * 1024), decimals: 2)} MB',
           ),
         const SettingsHeading('Lịch sao lưu'),
-        for (final hours in [0, 6, 12, 24, 48, 72])
+        for (final hours in AutomaticBackupPolicy.intervals)
           SettingsRow(
-            title: hours == 0 ? 'Tắt' : 'Mỗi $hours giờ',
+            title: hours == 0 ? 'Tắt' : 'Mỗi ${taskIntervalLabel(hours)}',
             trailing: policy.hours == hours
                 ? const Icon(CupertinoIcons.checkmark)
                 : null,

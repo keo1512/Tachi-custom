@@ -68,7 +68,11 @@ class DiagnosticEvent {
       'timeout' => 'Thao tác phản hồi quá lâu. Hãy thử lại.',
       'invalid_data' => 'Dữ liệu không đúng định dạng. Hãy kiểm tra hoặc khôi phục bản sao lưu.',
       'platform' => 'Thao tác trên thiết bị chưa hoàn tất. Hãy thử lại.',
-      'background_paused' => 'iOS đã dừng thời gian chạy nền. Mở ứng dụng để tiếp tục tác vụ còn lại.',
+      'background_paused' => 'iOS đã dừng phiên chạy nền. Công việc còn lại được giữ để tiếp tục khi được cấp thời gian.',
+      'background_started' =>
+        'iOS đã đánh thức tác vụ nền; app bắt đầu xử lý lịch tự động.',
+      'background_completed' => 'Phiên chạy nền đã xử lý lịch tự động. Xem kết quả riêng của sao lưu và cập nhật truyện.',
+      'background_interrupted' => 'Phiên chạy nền chưa hoàn tất. Dữ liệu đã ghi được giữ; app sẽ thử lại theo lịch.',
       'sync_permission_denied' => 'Cloud từ chối truy cập dữ liệu của tài khoản. Kiểm tra quy tắc Firestore của TachiBooks đã hỗ trợ đồng bộ phiên bản 2; dữ liệu trên máy được giữ nguyên.',
       'auth_provider_disabled' => 'Đăng nhập Google chưa được bật trong Firebase của TachiBooks. Bật Google trong Authentication rồi thử đăng nhập lại.',
       'auth_session_expired' =>
@@ -87,6 +91,9 @@ class DiagnosticEvent {
         'platform',
         'operation_failed',
         'background_paused',
+        'background_started',
+        'background_completed',
+        'background_interrupted',
         'source_browser_required',
         'source_api_unsupported',
         'source_engine_unavailable',
@@ -95,6 +102,7 @@ class DiagnosticEvent {
         'source_invalid_request',
         'source_title_unresolved',
         'source_chapter_unresolved',
+        'source_chapter_context_missing',
         'source_not_installed',
         'source_connection_failed',
         'sync_permission_denied',
@@ -196,7 +204,10 @@ class DiagnosticLogStore {
   final SharedPreferences preferences;
   final bool Function()? canRecord;
   static const key = 'deviceDiagnosticLogV1';
-  static const appVersion = '1.0.0+11';
+  static const appVersion = String.fromEnvironment(
+    'TACHI_APP_VERSION',
+    defaultValue: '1.0.0+11',
+  );
   static const maxEntries = 100, maxBytes = 128 * 1024;
   Future<void> _pending = Future<void>.value();
   final _changes = StreamController<void>.broadcast();

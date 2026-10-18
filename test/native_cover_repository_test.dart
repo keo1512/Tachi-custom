@@ -4,6 +4,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tachi_books/features/settings/settings_controller.dart';
 import 'package:http/testing.dart';
 import 'package:http/http.dart' as http;
 import 'package:tachi_books/features/sources/data/native_tachi_repository.dart';
@@ -13,15 +16,18 @@ import 'package:tachi_books/features/sources/data/source_repository.dart';
 import 'package:tachi_books/features/sources/domain/catalogue.dart';
 import 'package:tachi_books/features/sources/domain/native_source_engine.dart';
 
-CatalogueBook _book(String url, {String sourceId = '9223372036854775806'}) =>
-    CatalogueBook(
-      ref: '123', // Imported companion identity does not gate its saved cover.
-      title: 'Title',
-      sourceId: sourceId,
-      coverUrl: url,
-      kind: ContentKind.manga,
-      engine: SourceEngine.tachimanga,
-    );
+CatalogueBook _book(
+  String url, {
+  String sourceId = '9223372036854775806',
+  String ref = '123',
+}) => CatalogueBook(
+  ref: ref, // Imported companion identity does not gate its saved cover.
+  title: 'Title',
+  sourceId: sourceId,
+  coverUrl: url,
+  kind: ContentKind.manga,
+  engine: SourceEngine.tachimanga,
+);
 
 class _LegacyRuntime implements NativeSourceEngine {
   @override
@@ -77,6 +83,73 @@ void main() {
     addTearDown(repository.dispose);
     return repository;
   }
+
+  test('invalidating a cover rejects old in-flight cache publication and starts a new request', () async {
+    final started = Completer<void>(), release = Completer<void>();
+    var calls = 0;
+    final repository = native((_, _) async {
+      final version = ++calls;
+      if (version == 1) {
+        started.complete();
+        await release.future;
+      }
+      return {
+        'base64': base64Encode([255, 216, 255, version]),
+        'mimeType': 'image/jpeg',
+      };
+    });
+    final book = _book('/refreshed.jpg');
+    final old = repository.fetchCover(book);
+    await started.future;
+    await repository.invalidateCover(book);
+    final fresh = repository.fetchCover(book);
+    for (var i = 0; i < 20; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      if (calls == 2) break;
+    }
+    release.complete();
+    final images = await Future.wait([old, fresh]);
+    expect(calls, 2);
+    expect(images.last.bytes.last, 2);
+    expect((await repository.fetchCover(book)).bytes.last, 2);
+    expect(calls, 2);
+  });
+
+  test(
+    'two restored books sharing a retired URL keep their own refreshed covers',
+    () async {
+      var coverCalls = 0;
+      final repository = native((method, args) {
+        if (method == 'detail') {
+          return {
+            'ref': args['ref'],
+            'title': 'Fixture',
+            'coverUrl': '${args['ref']}.jpg',
+          };
+        }
+        expect(method, 'cover');
+        coverCalls++;
+        if (args['url'] == '/retired.jpg') {
+          throw const ApiException('Expired', statusCode: 404);
+        }
+        return {
+          'base64': base64Encode([
+            255,
+            216,
+            255,
+            args['url'] == '/first.jpg' ? 1 : 2,
+          ]),
+          'mimeType': 'image/jpeg',
+        };
+      });
+      final first = _book('/retired.jpg', ref: '/first');
+      final second = _book('/retired.jpg', ref: '/second');
+      expect((await repository.fetchCover(first)).bytes.last, 1);
+      expect((await repository.fetchCover(second)).bytes.last, 2);
+      expect((await repository.fetchCover(first)).bytes.last, 1);
+      expect(coverCalls, 4);
+    },
+  );
 
   test('cover disk cache survives runtime restart, distinguishes sources and invalidates one cover', () async {
     var calls = 0;
@@ -139,6 +212,52 @@ void main() {
       expect(calls, 2);
     },
   );
+
+  test('cover privacy epoch survives inactive provider listeners and settings rebuilds', () async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final container = ProviderContainer(
+      overrides: [preferencesProvider.overrideWithValue(preferences)],
+    );
+    addTearDown(container.dispose);
+    final gate = Completer<void>(), started = Completer<void>();
+    var calls = 0;
+    final repository = native(
+      (_, _) async {
+        calls++;
+        if (calls == 1) {
+          started.complete();
+          await gate.future;
+        }
+        return {
+          'base64': base64Encode([255, 216, 255, 1]),
+          'mimeType': 'image/jpeg',
+        };
+      },
+      canCacheCover: () => !container.read(settingsProvider).incognitoMode,
+      coverCacheEpoch: () =>
+          container.read(settingsProvider.notifier).privacyGeneration,
+    );
+    final book = _book('/privacy-provider.jpg');
+    final pending = repository.fetchCover(book);
+    await started.future;
+    final before = container.read(settingsProvider.notifier).privacyGeneration;
+    await container.read(settingsProvider.notifier).update(incognitoMode: true);
+    await container
+        .read(settingsProvider.notifier)
+        .update(incognitoMode: false);
+    await container.read(settingsProvider.notifier).update(libraryColumns: 4);
+    expect(
+      container.read(settingsProvider.notifier).privacyGeneration,
+      before + 2,
+    );
+    gate.complete();
+    await pending;
+    await repository.fetchCover(book);
+    expect(calls, 2);
+    await repository.fetchCover(book);
+    expect(calls, 2);
+  });
 
   test('an uninstalled source may load a public thumbnail but loaded-source failures never bypass its client', () async {
     var publicCalls = 0;

@@ -1,0 +1,289 @@
+{
+  "version": 1,
+  "recordedAt": "2026-10-18T10:07:12.239717+00:00",
+  "status": "source checks passed; current native startup, scheduling and codec acceptance pending",
+  "headCommit": "ced0a008b749e6f71870f0be66861079247c384d",
+  "workingTreeCommitted": false,
+  "newIpaBuilt": false,
+  "freeze": {
+    "path": "verification/device_followup_source_freeze.json",
+    "files": 648,
+    "sha256": "6962e9524d17f9548de2a2842e83de39ad68e5860e1c842c1c74f2d2cfe82df9"
+  },
+  "verification": {
+    "flutter": {
+      "path": "artifacts/device_followup_all_features_final.log",
+      "sha256": "11154ceb7e22e855d85c3b5c8765d6729fa64066237ffa14c05416f537d62c4a",
+      "bytes": 203959,
+      "passed": 1252,
+      "skipped": 6,
+      "failed": 0,
+      "isar": "official Isar Community 3.3.2 Windows DLL"
+    },
+    "analyze": {
+      "path": "artifacts/device_followup_analyze_acceptance.log",
+      "sha256": "c765851d26911f70f73944e71da4d3e71d35e32666f23928ef929432e8a01ddd",
+      "bytes": 98,
+      "issues": 0
+    },
+    "pythonHostHelpers": {
+      "path": "artifacts/device_followup_python_final.log",
+      "sha256": "b42c325189d49722799ca2176ce87a11266f9799166da33e999e3fcdca0c840c",
+      "bytes": 22636,
+      "tests": 86,
+      "passed": 71,
+      "skipped": 15,
+      "failed": 0,
+      "scope": "Java host and build helpers unchanged by later Flutter/native startup work"
+    },
+    "packageHelpers": {
+      "path": "artifacts/device_followup_package_helpers_final.log",
+      "sha256": "162583c7724ecdbaa9e842d00cd41d4f38ab7fbe306453906c70997c7b9eb4bb",
+      "bytes": 3907,
+      "passed": 20,
+      "failed": 0
+    },
+    "headlessCoordinator": {
+      "path": "artifacts/background_maintenance_owner_final.log",
+      "sha256": "fa638c9ff98e6c629ecbcca0e0bbac13983dd5a1eae20aa89cc9955d96b7816a",
+      "bytes": 2719
+    },
+    "javaHost": {
+      "sha256": "adbe0aaa991a5b68107035627783fb10fab97fe08d64d36b40948f0ff49377d6",
+      "sourceSha256": "554eeb600359a5106ae465c58b8be5f89071b34ba78942a0666adaf1d8a7edaa",
+      "sourceFiles": 33,
+      "entrypoint": "dev.tachibooks.engine.ExtensionHost.invoke",
+      "jniSignature": "(Ljava/lang/String;)Ljava/lang/String;",
+      "currentJavaSourcesMatch": true,
+      "runtime": "Java8 -Xint Windows"
+    },
+    "diffCheck": true
+  },
+  "implemented": [
+    "SManga/SChapter memo preservation, exact contextual recovery and page-cache isolation",
+    "Cover decode sizing, bounded requests and refresh of expired cover metadata",
+    "Continuous chapter scrolling, bounded image/chapter retention and visible chapter metadata",
+    "Bulk migration target source selector and stale preview invalidation",
+    "Offline source labels for backups without installed extensions",
+    "Author filtering, multiple source include/exclude, legacy preferences, presets and backups",
+    "Multi-folder downloads using the common durable deduplicated queue",
+    "Compact tall library filter sheet; removed scanlator condition including old presets",
+    "One headless-capable native engine with a shared Dart owner before/after foreground UI",
+    "Scheduled backup and chapter updates; independent failures, cancellation and atomic retention guards",
+    "Cadences: off, 1/2/3/4/6/8/12/18h and 1/2/3/5/7d; optional all-online-books mode",
+    "Safe background start/finish/interruption events in the device diagnostic log"
+  ],
+  "sourceNameCatalogue": {
+    "entries": 2427,
+    "path": "assets/source_catalogue/keiyoushi_names.json",
+    "sha256": "bbfc7f41df10ec0f76a659aa7e23fdbfd69df574425b5e250eb088d295011350",
+    "bytes": 87099
+  },
+  "originalRequestedExtensions": [
+    {
+      "name": "CuuTruyen",
+      "sourceId": "8222087175453285202",
+      "version": "1.6.1",
+      "sha256": "7645eba9e97f2e38e5c375a2f749f1fd90c045d80e3a4ad3b28ab38aa2855dee",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "LXManga",
+      "sourceId": "6495630445796108150",
+      "version": "1.6.42",
+      "sha256": "e7c565409a956d124bca7e79c6de6a2ab314e68feb94557c8be9f3598256f6f3",
+      "requests": 7,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MiMi",
+      "sourceId": "2558772350527638641",
+      "version": "1.6.7",
+      "sha256": "7747c02c1b84a0c69f0b05b4e85097803524c9dadc507137670b66c386cd4220",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MiMiHentai",
+      "sourceId": "8070257113818912648",
+      "version": "1.6.7",
+      "sha256": "8d210dda9899aa5d18e3b830c9d95b283f2fe88bc151c2347baf22d8e56ddbf5",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MinoTruyen Manga",
+      "sourceId": "1911829101129863006",
+      "version": "1.6.5",
+      "sha256": "f20d6962bb31c31c6a1b3fd6d0537faa499866900234204de2e119e8f97c6ed0",
+      "requests": 7,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MinoTruyen Comics",
+      "sourceId": "3751671803647824606",
+      "version": "1.6.5",
+      "sha256": "f20d6962bb31c31c6a1b3fd6d0537faa499866900234204de2e119e8f97c6ed0",
+      "requests": 7,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MinoTruyen Hentai",
+      "sourceId": "5865133728324986123",
+      "version": "1.6.5",
+      "sha256": "f20d6962bb31c31c6a1b3fd6d0537faa499866900234204de2e119e8f97c6ed0",
+      "requests": 7,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "MoeTruyen",
+      "sourceId": "8689080191405841403",
+      "version": "1.6.19",
+      "sha256": "62a0791273cc12ab1c4aad154da398cff6047a320a01b72e120bdd07ea395acf",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "ViHentai",
+      "sourceId": "4004369226840135398",
+      "version": "1.6.5",
+      "sha256": "b54a42cb2c48d8bbeaf67b87df96acd7a8c0c8c9e593ec08cceb452289fcc0de",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    },
+    {
+      "name": "VinaHentai",
+      "sourceId": "4572372176917567711",
+      "version": "1.6.19",
+      "sha256": "78b13ef3ef87df88fa7b6960aea7a177e17d469fa8a7075278f853c3a3c018bf",
+      "requests": 6,
+      "catalogue": true,
+      "detail": true,
+      "toc": true,
+      "pages": 2,
+      "image": true,
+      "coldCache": true,
+      "iosRuntimeVerified": false
+    }
+  ],
+  "originalCBHentai": {
+    "version": "1.6.96",
+    "sha256": "ebbc170abc008257a34f358e0f15850615b0e34a33917f65bc1662c8a991e5e2",
+    "contextAndImageProof": "passed in python host helpers with synthetic loopback HTTP"
+  },
+  "references": [
+    {
+      "file": "tinh nang phai co.md",
+      "sha256": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c",
+      "bytes": 43832
+    },
+    {
+      "file": "# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md",
+      "sha256": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083",
+      "bytes": 62663
+    },
+    {
+      "file": "TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md",
+      "sha256": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0",
+      "bytes": 162280
+    },
+    {
+      "file": "Tachimanga iOS Mod IPA No Jailbreak Cheats 5.0 Hacked IPA by iOSGods.com.ipa",
+      "sha256": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+      "bytes": 128494339,
+      "crcValid": true,
+      "entries": 566
+    }
+  ],
+  "comparison": {
+    "source": "Three supplied documents and the original IPA remain read-only; hash matches the checked reference inputs",
+    "originalIpaStaticInfo": {
+      "version": "5.0",
+      "backgroundModes": [],
+      "permittedTaskIdentifierCount": 2,
+      "interpretation": "Static metadata only; absent background mode entries do not establish whether foreground-continued tasks work"
+    },
+    "traceability": [
+      "tinh nang phai co.md:76-80 source filtering, 506-509 background download, 547-549 periodic/background update, 765 automatic backup",
+      "TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md:974/1052 background interruption, 1408 backup UI markers, 1635 update policies",
+      "Mechanism document:612 page fetch / 868 background limits; original IPA static Page/cookie disassembly"
+    ],
+    "userOverrides": [
+      "6 UIKit tabs",
+      "remove library scanlator filter",
+      "new author/multi-source/folder workflows and extended background schedules"
+    ],
+    "nativeUiParityVerified": false
+  },
+  "iosPending": [
+    "Compile explicit shared-engine startup and headless-to-scene handoff on macOS",
+    "Run two new TaskPlatformBridge XCTest cases plus the two ImageIO pixel/bounds cases",
+    "Real iPhone background grants with no UI, locked screen, recovery, Files bookmark and system expiry",
+    "Real source/Cloudflare/CDN/image behavior; fixtures do not prove Turnstile or IMGX paths"
+  ],
+  "limits": [
+    "iOS chooses execution time and can defer/expire work; exact hourly execution is not guaranteed",
+    "User force-quit stops tasks until reopening the app; no perpetual background service is claimed",
+    "Last delivered build 12 predates all changes recorded here"
+  ],
+  "primaryBackgroundReferences": [
+    "https://developer.apple.com/documentation/backgroundtasks/performing-long-running-tasks-on-ios-and-ipados",
+    "https://developer.apple.com/documentation/backgroundtasks/bgprocessingtaskrequest",
+    "https://api.flutter.dev/ios-embedder/interface_flutter_engine.html"
+  ]
+}

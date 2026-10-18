@@ -113,7 +113,7 @@ class SourceMigrationView extends ConsumerWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  subtitle: Text(librarySourceLabel(book)),
+                  subtitle: Text(resolvedLibrarySourceLabel(ref, book)),
                   trailing: const Icon(CupertinoIcons.chevron_right, size: 16),
                   onTap: () => showCupertinoModalPopup<void>(
                     context: context,

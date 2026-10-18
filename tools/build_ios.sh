@@ -40,15 +40,23 @@ if version.get('frameworkVersion') != '3.47.4' or version.get('frameworkRevision
     raise SystemExit('Use official Flutter 3.47.4 (9584c6713b324636289d067944a46fd6b49df14b) for this build.')
 PY
 
-# The lockfile pins the plugin versions whose iOS requirements were reviewed.
-flutter pub get --enforce-lockfile
-flutter analyze --no-pub
-flutter test --no-pub
+# CI performs the checks before the expensive native build. Reuse them only
+# while the source/config fingerprint matches. Standalone builds still check.
+tachi_preflight_receipt="${TACHI_PREFLIGHT_RECEIPT:-$tachi_root/artifacts/ios-preflight.json}"
+if [[ -n "${TACHI_PREFLIGHT_RECEIPT:-}" ]]; then
+  python3 tools/ios_build_preflight.py --verify --receipt "$tachi_preflight_receipt"
+else
+  python3 tools/ios_build_preflight.py --receipt "$tachi_preflight_receipt"
+fi
 tachi_flags=(--release --no-codesign --no-pub)
 if [[ $# -eq 1 ]]; then
   tachi_flags+=("--build-number=$1")
+  tachi_flags+=("--dart-define=TACHI_APP_VERSION=1.0.0+$1")
 fi
-flutter build ios "${tachi_flags[@]}"
+python3 tools/run_build_phase.py --name device-release --timeout 1200 \
+  --log "$tachi_root/artifacts/device-release.log" \
+  --status "$tachi_root/artifacts/device-release.status.json" \
+  -- flutter build ios "${tachi_flags[@]}"
 
 tachi_app="$tachi_root/build/ios/iphoneos/Runner.app"
 if [[ ! -d "$tachi_app" ]]; then
@@ -60,7 +68,7 @@ if codesign --display "$tachi_app" >/dev/null 2>&1; then
   exit 1
 fi
 python3 tools/package_jvm_frameworks.py "$tachi_app"
-python3 - "$tachi_app" "$tachi_output" "$tachi_root" <<'PY'
+python3 - "$tachi_app" "$tachi_output" "$tachi_root" "$tachi_preflight_receipt" <<'PY'
 import json
 import pathlib
 import plistlib
@@ -71,6 +79,8 @@ app = pathlib.Path(sys.argv[1])
 output = pathlib.Path(sys.argv[2])
 sys.path.insert(0, str(pathlib.Path(sys.argv[3]) / 'tools'))
 from check_native_runtime_bundle import verify
+from ios_build_preflight import verify_receipt
+preflight = verify_receipt(pathlib.Path(sys.argv[3]), pathlib.Path(sys.argv[4]))
 native_resources = verify(app)
 with (app / 'Info.plist').open('rb') as handle:
     info = plistlib.load(handle)
@@ -111,6 +121,7 @@ build_info = {
     'runtimeValidation': 'Not performed on an iPhone or iPad by this build script.',
     'firebaseConfiguration': 'Matching TachiBooks iOS config and Google callback included; live login and sync not verified by this build.',
     'onDeviceExtensionResources': native_resources,
+    'sourcePreflight': preflight,
 }
 with (output / 'TachiBooks-unsigned.build-info.json').open('w', encoding='utf-8') as handle:
     json.dump(build_info, handle, ensure_ascii=False, indent=2)

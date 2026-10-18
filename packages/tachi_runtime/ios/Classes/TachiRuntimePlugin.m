@@ -1,5 +1,6 @@
 #import "TachiRuntimePlugin.h"
 #import "TachiSourceBrowser.h"
+#import "TachiImageCodec.h"
 #import <dlfcn.h>
 #include <TargetConditionals.h>
 #include <stdlib.h>
@@ -130,7 +131,7 @@ static NSString *tachiStartupError;
     [@"-Xbootclasspath:" stringByAppendingString:[bootstrap componentsJoinedByString:@":"]],
     [@"-Dsun.boot.library.path=" stringByAppendingString:frameworks],
     [@"-Djava.ext.dirs=" stringByAppendingString:[jre stringByAppendingPathComponent:@"lib/ext"]],
-    [@"-Djava.class.path=" stringByAppendingString:[NSString stringWithFormat:@"%@/extension-host.jar:%@/extension-dependencies.jar", engine, engine]],
+    [@"-Djava.class.path=" stringByAppendingString:[NSString stringWithFormat:@"%@/extension-host.jar:%@/extension-dependencies.jar:%@/bcprov.jar", engine, engine, engine]],
     [@"-Djava.library.path=" stringByAppendingString:frameworks],
     [@"-Djava.io.tmpdir=" stringByAppendingString:temporary.path],
     [@"-Duser.home=" stringByAppendingString:data.path],
@@ -158,6 +159,12 @@ static NSString *tachiStartupError;
   free(options);
   if (status != JNI_OK || !env) {
     tachiStartupError = [NSString stringWithFormat:@"JVM không khởi động được (mã %d).", status];
+    return [self fail:tachiStartupError error:error];
+  }
+  if (!TachiRegisterImageCodec(env)) {
+    (*env)->ExceptionClear(env);
+    (*tachiVM)->DetachCurrentThread(tachiVM);
+    tachiStartupError = @"Runtime thiếu bộ giải mã ảnh nguồn tương thích.";
     return [self fail:tachiStartupError error:error];
   }
   jclass localHost = (*env)->FindClass(env, "dev/tachibooks/engine/ExtensionHost");

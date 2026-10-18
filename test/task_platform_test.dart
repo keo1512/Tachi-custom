@@ -162,6 +162,40 @@ void main() {
       'updateFailed': 2,
       'notifyUpdatePause': true,
     });
+    await platform.updateBackgroundWorkSnapshot(
+      pending: 0,
+      failed: 0,
+      notifyOnPause: false,
+      resumeRequested: false,
+      updatesRequested: false,
+      updateEarliestMillis: 0,
+      updateRemaining: 0,
+      updateFailed: 0,
+      notifyUpdatePause: false,
+      backupsRequested: true,
+      backupEarliestMillis: 1780000000000,
+    );
+    expect((calls.last.arguments as Map)['backupsRequested'], true);
+    expect(
+      (calls.last.arguments as Map)['backupEarliestMillis'],
+      1780000000000,
+    );
+    await expectLater(
+      platform.updateBackgroundWorkSnapshot(
+        pending: 0,
+        failed: 0,
+        notifyOnPause: false,
+        resumeRequested: false,
+        updatesRequested: false,
+        updateEarliestMillis: 0,
+        updateRemaining: 0,
+        updateFailed: 0,
+        notifyUpdatePause: false,
+        backupsRequested: true,
+        backupEarliestMillis: -1,
+      ),
+      throwsArgumentError,
+    );
     await expectLater(
       platform.updateBackgroundWorkSnapshot(
         pending: 0,
@@ -185,7 +219,17 @@ void main() {
       ),
       throwsArgumentError,
     );
-    for (final value in [7, -1, 'private', 0x80000000]) {
+    for (final value in [
+      7, -1, 'private', 0x80000000,
+      {'token': 8, 'resumeDownloads': false},
+      {'token': 9, 'resumeDownloads': true},
+      {
+        'token': 8,
+        'resumeDownloads': true,
+      }, // A duplicate cannot replace intent.
+      {'token': 10, 'resumeDownloads': 'true'},
+      {'token': 11, 'resumeDownloads': true, 'extra': 'private'},
+    ]) {
       final response = Completer<void>();
       messenger.handlePlatformMessage(
         channel.name,
@@ -196,9 +240,14 @@ void main() {
       );
       await response.future;
     }
-    expect(tokens, [7]);
+    expect(tokens, [7, 8, 9]);
+    expect(platform.scheduledDownloadsRequested(7), isTrue);
+    expect(platform.scheduledDownloadsRequested(8), isFalse);
+    expect(platform.scheduledDownloadsRequested(9), isTrue);
+    expect(platform.scheduledDownloadsRequested(10), isFalse);
     await platform.completeScheduledBackground(7, success: true);
     expect(calls.last.arguments, {'token': 7, 'success': true});
+    expect(platform.scheduledDownloadsRequested(7), isFalse);
     await expectLater(
       platform.completeScheduledBackground(0, success: true),
       throwsArgumentError,

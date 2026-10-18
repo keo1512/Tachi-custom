@@ -44,6 +44,10 @@ class SettingsController extends Notifier<AppSettings> {
   Future<void> _sourceRecentWrites = Future<void>.value();
   int _privacyGeneration = 0;
 
+  /// Changes synchronously when privacy is changed, including while providers
+  /// that own an in-flight request have no active UI listeners.
+  int get privacyGeneration => _privacyGeneration;
+
   Future<void> _changeSourcePins(
     List<String> Function(List<String>) transform,
   ) {

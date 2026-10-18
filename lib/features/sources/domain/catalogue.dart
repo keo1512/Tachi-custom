@@ -67,6 +67,8 @@ class CatalogueBook {
     required this.kind,
     required this.engine,
     this.knownChapterRefs = const [],
+    this.sourceMemo = const {},
+    this.nativeSourceContext = false,
   });
 
   final String ref;
@@ -84,6 +86,8 @@ class CatalogueBook {
   /// Saved source chapter URLs are evidence for repairing old companion IDs.
   /// Request context only; library identities and storage stay intact.
   final List<String> knownChapterRefs;
+  final Map<String, dynamic> sourceMemo;
+  final bool nativeSourceContext;
 
   String get identity => '${engine.name}:$sourceId:$ref';
 }
@@ -96,6 +100,9 @@ class CatalogueChapter {
     this.number,
     this.uploadedAt,
     this.scanlator = '',
+    this.sourceMemo = const {},
+    this.sourceUrl = '',
+    this.nativeSourceContext = false,
   });
 
   final String ref;
@@ -104,6 +111,9 @@ class CatalogueChapter {
   final double? number;
   final DateTime? uploadedAt;
   final String scanlator;
+  final Map<String, dynamic> sourceMemo;
+  final String sourceUrl;
+  final bool nativeSourceContext;
 }
 
 DateTime? catalogueUploadDate(Object? value) {
@@ -171,6 +181,7 @@ class CatalogueExtension {
     this.limitations = const [],
     this.sourceIds = const [],
     this.loadError = '',
+    this.sources = const [],
   });
 
   final String id;
@@ -184,6 +195,9 @@ class CatalogueExtension {
   final List<String> limitations;
   final List<String> sourceIds;
   final String loadError;
+
+  /// Repository metadata is available even before installing its extension.
+  final List<CatalogueSource> sources;
 
   String get installRef => engine == SourceEngine.tachimanga ? id : packageUrl;
 }

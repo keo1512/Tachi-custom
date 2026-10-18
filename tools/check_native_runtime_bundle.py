@@ -10,11 +10,30 @@ from pathlib import Path, PurePosixPath
 import stat
 import zipfile
 
-from configure_ios_tachi_runtime import NATIVE_LIBRARIES, macho
+from configure_ios_tachi_runtime import NATIVE_LIBRARIES, macho, SPEC
 from native_extension_engine.build import sha256, ARRAY_DECODER_RESOURCE, ARRAY_DECODER_BYTES, ARRAY_DECODER_SHA256
 from package_jvm_frameworks import alias_path, executable_path, native_records, verify_layout
 
 BOOTSTRAP_JARS = ("resources.jar", "rt.jar", "jsse.jar", "jce.jar", "charsets.jar", "jfr.jar")
+
+
+def crypto_metadata(provenance: dict, host_members) -> dict | None:
+    record = provenance.get("cryptoProvider")
+    if record is None and "dev/tachibooks/engine/ImageCodec.class" not in host_members:
+        return None  # Preserve verification of historical IPA builds.
+    expected = SPEC["cryptoProvider"]
+    if not isinstance(record, dict) or record.get("sha256") != expected["sha256"] or record.get("bytes") != expected["bytes"]:
+        raise ValueError("The signed crypto provider provenance is missing or invalid")
+    return expected
+
+
+def crypto_archive(data: bytes, metadata: dict) -> None:
+    if len(data) != metadata["bytes"] or hashlib.sha256(data).hexdigest() != metadata["sha256"]:
+        raise ValueError("The signed crypto provider bytes do not match the pinned upstream JAR")
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        names = archive.namelist()
+        if archive.testzip() is not None or "org/bouncycastle/jce/provider/BouncyCastleProvider.class" not in names or not any(n.startswith("META-INF/") and n.endswith(".SF") for n in names):
+            raise ValueError("The signed crypto provider is missing its classes or signature")
 
 
 def array_decoder(archive: zipfile.ZipFile) -> None:
@@ -88,6 +107,7 @@ def verify(app: Path) -> dict:
     if not (tachi / "licenses/SOURCE.txt").is_file():
         raise ValueError("The packaged runtime is missing corresponding source references")
     engine = tachi / "engine"
+    host_members = []
     for filename, metadata in (("extension-host.jar", "host"),
                                ("extension-dependencies.jar", "dependencies")):
         path = engine / filename
@@ -102,6 +122,15 @@ def verify(app: Path) -> dict:
                 raise ValueError("The Java host entrypoint is missing")
             if filename == "extension-dependencies.jar":
                 array_decoder(archive)
+            else:
+                host_members = archive.namelist()
+    crypto = crypto_metadata(provenance, host_members)
+    if crypto is not None:
+        path = engine / "bcprov.jar"
+        inside(path, app)
+        if not path.is_file() or path.stat().st_size != crypto["bytes"]:
+            raise ValueError("The signed crypto provider JAR is missing or truncated")
+        crypto_archive(path.read_bytes(), crypto)
     jre = tachi / "jre"
     for filename in BOOTSTRAP_JARS:
         jar(jre / "lib" / filename, app, "java/lang/Object.class" if filename == "rt.jar" else None)
@@ -197,12 +226,20 @@ def verify_archive(ipa: Path) -> dict:
                 raise ValueError("The IPA JVM library alias has an unexpected target")
             if resource + "jre/" + relative in by_name:
                 raise ValueError("Standalone JVM native code remains in the IPA resource bundle")
+        host_members = []
         for filename, key in (("extension-host.jar", "host"),
                               ("extension-dependencies.jar", "dependencies")):
             check_file(resource + "engine/" + filename, provenance[key]["sha256"])
             if filename == "extension-dependencies.jar":
                 with zipfile.ZipFile(io.BytesIO(archive.read(resource + "engine/" + filename))) as dependencies:
                     array_decoder(dependencies)
+            else:
+                with zipfile.ZipFile(io.BytesIO(archive.read(resource + "engine/" + filename))) as host:
+                    host_members = host.namelist()
+        crypto = crypto_metadata(provenance, host_members)
+        if crypto is not None:
+            check_file(resource + "engine/bcprov.jar", crypto["sha256"])
+            crypto_archive(archive.read(resource + "engine/bcprov.jar"), crypto)
     return {"nativeAliases": len(records), "nativeLayoutVersion": 2,
             "arrayDecoderSha256": ARRAY_DECODER_SHA256,
             "zipIntegrityVerified": True, "deviceRuntimeVerified": False}

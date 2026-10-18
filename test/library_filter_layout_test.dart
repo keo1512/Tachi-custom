@@ -74,7 +74,12 @@ void main() {
           'Nguồn thử 95',
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(ListTile, 'Nguồn thử 95'));
+        await tester.tap(find.widgetWithText(CheckboxListTile, 'Nguồn thử 95'));
+        await tester.pumpAndSettle();
+        expect(changed, isNull);
+        await tester.tap(
+          find.byKey(const ValueKey('library-filter-picker-apply')),
+        );
         await tester.pumpAndSettle();
         expect(changed!.source, 'source:95');
         expect(
@@ -161,4 +166,71 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets(
+    'multi-source picker discards cancelled edits, clears explicitly and fits with keyboard',
+    (tester) async {
+      LibraryFilter? changed;
+      await mount(
+        tester,
+        const Size(320, 568),
+        (value) => changed = value,
+        scale: 1.5,
+      );
+      await scrollToFilter(tester, find.text('Nguồn truyện'));
+      await tester.tap(find.text('Nguồn truyện'));
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('library-filter-picker-search')),
+        'Nguồn thử 95',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('library-filter-option-source:95')),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byTooltip('Đóng danh sách'));
+      tester.view.viewInsets = const FakeViewPadding();
+      await tester.pumpAndSettle();
+      expect(changed, isNull);
+      await tester.tap(find.text('Nguồn truyện'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('library-filter-picker-search')),
+        'Nguồn thử 95',
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.byKey(const ValueKey('library-filter-option-source:95')),
+            )
+            .value,
+        isFalse,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('library-filter-option-source:95')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('library-filter-picker-apply')),
+      );
+      await tester.pumpAndSettle();
+      expect(changed!.selectedSources, {'source:95'});
+      await tester.tap(find.text('Nguồn truyện'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bỏ chọn'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('library-filter-picker-apply')),
+      );
+      await tester.pumpAndSettle();
+      expect(changed!.selectedSources, isEmpty);
+      expect(changed!.active, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

@@ -128,10 +128,8 @@ void main() {
             stored: {'readerTheme': 'paper', 'mangaMode': 'rtl'},
           );
           await _waitForImages(tester);
-          final images = find.byType(Image);
-          expect(images, findsNWidgets(2));
-          final first = tester.getRect(images.first);
-          final second = tester.getRect(images.last);
+          final first = tester.getRect(_continuousImage(0, 0));
+          final second = tester.getRect(_continuousImage(0, 1));
           expect(first.left, 0);
           expect(first.width, size.width);
           expect(second.width, size.width);
@@ -403,46 +401,53 @@ void main() {
   );
 
   testWidgets(
-    'chapter boundary stays on this chapter until explicit next and describes the final chapter',
+    'continuous chapters share scrolling and metadata follows forward and backward reading',
     (tester) async {
       final fixture = await _open(tester);
       await _waitForImages(tester);
-      _verticalScroll(tester)
-          .jumpTo(_verticalScroll(tester).position.maxScrollExtent);
+      final scroll = _verticalScroll(tester);
+      final viewport = tester.getRect(find.byType(SingleChildScrollView));
+      final last = tester.getRect(_continuousImage(0, 1));
+      scroll.jumpTo(scroll.offset + last.bottom - viewport.bottom);
       await tester.pumpAndSettle();
-      expect(find.text('Hết chương'), findsOneWidget);
-      expect(find.text('Chương tiếp theo: Chương sau'), findsOneWidget);
+      expect(find.text('Hoàn thành:\nChương đầu'), findsOneWidget);
+      expect(find.text('Hiện tại:\nChương sau'), findsOneWidget);
       expect(find.text('Chương đầu'), findsOneWidget);
-      await tester.ensureVisible(find.text('Đọc chương tiếp'));
-      await tester.tap(find.text('Đọc chương tiếp'));
-      await tester.pumpAndSettle();
-      await _waitForImages(tester);
-      _verticalScroll(tester)
-          .jumpTo(_verticalScroll(tester).position.maxScrollExtent);
-      await tester.pumpAndSettle();
-      expect(find.text('Chương sau'), findsOneWidget);
-      expect(
-        find.text('Đây là chương cuối trong danh sách hiện tại.'),
-        findsOneWidget,
-      );
+      expect((await fixture.repo.find('reader'))!.chapters.first.read, isTrue);
       expect(find.text('Đọc chương tiếp'), findsNothing);
+      await _scrollToContinuousPage(tester, 1, 0);
+      await _waitForImages(tester);
+      expect(find.text('Chương sau'), findsOneWidget);
+      final slider = find.byKey(const ValueKey('reader-position-slider'));
+      expect(tester.widget<CupertinoSlider>(slider).value, 0);
+      expect((await fixture.repo.find('reader'))!.currentChapter, 1);
+      await tester.tap(find.byTooltip('Đánh dấu trang'));
+      await tester.pumpAndSettle();
+      expect(
+        (await fixture.repo.find('reader'))!.bookmarks.single,
+        startsWith('1:'),
+      );
+      await _scrollToContinuousPage(tester, 0, 1);
+      expect(find.text('Chương đầu'), findsOneWidget);
+      expect(tester.widget<CupertinoSlider>(slider).value, 1);
+      expect((await fixture.repo.find('reader'))!.currentChapter, 0);
+      expect((await fixture.repo.find('reader'))!.chapters.first.read, isTrue);
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      expect(tester.takeException(), isNull);
       await _dispose(tester, fixture);
     },
   );
 
   testWidgets(
-    'an old chapter boundary cannot open replacement content after restore',
+    'an old reader cannot open replacement content through chapter controls after restore',
     (tester) async {
       final fixture = await _open(tester);
       await _waitForImages(tester);
-      final scroll = _verticalScroll(tester);
-      scroll.jumpTo(scroll.position.maxScrollExtent);
-      await tester.pumpAndSettle();
       final replacement = (await fixture.repo.find('reader'))!
           .copyWith(title: 'Restored only', progress: .1);
       await fixture.repo.clear();
       await fixture.repo.save(replacement);
-      await tester.tap(find.text('Đọc chương tiếp'));
+      await tester.tap(find.byTooltip('Chương tiếp theo'));
       await tester.pumpAndSettle();
       expect(
         find.text(
@@ -450,10 +455,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(
-        find.byKey(const ValueKey('reader-chapter-boundary')),
-        findsOneWidget,
-      );
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
       expect(
         (await fixture.repo.find('reader'))!.toJson(),
         replacement.toJson(),
@@ -835,7 +837,9 @@ void main() {
       expect(saved.progress, closeTo(.999 / 2, .00001));
       expect(saved.chapters.first.read, false);
       await pointer.up();
-      scroll.jumpTo(scroll.position.maxScrollExtent);
+      final last = tester.getRect(_continuousImage(0, 999));
+      final viewport = tester.getRect(find.byType(SingleChildScrollView));
+      scroll.jumpTo(scroll.offset + last.bottom - viewport.bottom);
       await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
       expect((await fixture.repo.find('reader'))!.chapters.first.read, true);
@@ -1099,6 +1103,29 @@ Future<void> _waitForImages(WidgetTester tester) async {
       }),
     );
   });
+  await tester.pumpAndSettle();
+}
+
+Finder _continuousImage(int chapter, int page) => find.descendant(
+  of: find.byKey(ValueKey('continuous-image:$chapter:$page')),
+  matching: find.byType(Image),
+);
+
+Future<void> _scrollToContinuousPage(
+  WidgetTester tester,
+  int chapter,
+  int page,
+) async {
+  final scroll = _verticalScroll(tester);
+  final image = tester.getRect(_continuousImage(chapter, page));
+  final viewport = tester.getRect(find.byType(SingleChildScrollView));
+  scroll.jumpTo(
+    (scroll.offset + image.top - viewport.top).clamp(
+      0,
+      scroll.position.maxScrollExtent,
+    ),
+  );
+  await tester.pump(const Duration(milliseconds: 600));
   await tester.pumpAndSettle();
 }
 

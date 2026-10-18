@@ -8,7 +8,7 @@ Pod::Spec.new do |s|
   s.source = { :path => '.' }
   s.source_files = 'Classes/**/*.{h,m}'
   s.dependency 'Flutter'
-  s.frameworks = 'WebKit'
+  s.frameworks = 'WebKit', 'ImageIO', 'CoreGraphics'
   s.platform = :ios, '15.0'
   s.resource_bundles = {
     'TachiRuntime' => ['Runtime/jre', 'Runtime/engine', 'Runtime/licenses']

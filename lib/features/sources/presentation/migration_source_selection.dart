@@ -48,19 +48,25 @@ Future<List<CatalogueSource>?> selectMigrationSources(
   BuildContext context, {
   required List<CatalogueSource> candidates,
   required Set<String> selected,
+  String title = 'Nguồn tìm kiếm',
 }) => showDialog<List<CatalogueSource>>(
   context: context,
-  builder: (_) =>
-      _MigrationSourcesDialog(candidates: candidates, selected: selected),
+  builder: (_) => _MigrationSourcesDialog(
+    candidates: candidates,
+    selected: selected,
+    title: title,
+  ),
 );
 
 class _MigrationSourcesDialog extends StatefulWidget {
   const _MigrationSourcesDialog({
     required this.candidates,
     required this.selected,
+    required this.title,
   });
   final List<CatalogueSource> candidates;
   final Set<String> selected;
+  final String title;
   @override
   State<_MigrationSourcesDialog> createState() => _MigrationSourcesState();
 }
@@ -70,7 +76,7 @@ class _MigrationSourcesState extends State<_MigrationSourcesDialog> {
   String query = '';
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Nguồn tìm kiếm'),
+    title: Text(widget.title),
     content: SizedBox(
       width: 420,
       height: MediaQuery.sizeOf(context).height * .5,
@@ -84,6 +90,13 @@ class _MigrationSourcesState extends State<_MigrationSourcesDialog> {
           Expanded(
             child: ListView(
               children: [
+                if (widget.candidates.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text(
+                      'Chưa có nguồn phù hợp. Cài thêm extension trong Duyệt rồi chọn lại nguồn đích.',
+                    ),
+                  ),
                 for (final source in widget.candidates.where(
                   (source) =>
                       source.name.toLowerCase().contains(query.toLowerCase()),

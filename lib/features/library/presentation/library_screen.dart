@@ -9,6 +9,7 @@ import '../../../core/widgets/book_cover.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../downloads/presentation/download_queue_controller.dart';
 import '../domain/library_book.dart';
+import '../domain/library_authors.dart';
 import '../domain/library_grouping.dart';
 import '../domain/library_categories.dart';
 import '../domain/library_search.dart';
@@ -42,6 +43,7 @@ import 'library_locations.dart';
 import 'library_folder_tile.dart';
 import 'library_folders_controller.dart';
 import 'library_folder_name_dialog.dart';
+import 'library_folder_download_selection.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -187,6 +189,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             category: 'Tất cả',
             source: 'all',
             excludeSource: false,
+            author: '',
             scanlator: '',
             unread: LibraryTriState.any,
             downloaded: LibraryTriState.any,
@@ -344,10 +347,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   Future<void> downloadSelected(
     List<LibraryBook> books,
-    Set<String> ids,
-  ) async {
+    Set<String> ids, {
+    int? expectedRevision,
+  }) async {
     final selected = books.where((book) => ids.contains(book.id)).toList();
-    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    if (selected.isEmpty || selectionBusy) return;
+    final revision =
+        expectedRevision ??
+        selectionRevision ??
+        ref.read(libraryRepositoryProvider).replacementRevision;
     final unreadOnly = await showCupertinoModalPopup<bool>(
       context: context,
       builder: (ctx) => CupertinoActionSheet(
@@ -390,6 +398,30 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             : 'Đã thêm $count chương vào hàng đợi tải',
       );
     }
+  }
+
+  Future<void> downloadFolders(
+    List<LibraryBook> books,
+    List<LibraryGroup> folders,
+  ) async {
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    final preferences = ref.read(preferencesProvider);
+    final generation = preferences is CoordinatedPreferences
+        ? preferences.mutationGeneration
+        : 0;
+    final ids = await showLibraryFolderDownloadSelection(context, folders);
+    if (ids == null || ids.isEmpty || !mounted) return;
+    await perform(context, () async {
+      checkLibraryRevision(
+        ref.read(libraryRepositoryProvider).replacementRevision,
+        revision,
+      );
+      if (preferences is CoordinatedPreferences &&
+          preferences.mutationGeneration != generation) {
+        throw StateError('Thiết lập đã được khôi phục. Chọn lại thư mục.');
+      }
+      await downloadSelected(books, ids, expectedRevision: revision);
+    });
   }
 
   Future<void> import() async {
@@ -526,7 +558,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      showDragHandle: true,
+      showDragHandle: false,
       constraints: const BoxConstraints(maxWidth: 600),
       builder: (_) => Consumer(
         builder: (_, sheetRef, _) => LibraryFilterSheet(
@@ -546,6 +578,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           presetsBuilder: (filter, onApply) =>
               LibraryFilterPresetsBar(filter: filter, onApply: onApply),
           collections: collections,
+          authors: {
+            for (final book in books) ...libraryAuthorNames(book.author),
+          },
           sources: {
             for (final book in books)
               if (book.engine != 'local')
@@ -812,6 +847,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   );
                 }
                 if (v == 'import') import();
+                if (v == 'download-folders') downloadFolders(books, folders);
                 if (v == 'categories') {
                   openSettingsPage(context, const LibraryCategoriesScreen());
                 }
@@ -849,6 +885,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   enabled: books.isNotEmpty,
                   child: const Text('Chọn nhiều sách'),
                 ),
+                if (folders.isNotEmpty)
+                  PopupMenuItem(
+                    value: 'download-folders',
+                    enabled: !selectionBusy,
+                    child: const Text('Tải nhiều thư mục'),
+                  ),
                 PopupMenuItem(
                   value: 'random',
                   enabled: visible.isNotEmpty,

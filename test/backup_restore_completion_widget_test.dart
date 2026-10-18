@@ -134,6 +134,11 @@ void main() {
           find.textContaining('MB\nTrong dữ liệu ứng dụng'),
           findsOneWidget,
         );
+        await Scrollable.ensureVisible(
+          tester.element(find.text(store.item.name)),
+          alignment: .5,
+        );
+        await tester.pumpAndSettle();
         await tester.tap(find.text(store.item.name));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Xem trước và khôi phục'));

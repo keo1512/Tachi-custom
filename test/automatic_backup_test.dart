@@ -85,6 +85,42 @@ void main() {
     await store.delete(backups.first.name);
     expect((await store.list()).length, 2);
   });
+  for (final interruptAfterPublish in [false, true]) {
+    test(
+      'interruption protects previous backups before rename/retention; published=$interruptAfterPublish',
+      () async {
+        final previous = await store.create(DateTime(2026, 1, 1));
+        await expectLater(
+          store.create(
+            DateTime(2026, 1, 2),
+            keep: 1,
+            beforePublish: () {
+              final files = store.directory.listSync().whereType<File>().map(
+                (file) => file.uri.pathSegments.last,
+              );
+              final reached = interruptAfterPublish
+                  ? files.any(
+                      (name) => name.endsWith('.json') && name != previous.name,
+                    )
+                  : files.any((name) => name.endsWith('.pending'));
+              if (reached) throw AutomaticBackupInterrupted();
+            },
+          ),
+          throwsStateError,
+        );
+        final remaining = await store.list();
+        expect(remaining.map((entry) => entry.name), contains(previous.name));
+        expect(remaining, hasLength(interruptAfterPublish ? 2 : 1));
+        expect(await store.read(previous.name), isNotEmpty);
+        expect(
+          store.directory.listSync().any(
+            (file) => file.path.endsWith('.pending'),
+          ),
+          isFalse,
+        );
+      },
+    );
+  }
   test(
     'name traversal and corrupt backup are refused without library changes',
     () async {

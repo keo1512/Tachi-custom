@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../settings/settings_controller.dart';
+import '../../../core/format/task_intervals.dart';
 import '../domain/library_book.dart';
 import '../domain/library_reading.dart';
 import '../domain/release_prediction.dart';
@@ -18,7 +19,9 @@ class LibraryUpdatePolicy {
     this.downloadAhead = 0,
     this.wifiOnly = false,
     this.chargingOnly = false,
+    this.checkAll = false,
   });
+  static const intervals = automaticTaskIntervalHours;
   final int hours, downloadAhead;
   final bool skipCompleted,
       skipUnstarted,
@@ -26,7 +29,8 @@ class LibraryUpdatePolicy {
       skipEarly,
       downloadNew,
       wifiOnly,
-      chargingOnly;
+      chargingOnly,
+      checkAll;
   Map<String, dynamic> toJson() => {
     'hours': hours,
     'skipCompleted': skipCompleted,
@@ -37,12 +41,11 @@ class LibraryUpdatePolicy {
     'downloadAhead': downloadAhead,
     'wifiOnly': wifiOnly,
     'chargingOnly': chargingOnly,
+    'checkAll': checkAll,
   };
   factory LibraryUpdatePolicy.fromJson(Map<String, dynamic> json) =>
       LibraryUpdatePolicy(
-        hours: const [0, 6, 12, 24, 48, 72].contains(json['hours'])
-            ? json['hours'] as int
-            : 0,
+        hours: intervals.contains(json['hours']) ? json['hours'] as int : 0,
         downloadAhead: json['downloadAhead'] is int
             ? (json['downloadAhead'] as int).clamp(0, 10)
             : 0,
@@ -55,9 +58,11 @@ class LibraryUpdatePolicy {
         downloadNew: json['downloadNew'] == true,
         wifiOnly: json['wifiOnly'] == true,
         chargingOnly: json['chargingOnly'] == true,
+        checkAll: json['checkAll'] == true,
       );
   String? skipReason(LibraryBook book, DateTime now) {
     if (book.engine == 'local') return 'Truyện trên máy';
+    if (checkAll) return null;
     if (skipCompleted && (book.completed || [2, 4, 5].contains(book.status))) {
       return 'Đã hoàn thành hoặc ngừng phát hành';
     }

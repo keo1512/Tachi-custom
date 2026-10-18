@@ -142,17 +142,28 @@ final class TaskPauseSnapshot {
   private(set) var notifyOnPause = false, resumeRequested = false
   private(set) var updatesRequested = false, notifyUpdatePause = false
   private(set) var updateEarliestMillis = 0, updateRemaining = 0, updateFailed = 0
+  private(set) var backupsRequested = false, backupEarliestMillis = 0
   private var consumed = true
   private var updateConsumed = true
   private var armed = false
-  var eligible: Bool { resumeRequested || updatesRequested }
+  var eligible: Bool { resumeRequested || updatesRequested || backupsRequested }
+  func earliestDate(now: Date) -> Date {
+    let minimum = now.addingTimeInterval(15 * 60)
+    var dates: [Date] = []
+    if resumeRequested { dates.append(minimum) }
+    if updatesRequested { dates.append(max(minimum, Date(timeIntervalSince1970: Double(updateEarliestMillis) / 1000))) }
+    if backupsRequested { dates.append(max(minimum, Date(timeIntervalSince1970: Double(backupEarliestMillis) / 1000))) }
+    return dates.min() ?? minimum
+  }
 
   @discardableResult
   func update(pending: Int, failed: Int, notifyOnPause: Bool, resumeRequested: Bool,
               updatesRequested: Bool = false, updateEarliestMillis: Int = 0,
-              updateRemaining: Int = 0, updateFailed: Int = 0, notifyUpdatePause: Bool = false) -> Bool {
+              updateRemaining: Int = 0, updateFailed: Int = 0, notifyUpdatePause: Bool = false,
+              backupsRequested: Bool = false, backupEarliestMillis: Int = 0) -> Bool {
     guard [pending, failed, updateRemaining, updateFailed].allSatisfy({ $0 >= 0 && $0 <= 1_000_000 }),
-      updateEarliestMillis >= 0, updateEarliestMillis <= 253402300799999 else { return false }
+      updateEarliestMillis >= 0, updateEarliestMillis <= 253402300799999,
+      backupEarliestMillis >= 0, backupEarliestMillis <= 253402300799999 else { return false }
     let oldUpdateNotice = self.notifyUpdatePause
     self.pending = pending
     self.failed = failed
@@ -164,6 +175,8 @@ final class TaskPauseSnapshot {
     self.updateRemaining = updateRemaining
     self.updateFailed = updateFailed
     self.notifyUpdatePause = notifyUpdatePause && updateRemaining + updateFailed > 0
+    self.backupsRequested = backupsRequested
+    self.backupEarliestMillis = backupEarliestMillis
     if !self.notifyUpdatePause { updateConsumed = true }
     else if armed && !oldUpdateNotice { updateConsumed = false }
     return true
@@ -173,6 +186,7 @@ final class TaskPauseSnapshot {
     notifyOnPause = false
     resumeRequested = false
     updatesRequested = false
+    backupsRequested = false
     notifyUpdatePause = false
     updateConsumed = true
     armed = false
@@ -196,10 +210,12 @@ final class TaskPauseSnapshot {
 @MainActor
 final class TaskScheduledWindow {
   let token: Int
+  let resumeDownloads: Bool
   private(set) var completed = false
   private let finish: (Bool) -> Void
-  init(token: Int, finish: @escaping (Bool) -> Void) {
+  init(token: Int, resumeDownloads: Bool = false, finish: @escaping (Bool) -> Void) {
     self.token = token
+    self.resumeDownloads = resumeDownloads
     self.finish = finish
   }
   @discardableResult
@@ -213,8 +229,8 @@ final class TaskScheduledWindow {
 
 /// One deferred processing request for an explicitly started durable queue.
 /// Register during application launch, before Flutter scene initialization.
-/// This intentionally does not create a second/headless Flutter engine: if the
-/// app's existing engine cannot acknowledge readiness, complete unsuccessfully.
+/// AppDelegate owns one headless-capable engine before any scene is connected.
+/// If its Dart coordinator cannot acknowledge readiness, fail without data work.
 @MainActor
 final class TaskBackgroundScheduler {
   static let shared = TaskBackgroundScheduler()
@@ -225,7 +241,8 @@ final class TaskBackgroundScheduler {
     var result = ["backgroundRequested": snapshot.eligible ? 1 : 0,
      "backgroundRunning": active != nil || TaskContinuedDownloads.shared.running ? 1 : 0,
      "backgroundPendingChapters": snapshot.pending,
-     "backgroundRemainingBooks": snapshot.updateRemaining]
+     "backgroundRemainingBooks": snapshot.updateRemaining,
+     "backgroundBackupsRequested": snapshot.backupsRequested ? 1 : 0]
     result.merge(TaskContinuedDownloads.shared.diagnosticState) { _, new in new }
     return result
   }
@@ -234,7 +251,7 @@ final class TaskBackgroundScheduler {
   private var nextToken = 0
   private var active: TaskScheduledWindow?
   private var watchdog: DispatchWorkItem?
-  var onStart: (Int) -> Void = { _ in }
+  var onStart: (Int, Bool) -> Void = { _, _ in }
   var onExpired: () -> Void = {}
 
   private init() {
@@ -246,7 +263,9 @@ final class TaskBackgroundScheduler {
         updateEarliestMillis: saved["updateEarliestMillis"] as? Int ?? 0,
         updateRemaining: saved["updateRemaining"] as? Int ?? 0,
         updateFailed: saved["updateFailed"] as? Int ?? 0,
-        notifyUpdatePause: saved["notifyUpdatePause"] as? Bool ?? false)
+        notifyUpdatePause: saved["notifyUpdatePause"] as? Bool ?? false,
+        backupsRequested: saved["backupsRequested"] as? Bool ?? false,
+        backupEarliestMillis: saved["backupEarliestMillis"] as? Int ?? 0)
     }
   }
   func register() {
@@ -260,7 +279,7 @@ final class TaskBackgroundScheduler {
       self.launch(processing)
     }
   }
-  func attach(onStart: @escaping (Int) -> Void, onExpired: @escaping () -> Void) {
+  func attach(onStart: @escaping (Int, Bool) -> Void, onExpired: @escaping () -> Void) {
     ready = false
     self.onStart = onStart
     self.onExpired = onExpired
@@ -271,15 +290,20 @@ final class TaskBackgroundScheduler {
   }
   func update(pending: Int, failed: Int, notifyOnPause: Bool, resumeRequested: Bool,
               updatesRequested: Bool = false, updateEarliestMillis: Int = 0,
-              updateRemaining: Int = 0, updateFailed: Int = 0, notifyUpdatePause: Bool = false) -> Bool {
+              updateRemaining: Int = 0, updateFailed: Int = 0, notifyUpdatePause: Bool = false,
+              backupsRequested: Bool = false, backupEarliestMillis: Int = 0) -> Bool {
     let oldEligible = snapshot.eligible, oldEarliest = snapshot.updateEarliestMillis,
-      oldDownload = snapshot.resumeRequested
+      oldDownload = snapshot.resumeRequested, oldBackup = snapshot.backupsRequested,
+      oldBackupEarliest = snapshot.backupEarliestMillis, oldUpdates = snapshot.updatesRequested
     guard snapshot.update(pending: pending, failed: failed, notifyOnPause: notifyOnPause, resumeRequested: resumeRequested,
       updatesRequested: updatesRequested, updateEarliestMillis: updateEarliestMillis,
-      updateRemaining: updateRemaining, updateFailed: updateFailed, notifyUpdatePause: notifyUpdatePause) else { return false }
+      updateRemaining: updateRemaining, updateFailed: updateFailed, notifyUpdatePause: notifyUpdatePause,
+      backupsRequested: backupsRequested, backupEarliestMillis: backupEarliestMillis) else { return false }
     persist()
     if submitted, active == nil,
-      oldEligible != snapshot.eligible || oldEarliest != snapshot.updateEarliestMillis || oldDownload != snapshot.resumeRequested {
+      oldEligible != snapshot.eligible || oldEarliest != snapshot.updateEarliestMillis || oldDownload != snapshot.resumeRequested ||
+      oldUpdates != snapshot.updatesRequested ||
+      oldBackup != snapshot.backupsRequested || oldBackupEarliest != snapshot.backupEarliestMillis {
       BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.identifier)
       submitted = false
     }
@@ -302,16 +326,15 @@ final class TaskBackgroundScheduler {
       "notifyOnPause": snapshot.notifyOnPause, "resumeRequested": snapshot.resumeRequested,
       "updatesRequested": snapshot.updatesRequested, "updateEarliestMillis": snapshot.updateEarliestMillis,
       "updateRemaining": snapshot.updateRemaining, "updateFailed": snapshot.updateFailed,
-      "notifyUpdatePause": snapshot.notifyUpdatePause], forKey: Self.snapshotKey)
+      "notifyUpdatePause": snapshot.notifyUpdatePause, "backupsRequested": snapshot.backupsRequested,
+      "backupEarliestMillis": snapshot.backupEarliestMillis], forKey: Self.snapshotKey)
   }
   private func submitIfNeeded() {
     guard registered, !submitted, snapshot.eligible else { return }
     let request = BGProcessingTaskRequest(identifier: Self.identifier)
-    request.requiresNetworkConnectivity = true
+    request.requiresNetworkConnectivity = snapshot.resumeRequested || snapshot.updatesRequested
     request.requiresExternalPower = false
-    let earliest = Date(timeIntervalSinceNow: 15 * 60)
-    request.earliestBeginDate = snapshot.resumeRequested ? earliest :
-      max(earliest, Date(timeIntervalSince1970: Double(snapshot.updateEarliestMillis) / 1000))
+    request.earliestBeginDate = snapshot.earliestDate(now: Date())
     do {
       try BGTaskScheduler.shared.submit(request)
       submitted = true
@@ -330,7 +353,8 @@ final class TaskBackgroundScheduler {
     }
     nextToken = nextToken == Int(Int32.max) ? 1 : nextToken + 1
     let token = nextToken
-    active = TaskScheduledWindow(token: token, finish: { task.setTaskCompleted(success: $0) })
+    active = TaskScheduledWindow(token: token, resumeDownloads: snapshot.resumeRequested,
+      finish: { task.setTaskCompleted(success: $0) })
     delivered = false
     snapshot.arm()
     task.expirationHandler = { [weak self] in
@@ -345,7 +369,7 @@ final class TaskBackgroundScheduler {
     guard ready, !delivered, let active = active, !active.completed else { return }
     delivered = true
     installWatchdog(token: active.token, seconds: 5 * 60)
-    onStart(active.token)
+    onStart(active.token, active.resumeDownloads)
   }
   private func installWatchdog(token: Int, seconds: TimeInterval) {
     watchdog?.cancel()
@@ -495,8 +519,9 @@ final class TaskPlatformBridge {
       self?.lease.end()
       self?.channel.invokeMethod("continuedProcessingExpired", arguments: nil)
     }
-    scheduler.attach(onStart: { [weak self] token in
-      self?.channel.invokeMethod("scheduledBackground", arguments: token)
+    scheduler.attach(onStart: { [weak self] token, resumeDownloads in
+      let context: [String: Any] = ["token": token, "resumeDownloads": resumeDownloads]
+      self?.channel.invokeMethod("scheduledBackground", arguments: context)
     }, onExpired: { [weak self] in self?.expired() })
     channel.setMethodCallHandler { [weak self] call, result in
       DispatchQueue.main.async {
@@ -530,13 +555,18 @@ final class TaskPlatformBridge {
       guard let args = call.arguments as? [String: Any],
         (Set(args.keys) == ["pending", "failed", "notifyOnPause", "resumeRequested"] ||
           Set(args.keys) == ["pending", "failed", "notifyOnPause", "resumeRequested", "updatesRequested",
-            "updateEarliestMillis", "updateRemaining", "updateFailed", "notifyUpdatePause"]),
+            "updateEarliestMillis", "updateRemaining", "updateFailed", "notifyUpdatePause"] ||
+          Set(args.keys) == ["pending", "failed", "notifyOnPause", "resumeRequested", "updatesRequested",
+            "updateEarliestMillis", "updateRemaining", "updateFailed", "notifyUpdatePause", "backupsRequested", "backupEarliestMillis"]),
         let pending = args["pending"] as? Int, let failed = args["failed"] as? Int,
         let notify = args["notifyOnPause"] as? Bool, let resume = args["resumeRequested"] as? Bool else {
         result(FlutterError(code: "invalid_summary", message: "Tóm tắt tác vụ không hợp lệ.", details: nil))
         return
       }
       let extended = args.count != 4
+      guard args.count != 11 || (args["backupsRequested"] is Bool && args["backupEarliestMillis"] is Int) else {
+        result(FlutterError(code: "invalid_summary", message: "Lịch sao lưu nền không hợp lệ.", details: nil)); return
+      }
       guard (!extended || (args["updatesRequested"] is Bool && args["updateEarliestMillis"] is Int &&
         args["updateRemaining"] is Int && args["updateFailed"] is Int && args["notifyUpdatePause"] is Bool)),
         scheduler.update(pending: pending, failed: failed, notifyOnPause: notify, resumeRequested: resume,
@@ -544,7 +574,9 @@ final class TaskPlatformBridge {
           updateEarliestMillis: args["updateEarliestMillis"] as? Int ?? 0,
           updateRemaining: args["updateRemaining"] as? Int ?? 0,
           updateFailed: args["updateFailed"] as? Int ?? 0,
-          notifyUpdatePause: args["notifyUpdatePause"] as? Bool ?? false) else {
+          notifyUpdatePause: args["notifyUpdatePause"] as? Bool ?? false,
+          backupsRequested: args["backupsRequested"] as? Bool ?? false,
+          backupEarliestMillis: args["backupEarliestMillis"] as? Int ?? 0) else {
         result(FlutterError(code: "invalid_summary", message: "Tóm tắt cập nhật nền không hợp lệ.", details: nil)); return
       }
       continued.update(pending: pending, failed: failed, requested: resume)

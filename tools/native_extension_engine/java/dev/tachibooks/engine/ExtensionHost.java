@@ -46,9 +46,9 @@ public final class ExtensionHost {
         protected boolean removeEldestEntry(Map.Entry<String,SManga> item){return size()>256;}
     };
     private static final class CachedChapter{
-        final String sourceId,ref;final List<? extends Page> pages;
+        final String sourceId,bookRef,ref;final List<? extends Page> pages;
         boolean restoredForImages;
-        CachedChapter(String sourceId,String ref,List<? extends Page> pages){this.sourceId=sourceId;this.ref=ref;this.pages=pages;}
+        CachedChapter(String sourceId,String bookRef,String ref,List<? extends Page> pages){this.sourceId=sourceId;this.bookRef=bookRef;this.ref=ref;this.pages=pages;}
     }
     private ExtensionHost(){}
     // Covers only read the loaded registry and use OkHttp's thread-safe client.
@@ -76,7 +76,7 @@ public final class ExtensionHost {
                     case "health":result=status();break;
                     case "clearSourceCache":
                         if(!args.entrySet().isEmpty())throw new IllegalArgumentException("Cache cleanup accepts no paths");
-                        mangaMetadata.clear();chapterPages.clear();result=new JsonPrimitive(true);break;
+                        mangaMetadata.clear();chapterPages.clear();SourceContext.clear();result=new JsonPrimitive(true);break;
                     case "clearCookies":
                         if(!args.entrySet().isEmpty())throw new IllegalArgumentException("Cookie cleanup accepts no paths");
                         result=BrowserSession.clear(registry,networking.getClient().cookieJar());break;
@@ -85,8 +85,8 @@ public final class ExtensionHost {
                         result=BrowserSession.resetUserAgents();break;
                     case "extensions":result=registry.extensions();break;
                     case "inspectPackage":result=registry.inspect(Paths.get(required(args,"apkPath")));break;
-                    case "install":result=registry.install(Paths.get(required(args,"apkPath")),optional(args,"packageUrl"),optional(args,"iconUrl"),optional(args,"packageHash"));chapterPages.clear();mangaMetadata.clear();BrowserSession.initialize(dataDirectory,registry);break;
-                    case "uninstall":result=new JsonPrimitive(registry.uninstall(required(args,"id")));chapterPages.clear();mangaMetadata.clear();break;
+                    case "install":result=registry.install(Paths.get(required(args,"apkPath")),optional(args,"packageUrl"),optional(args,"iconUrl"),optional(args,"packageHash"));chapterPages.clear();mangaMetadata.clear();SourceContext.clear();BrowserSession.initialize(dataDirectory,registry);break;
+                    case "uninstall":result=new JsonPrimitive(registry.uninstall(required(args,"id")));chapterPages.clear();mangaMetadata.clear();SourceContext.clear();break;
                     case "search":result=search(args);break;
                     case "filters":result=SourceFilterCodec.encode(registry.source(required(args,"sourceId")).getFilterList());break;
                     case "detail":result=detail(args);break;
@@ -105,6 +105,7 @@ public final class ExtensionHost {
         }catch(Throwable failure){
             JsonObject error=new JsonObject();String code,message;
             if(requiresBrowser(failure)){code="source_requires_browser";message="The source requires an interactive browser session.";}
+            else if(failure instanceof SourceContext.Missing){code="source_context_missing";message="The source needs its original chapter context.";}
             else if(failure instanceof HttpStatusException){code="http_error";message="Source returned an HTTP error";error.addProperty("httpStatus",((HttpStatusException)failure).status);}
             else if(failure instanceof SourceNotLoadedException){code="source_not_installed";message="Required source extension is not loaded.";}
             else if(failure instanceof LinkageError||failure instanceof UnsupportedExtensionVersionException){code="unsupported_extension";message="The extension requires an Android or Java API that this engine does not provide.";}
@@ -121,6 +122,7 @@ public final class ExtensionHost {
         Path requested=Paths.get(directory).toAbsolutePath().normalize();
         if(registry!=null){if(!dataDirectory.equals(requested))throw new IllegalArgumentException("Engine is already initialized with another data directory");return status();}
         Files.createDirectories(requested);application=new EngineApplication(requested);
+        AndroidCryptoProvider.install();
         if(GlobalContext.INSTANCE.getOrNull()==null)GlobalContext.INSTANCE.startKoin(KoinApplication.Companion.init());
         networking=new NetworkHelper(application);
         register(Application.class,application);register(NetworkHelper.class,networking);
@@ -161,7 +163,8 @@ public final class ExtensionHost {
     private static JsonObject book(CatalogueSource source,SManga manga){
         mangaMetadata.put(source.getId()+"\n"+manga.getUrl(),manga);
         JsonObject result=new JsonObject();result.addProperty("ref",manga.getUrl());result.addProperty("title",manga.getTitle());result.addProperty("author",manga.getAuthor());result.addProperty("artist",manga.getArtist());result.addProperty("description",manga.getDescription());result.addProperty("coverUrl",manga.getThumbnail_url());result.addProperty("status",manga.getStatus());result.addProperty("sourceId",Long.toString(source.getId()));result.addProperty("kind","manga");result.addProperty("engine","tachi");
-        JsonArray genres=new JsonArray();if(manga.getGenre()!=null)for(String genre:manga.getGenre().split(","))if(!genre.trim().isEmpty())genres.add(genre.trim());result.add("genres",genres);return result;
+        JsonArray genres=new JsonArray();if(manga.getGenre()!=null)for(String genre:manga.getGenre().split(","))if(!genre.trim().isEmpty())genres.add(genre.trim());result.add("genres",genres);
+        if(!manga.getMemo().isEmpty())result.add("memo",SourceContext.encode(manga.getMemo()));return result;
     }
     private static JsonObject detail(JsonObject args)throws Exception{
         CatalogueSource source=registry.source(required(args,"sourceId"));
@@ -174,13 +177,20 @@ public final class ExtensionHost {
         try{if(updated.getTitle().isEmpty())updated.setTitle(original.getTitle());}
         catch(kotlin.UninitializedPropertyAccessException missing){updated.setTitle(original.getTitle());}
         if(updated.getThumbnail_url()==null)updated.setThumbnail_url(original.getThumbnail_url());
+        JsonObject memo=SourceContext.encode(original.getMemo());
+        for(Map.Entry<String,JsonElement> entry:SourceContext.encode(updated.getMemo()).entrySet())memo.add(entry.getKey(),entry.getValue());
+        updated.setMemo(SourceContext.decode(memo));
         return book(source,updated);
     }
     private static JsonArray chapters(JsonObject args)throws Exception{
         CatalogueSource source=registry.source(required(args,"sourceId"));
         SMangaUpdate update=SuspendBridge.await(completion->source.getMangaUpdate(manga(args),Collections.emptyList(),false,true,completion));
         List<SChapter> chapters=new ArrayList<>(update.getChapters());Collections.reverse(chapters);JsonArray result=new JsonArray();int ordinal=0;
-        for(SChapter chapter:chapters){JsonObject value=new JsonObject();value.addProperty("ref",chapter.getUrl());value.addProperty("title",chapter.getName());value.addProperty("index",ordinal++);value.addProperty("number",chapter.getChapter_number());value.addProperty("uploadedAt",chapter.getDate_upload());value.addProperty("scanlator",chapter.getScanlator());result.add(value);}return result;
+        SourceContext.remember(source,required(args,"ref"),chapters);
+        for(SChapter chapter:chapters){JsonObject value=new JsonObject();value.addProperty("ref",chapter.getUrl());value.addProperty("title",chapter.getName());value.addProperty("index",ordinal++);value.addProperty("number",chapter.getChapter_number());value.addProperty("uploadedAt",chapter.getDate_upload());value.addProperty("scanlator",chapter.getScanlator());
+            if(!chapter.getMemo().isEmpty())value.add("memo",SourceContext.encode(chapter.getMemo()));
+            String url=SourceContext.url(source,chapter);if(!url.isEmpty())value.addProperty("sourceUrl",url);
+            result.add(value);}return result;
     }
     private static JsonObject chapter(JsonObject args)throws Exception{
         CatalogueSource source=registry.source(required(args,"sourceId"));String ref=required(args,"ref");
@@ -188,35 +198,54 @@ public final class ExtensionHost {
         // original source's request/headers/cookies only for the requested page.
         // Empty header envelopes retain transport compatibility; Flutter does
         // not issue raw image HTTP requests for this native engine.
-        List<? extends Page> pages=loadPages(source,ref,optional(args,"title"));JsonArray images=new JsonArray();JsonObject imageHeaders=new JsonObject();
+        String bookRef=optional(args,"bookRef");
+        List<? extends Page> pages=loadPages(source,bookRef,ref,optional(args,"title"),args);JsonArray images=new JsonArray();JsonObject imageHeaders=new JsonObject();
         int ordinal=0;
         for(Page page:pages){String image=page.getImageUrl();if(image==null||image.isEmpty()){
                 if(!(source instanceof HttpSource))throw new IllegalArgumentException("Source did not return image URLs");
                 // The image RPC owns resolution. A slow/broken later page must
                 // not keep an already-readable first page from opening.
-                images.add(deferredPageUrl(Long.toString(source.getId()),ref,ordinal++));continue;
+                images.add(deferredPageUrl(Long.toString(source.getId()),bookRef,ref,ordinal++));continue;
             }
             ordinal++;images.add(image);
         }
         JsonObject result=new JsonObject();result.addProperty("kind","manga");result.add("images",images);result.add("headers",new JsonObject());result.add("imageHeaders",imageHeaders);return result;
     }
-    private static String deferredPageUrl(String sourceId,String ref,int ordinal)throws Exception{
+    private static String deferredPageUrl(String sourceId,String bookRef,String ref,int ordinal)throws Exception{
         // This reserved, non-network locator preserves the existing string-list
         // transport and partial-download format. Only image(source,chapter,index)
         // consumes it; it is never passed to the source's HTTP image request.
-        return "https://page.tachibooks.invalid/"+EngineFiles.sha256((sourceId+"\n"+ref+"\n"+ordinal).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String identity=bookRef.isEmpty()?sourceId+"\n"+ref:SourceContext.key(sourceId,bookRef,ref);
+        return "https://page.tachibooks.invalid/"+EngineFiles.sha256((identity+"\n"+ordinal).getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
-    private static List<? extends Page> loadPages(CatalogueSource source,String ref,String title)throws Exception{
-        SChapter chapter=SChapter.Companion.create();chapter.setUrl(ref);chapter.setName(title);
-        List<? extends Page> pages=SuspendBridge.await(completion->source.getPageList(chapter,completion));
+    private static List<? extends Page> loadPages(CatalogueSource source,String bookRef,String ref,String title,JsonObject args)throws Exception{
+        SChapter chapter=SourceContext.chapter(source,bookRef,ref,title,args.get("chapterMemo"));
+        List<? extends Page> pages;
+        try{final SChapter original=chapter;pages=SuspendBridge.await(completion->source.getPageList(original,completion));}
+        catch(IllegalStateException missing){
+            // A restored URL can precede a source's switch to short chapter IDs
+            // plus memo. Recover only from the same parent's original TOC and
+            // an exact source URL, never a title/ordinal guess.
+            if(bookRef.isEmpty()||!chapter.getMemo().isEmpty())throw missing;
+            JsonObject parent=new JsonObject();parent.addProperty("sourceId",Long.toString(source.getId()));parent.addProperty("ref",bookRef);parent.addProperty("title",optional(args,"bookTitle"));
+            if(args.has("bookMemo"))parent.add("memo",args.get("bookMemo"));
+            if(bookRef.matches("[0-9]+")&&!args.has("bookMemo"))throw new SourceContext.Missing();
+            SMangaUpdate update;
+            try{update=SuspendBridge.await(completion->source.getMangaUpdate(manga(parent),Collections.emptyList(),false,true,completion));}
+            catch(IllegalStateException context){if(!args.has("bookMemo"))throw new SourceContext.Missing();throw context;}
+            SourceContext.remember(source,bookRef,update.getChapters());
+            final SChapter restored=SourceContext.match(source,ref,update.getChapters());
+            if(restored==null)throw missing;
+            pages=SuspendBridge.await(completion->source.getPageList(restored,completion));
+        }
         if(pages==null||pages.size()>10000)throw new IllegalArgumentException("Source returned an invalid page count");
         List<? extends Page> retained=new ArrayList<>(pages);
-        String sourceId=Long.toString(source.getId());chapterPages.put(sourceId+"\n"+ref,new CachedChapter(sourceId,ref,retained));
+        String sourceId=Long.toString(source.getId());chapterPages.put(SourceContext.key(sourceId,bookRef,ref),new CachedChapter(sourceId,bookRef,ref,retained));
         return retained;
     }
     private static JsonObject image(JsonObject args)throws Exception{
         CatalogueSource source=registry.source(required(args,"sourceId"));if(!(source instanceof HttpSource))throw new IllegalArgumentException("Source has no HTTP image loader");
-        String url=required(args,"url"),chapterRef=optional(args,"chapterRef"),sourceId=Long.toString(source.getId());
+        String url=required(args,"url"),chapterRef=optional(args,"chapterRef"),sourceId=Long.toString(source.getId()),bookRef=optional(args,"ref");
         int ordinal=args.has("index")?args.get("index").getAsInt():0;Page page=null;boolean refreshed=false;
         // Validate caller metadata before a cache miss can trigger source work.
         // The supplied URL identifies old cached content; it never chooses the
@@ -226,11 +255,14 @@ public final class ExtensionHost {
         HttpUrl supplied=HttpUrl.parse(url);
         if(supplied==null||!supplied.username().isEmpty()||!supplied.password().isEmpty())throw new IllegalArgumentException("Image URL is invalid");
         boolean deferred="page.tachibooks.invalid".equals(supplied.host());
-        if(deferred&&(chapterRef.isEmpty()||!url.equals(deferredPageUrl(sourceId,chapterRef,ordinal))))throw new IllegalArgumentException("Deferred page identity is invalid");
+        if(deferred&&(chapterRef.isEmpty()||!url.equals(deferredPageUrl(sourceId,bookRef,chapterRef,ordinal))&&!url.equals(deferredPageUrl(sourceId,"",chapterRef,ordinal))))throw new IllegalArgumentException("Deferred page identity is invalid");
         if(!chapterRef.isEmpty()){
-            CachedChapter cached=chapterPages.get(sourceId+"\n"+chapterRef);
-            List<? extends Page> pages=cached!=null?cached.pages:loadPages(source,chapterRef,optional(args,"chapterTitle"));
-            if(cached==null){cached=chapterPages.get(sourceId+"\n"+chapterRef);cached.restoredForImages=true;}
+            CachedChapter cached=chapterPages.get(SourceContext.key(sourceId,bookRef,chapterRef));
+            if(cached==null&&bookRef.isEmpty())for(CachedChapter candidate:chapterPages.values())if(candidate.sourceId.equals(sourceId)&&candidate.ref.equals(chapterRef)){
+                if(cached!=null)throw new IllegalArgumentException("Chapter image identity is ambiguous");cached=candidate;
+            }
+            List<? extends Page> pages=cached!=null?cached.pages:loadPages(source,bookRef,chapterRef,optional(args,"chapterTitle"),args);
+            if(cached==null){cached=chapterPages.get(SourceContext.key(sourceId,bookRef,chapterRef));cached.restoredForImages=true;}
             // Every remaining page in a persisted partial chapter can have an
             // expired signature. Retain the reload's stable-identity authority
             // for the whole chapter, rather than only its first image request.
@@ -241,7 +273,7 @@ public final class ExtensionHost {
         }else{
             // Compatibility for clients that obtained a chapter immediately before
             // requesting its image. A cache miss needs the stable chapter identity.
-            for(CachedChapter cached:chapterPages.values())if(cached.sourceId.equals(sourceId)&&ordinal>=0&&ordinal<cached.pages.size()){
+            for(CachedChapter cached:chapterPages.values())if(cached.sourceId.equals(sourceId)&&(bookRef.isEmpty()||cached.bookRef.equals(bookRef))&&ordinal>=0&&ordinal<cached.pages.size()){
                 Page candidate=cached.pages.get(ordinal);
                 if(url.equals(candidate.getImageUrl())){if(page!=null&&page!=candidate)throw new IllegalArgumentException("Image belongs to more than one cached chapter");page=candidate;}
             }
@@ -281,7 +313,7 @@ public final class ExtensionHost {
         // must not be applied to a cover. The client retains its cookie jar and
         // source interceptors, including browser clearance when available.
         Request request=new Request.Builder().url(url).headers(http.getHeaders()).build();
-        try(Response response=http.getClient().newBuilder().callTimeout(20,java.util.concurrent.TimeUnit.SECONDS).build().newCall(request).execute()){
+        try(Response response=http.getClient().newBuilder().callTimeout(8,java.util.concurrent.TimeUnit.SECONDS).build().newCall(request).execute()){
             if(!response.isSuccessful())throw new HttpStatusException(response.code());
             if(response.body()==null)throw new IOException("Cover HTTP response is empty");
             if(response.body().contentLength()>MAX_IMAGE_BYTES)throw new IOException("Cover size exceeds native response limit");
@@ -326,7 +358,7 @@ public final class ExtensionHost {
                 try{restorePreferences(store,before);registry.reload();BrowserSession.initialize(dataDirectory,registry);}
                 catch(Exception recovery){failure.addSuppressed(recovery);}
                 throw new IllegalStateException("Source preference could not be applied",failure);
-            }finally{chapterPages.clear();mangaMetadata.clear();}
+            }finally{chapterPages.clear();mangaMetadata.clear();SourceContext.clear();}
         }
         throw new IllegalArgumentException("Source preference does not exist");
     }
@@ -345,7 +377,7 @@ public final class ExtensionHost {
         }
         if(!editor.commit())throw new IllegalStateException("Source preference recovery failed");
     }
-    private static SManga manga(JsonObject args){String ref=required(args,"ref");SManga cached=mangaMetadata.get(required(args,"sourceId")+"\n"+ref);if(cached!=null)return cached;SManga value=SManga.Companion.create();value.setUrl(ref);value.setTitle(optional(args,"title"));return value;}
+    private static SManga manga(JsonObject args){String ref=required(args,"ref");SManga cached=mangaMetadata.get(required(args,"sourceId")+"\n"+ref);if(cached!=null)return cached;SManga value=SManga.Companion.create();value.setUrl(ref);value.setTitle(optional(args,"title"));value.setMemo(SourceContext.decode(args.get("memo")));return value;}
     private static SChapter schapter(JsonObject args){SChapter value=SChapter.Companion.create();value.setUrl(required(args,"ref"));value.setName(optional(args,"title"));return value;}
     private static String required(JsonObject value,String key){String result=optional(value,key);if(result.isEmpty()||result.length()>16384)throw new IllegalArgumentException("Required argument is missing or invalid: "+key);return result;}
     private static String optional(JsonObject value,String key){return !value.has(key)||value.get(key).isJsonNull()?"":value.get(key).getAsString();}

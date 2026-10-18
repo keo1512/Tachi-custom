@@ -54,6 +54,9 @@ ImageProvider<Object>? libraryCoverImage(WidgetRef ref, LibraryBook book) {
       ref: book.sourceRef,
       title: book.title,
       sourceId: book.sourceId,
+      sourceMemo: book.sourceMemo,
+      nativeSourceContext: book.nativeSourceContext,
+      knownChapterRefs: book.chapters.map((c) => c.id).toList(),
       coverUrl: book.cover,
       kind: book.kind == 'manga' ? ContentKind.manga : ContentKind.novel,
       engine: book.engine == 'vbook'

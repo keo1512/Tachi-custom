@@ -9,6 +9,9 @@ import 'package:tachi_books/features/downloads/data/download_queue_repository.da
 import 'package:tachi_books/features/downloads/presentation/download_queue_controller.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
+import 'package:tachi_books/features/library/domain/library_folders.dart';
+import 'package:tachi_books/features/library/domain/library_grouping.dart';
+import 'package:tachi_books/features/library/presentation/library_folder_download_selection.dart';
 import 'package:tachi_books/features/library/presentation/library_screen.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
@@ -16,6 +19,152 @@ import 'package:tachi_books/features/settings/settings_controller.dart';
 void main() {
   setUp(
     () => SharedPreferences.setMockInitialValues({'downloadConcurrency': 1}),
+  );
+
+  testWidgets(
+    'folder selection retains choices across searches and counts overlapping books once',
+    (tester) async {
+      Set<String>? result;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async =>
+                    result = await showLibraryFolderDownloadSelection(context, [
+                      LibraryGroup(
+                        key: 'a',
+                        label: 'Folder A',
+                        bookIds: ['one', 'shared'],
+                      ),
+                      LibraryGroup(
+                        key: 'b',
+                        label: 'Folder B',
+                        bookIds: ['two', 'shared'],
+                      ),
+                    ]),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const ValueKey('library-filter-picker-apply')),
+            )
+            .onPressed,
+        isNull,
+      );
+      for (final key in ['a', 'b']) {
+        await tester.enterText(
+          find.byKey(const ValueKey('library-filter-picker-search')),
+          'Folder ${key.toUpperCase()}',
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(ValueKey('library-filter-option-$key')));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('2 thư mục · 3 truyện không trùng'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('library-filter-picker-apply')),
+      );
+      await tester.pumpAndSettle();
+      expect(result, {'one', 'two', 'shared'});
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final size in const [Size(320, 568), Size(430, 932)]) {
+    testWidgets(
+      'multiple library folders download only selected category books at $size',
+      (tester) async {
+        final fixture = await _mount(tester, size, folders: true);
+        await _openFolders(tester);
+        expect(find.text('Folder A (1 truyện)'), findsOneWidget);
+        for (final name in ['Folder A', 'Folder B']) {
+          final item = find.byKey(
+            ValueKey('library-filter-option-folder:$name'),
+          );
+          await tester.ensureVisible(item);
+          await tester.pumpAndSettle();
+          await tester.tap(item);
+          await tester.pumpAndSettle();
+        }
+        expect(find.text('2 thư mục · 2 truyện không trùng'), findsOneWidget);
+        await tester.tap(
+          find.byKey(const ValueKey('library-filter-picker-apply')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Tải 2 truyện'), findsOneWidget);
+        await tester.tap(find.text('Tất cả chương chưa tải'));
+        await tester.pumpAndSettle();
+        expect(
+          fixture.container
+              .read(downloadQueueProvider)
+              .tasks
+              .map((job) => '${job.bookId}:${job.chapterId}'),
+          [
+            'tachi:read',
+            'tachi:shared-unread',
+            'vbook:shared-unread',
+            'vbook:read',
+          ],
+        );
+        expect(fixture.calls, ['tachi:read']);
+        await _expectMetadata(fixture);
+        fixture.container.read(downloadQueueProvider.notifier).pause();
+        fixture.blockers['tachi:read']!.complete();
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      },
+    );
+  }
+
+  testWidgets(
+    'folder picker cancellation and library restore cannot enqueue stale selection',
+    (tester) async {
+      final fixture = await _mount(tester, const Size(430, 932), folders: true);
+      await _openFolders(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('library-filter-option-folder:Folder A')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Đóng danh sách'));
+      await tester.pumpAndSettle();
+      expect(fixture.container.read(downloadQueueProvider).tasks, isEmpty);
+      await _openFolders(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('library-filter-option-folder:Folder A')),
+      );
+      await tester.pumpAndSettle();
+      await fixture.repository.clear();
+      final replacement = fixture.books.first.copyWith(
+        sourceRef: 'replacement',
+      );
+      await fixture.repository.save(replacement);
+      await fixture.container.read(libraryProvider.notifier).refresh();
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('library-filter-picker-apply')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Tất cả chương chưa tải'), findsNothing);
+      expect(fixture.calls, isEmpty);
+      expect(fixture.container.read(downloadQueueProvider).tasks, isEmpty);
+      expect(
+        (await fixture.repository.find(replacement.id))!.toJson(),
+        replacement.toJson(),
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
   );
 
   for (final size in const [Size(320, 568), Size(430, 932)]) {
@@ -182,11 +331,26 @@ typedef _Fixture = ({
   Map<String, Completer<void>> blockers,
 });
 
-Future<_Fixture> _mount(WidgetTester tester, Size size) async {
+Future<_Fixture> _mount(
+  WidgetTester tester,
+  Size size, {
+  bool folders = false,
+}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
   addTearDown(tester.view.reset);
   final preferences = await SharedPreferences.getInstance();
+  if (folders) {
+    await preferences.setString(
+      LibraryFolders.preferenceKey,
+      LibraryFolders({
+        'tachi': 'Folder A',
+        'vbook': 'Folder B',
+        'local': 'Offline',
+        'outside': 'Folder A',
+      }).encode(),
+    );
+  }
   final repository = MemoryLibraryRepository();
   final books = [
     LibraryBook(
@@ -297,6 +461,19 @@ Future<void> _selectVisible(WidgetTester tester) async {
   await tester.longPress(find.byKey(const ValueKey('library-book-tachi')));
   await tester.pumpAndSettle();
   await tester.tap(find.byTooltip('Chọn tất cả sách hiển thị'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openFolders(WidgetTester tester) async {
+  await tester.ensureVisible(
+    find.byKey(const ValueKey('library-group-value:Kệ tải')),
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('library-group-value:Kệ tải')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byTooltip('Thao tác thư viện'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Tải nhiều thư mục'));
   await tester.pumpAndSettle();
 }
 

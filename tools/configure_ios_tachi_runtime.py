@@ -188,6 +188,7 @@ def main() -> None:
     legacy = local_or_fetch(args.legacy_dependency_archive, cache / "android-compatibility.jar", {
         "url": LEGACY_DEPENDENCY_URL, "sha256": LEGACY_DEPENDENCY_SHA256, "bytes": LEGACY_DEPENDENCY_BYTES})
     decoder = local_or_fetch(None, cache / "aircompressor-0.27.jar", SPEC["portableZstd"])
+    crypto = local_or_fetch(None, cache / "bcprov-jdk15to18-1.86.jar", SPEC["cryptoProvider"])
     decoder_notice = fetch(SPEC["portableZstd"]["licenseUrl"], cache / "aircompressor-LICENSE.txt", SPEC["portableZstd"]["licenseSha256"])
     with tempfile.TemporaryDirectory(prefix="prepare-", dir=cache) as temporary:
         staging = Path(temporary) / "Runtime"
@@ -195,6 +196,9 @@ def main() -> None:
         extract_jre(zero, staging / "jre")
         dependency_jar = staging / "engine/extension-dependencies.jar"
         dependency_info = build_dependencies(dependencies, dependency_jar, legacy)
+        # A JCE provider must retain the upstream JAR signature. Do not merge
+        # or rewrite its bytes into the ordinary dependency JAR.
+        shutil.copyfile(crypto, staging / "engine/bcprov.jar")
         compiler = args.javac or shutil.which("javac")
         java = args.java or str(Path(compiler).with_name("java.exe" if os.name == "nt" else "java")) if compiler else args.java or shutil.which("java")
         if not java:
@@ -214,6 +218,7 @@ def main() -> None:
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, destination)
         provenance = {"zero": SPEC["zero"], "dependencies": dependency_info, "host": host_info,
+                      "cryptoProvider": SPEC["cryptoProvider"],
                       "nativeLibraries": configure_loaders(staging / "jre"), "deviceRuntimeVerified": False,
                       "limitations": ["Pinned prebuilt Zero runtime has an internal 2022 runtime version; its maintenance and source correspondence require verification",
                                       "On-device API 1.6 extension compatibility is not verified",
@@ -229,6 +234,7 @@ def main() -> None:
             "Reviewed Android hierarchy and Java8 Preference port: https://github.com/Suwayomi/Suwayomi-Server/tree/40bc5da57820324ed0ae724cbbc020cc4673b594/AndroidCompat\n"
             "Those MPL source files and provenance are included in extension-host.jar.\n"
             "Dependency original license/notices remain inside extension-dependencies.jar.\n"
+            "Bouncy Castle signed provider: " + SPEC["cryptoProvider"]["source"] + "; license/notices remain inside engine/bcprov.jar.\n"
             "The native changes replace bundled dylib install names/rpaths only, via this configure script.\n"
             "Provide corresponding source/notices with any distributed runtime; source references are not an audit of all redistribution obligations.\n",
             encoding="utf-8")

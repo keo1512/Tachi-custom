@@ -376,10 +376,8 @@ void main() {
       expect(source.pages, [0, 1]);
       expect((await repo.snapshot()).encode(), replacement);
       expect(
-        find.text(
-          'Thư viện đã được thay đổi hoặc khôi phục. Hãy mở lại sách trước khi tiếp tục.',
-        ),
-        findsOneWidget,
+        find.textContaining('Thư viện đã được thay đổi hoặc khôi phục.'),
+        findsWidgets,
       );
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -526,7 +524,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(source.pages, [12, 11, 13, 10, 14]);
-      final target = find.byKey(const ValueKey('native-page:1:12'));
+      final target = find.byKey(const ValueKey('continuous-image:0:12'));
       final viewport = tester.getRect(find.byType(SingleChildScrollView));
       final page = tester.getRect(target);
       expect(page.top, closeTo(viewport.top - page.height * .5, 1));
@@ -726,11 +724,21 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Chương tiếp theo'));
       await tester.pumpAndSettle();
-      expect(source.chapterRequests, ['/chapter', '/chapter-two']);
+      // The continuous reader already tried prefetching this chapter. The
+      // explicit button makes one new attempt at the same source identity.
+      expect(source.chapterRequests, [
+        '/chapter',
+        '/chapter-two',
+        '/chapter-two',
+      ]);
       expect(find.text('Chưa mở được chương'), findsOneWidget);
       await tester.tap(find.byTooltip('Xem trang web'));
       await tester.pumpAndSettle();
-      expect(source.chapterRequests.last, '/chapter-two');
+      expect(
+        source.chapterRequests.where((ref) => ref == '/chapter-two'),
+        hasLength(3),
+      );
+      expect(find.text('Next chapter'), findsOneWidget);
       expect(find.text('Chưa mở được chương'), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());

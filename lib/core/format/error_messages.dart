@@ -22,6 +22,7 @@ String? sourceErrorDiagnosticCode(Object error) {
     'invalid_request' || 'invalid_runtime_request' => 'source_invalid_request',
     'restored_title_unresolved' => 'source_title_unresolved',
     'chapter_identity_changed' => 'source_chapter_unresolved',
+    'source_context_missing' => 'source_chapter_context_missing',
     'source_not_installed' || 'unknown_source' => 'source_not_installed',
     'connection_failed' => 'source_connection_failed',
     'timeout' => 'timeout',
@@ -40,6 +41,7 @@ String? sourceErrorMessage(String code) => switch (code) {
   'source_invalid_request' => 'Yêu cầu tới engine extension không hợp lệ. Mở lại truyện từ nguồn; nếu vẫn lỗi, xuất nhật ký chẩn đoán.',
   'source_title_unresolved' => 'Truyện đang dùng mã của server cũ. Mở đúng truyện từ nguồn đã cài hoặc dùng Di chuyển nguồn để liên kết lại.',
   'source_chapter_unresolved' => 'Chương chưa có địa chỉ nguồn hợp lệ. Cập nhật mục lục truyện rồi mở lại chương.',
+  'source_chapter_context_missing' => 'Extension cần dữ liệu phụ gốc của chương. Cập nhật mục lục từ đúng nguồn rồi mở lại chương; nội dung đã tải và tiến độ đọc được giữ nguyên.',
   'source_not_installed' => 'Nguồn của truyện chưa được cài hoặc chưa nạp được trên máy. Kiểm tra Duyệt → Phần mở rộng. Cài extension tương ứng hoặc cập nhật extension rồi thử lại.',
   'source_connection_failed' =>
     'Không kết nối được nguồn. Kiểm tra mạng rồi thử lại.',

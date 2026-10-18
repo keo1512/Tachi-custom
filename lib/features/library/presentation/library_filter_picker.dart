@@ -16,14 +16,46 @@ Future<String?> showLibraryFilterPicker(
       _FilterPicker(title: title, options: options, selected: selected),
 );
 
+Future<Set<String>?> showLibraryFilterMultiPicker(
+  BuildContext context, {
+  required String title,
+  required Map<String, String> options,
+  required Set<String> selected,
+  bool requireSelection = false,
+  String Function(Set<String>)? applyLabel,
+  String Function(Set<String>)? selectionSummary,
+}) => showModalBottomSheet<Set<String>>(
+  context: context,
+  isScrollControlled: true,
+  useSafeArea: true,
+  showDragHandle: true,
+  constraints: const BoxConstraints(maxWidth: 600),
+  builder: (_) => _FilterPicker(
+    title: title,
+    options: options,
+    selected: '',
+    initialSelection: selected,
+    requireSelection: requireSelection,
+    applyLabel: applyLabel,
+    selectionSummary: selectionSummary,
+  ),
+);
+
 class _FilterPicker extends StatefulWidget {
   const _FilterPicker({
     required this.title,
     required this.options,
     required this.selected,
+    this.initialSelection,
+    this.requireSelection = false,
+    this.applyLabel,
+    this.selectionSummary,
   });
   final String title, selected;
   final Map<String, String> options;
+  final Set<String>? initialSelection;
+  final bool requireSelection;
+  final String Function(Set<String>)? applyLabel, selectionSummary;
   @override
   State<_FilterPicker> createState() => _FilterPickerState();
 }
@@ -31,6 +63,8 @@ class _FilterPicker extends StatefulWidget {
 class _FilterPickerState extends State<_FilterPicker> {
   final search = TextEditingController();
   String query = '';
+  late final selected = {...?widget.initialSelection};
+  bool get multiple => widget.initialSelection != null;
   @override
   void dispose() {
     search.dispose();
@@ -49,7 +83,9 @@ class _FilterPickerState extends State<_FilterPicker> {
     return Padding(
       padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
       child: SizedBox(
-        height: (media.size.height - media.viewInsets.bottom) * .65,
+        height:
+            (media.size.height - media.padding.top - media.viewInsets.bottom) *
+            (multiple ? .85 : .65),
         child: Column(
           children: [
             Row(
@@ -99,6 +135,21 @@ class _FilterPickerState extends State<_FilterPicker> {
                       itemCount: items.length,
                       itemBuilder: (_, index) {
                         final item = items[index];
+                        if (multiple) {
+                          return CheckboxListTile(
+                            key: ValueKey('library-filter-option-${item.key}'),
+                            title: Text(item.value),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            value: selected.contains(item.key),
+                            onChanged: (value) => setState(() {
+                              if (value == true) {
+                                selected.add(item.key);
+                              } else {
+                                selected.remove(item.key);
+                              }
+                            }),
+                          );
+                        }
                         return ListTile(
                           title: Text(item.value),
                           selected: item.key == widget.selected,
@@ -113,6 +164,61 @@ class _FilterPickerState extends State<_FilterPicker> {
                       },
                     ),
             ),
+            if (multiple)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (widget.selectionSummary != null &&
+                          media.viewInsets.bottom == 0)
+                        Text(widget.selectionSummary!(selected)),
+                      if (media.viewInsets.bottom == 0)
+                        Wrap(
+                          spacing: 8,
+                          alignment: WrapAlignment.spaceBetween,
+                          children: [
+                            TextButton(
+                              onPressed: items.isEmpty
+                                  ? null
+                                  : () => setState(
+                                      () => selected.addAll(
+                                        items.map((item) => item.key),
+                                      ),
+                                    ),
+                              child: Text(
+                                query.trim().isEmpty
+                                    ? 'Chọn tất cả'
+                                    : 'Chọn kết quả',
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: selected.isEmpty
+                                  ? null
+                                  : () => setState(selected.clear),
+                              child: const Text('Bỏ chọn'),
+                            ),
+                          ],
+                        ),
+                      FilledButton(
+                        key: const ValueKey('library-filter-picker-apply'),
+                        onPressed: widget.requireSelection && selected.isEmpty
+                            ? null
+                            : () => Navigator.pop(
+                                context,
+                                Set<String>.of(selected),
+                              ),
+                        child: Text(
+                          widget.applyLabel?.call(selected) ??
+                              'Áp dụng (${selected.length})',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),

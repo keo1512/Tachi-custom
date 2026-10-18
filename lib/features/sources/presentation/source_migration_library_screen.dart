@@ -111,7 +111,8 @@ class _MigrationLibraryState
                       .toList();
                   String label(String identity) =>
                       known[identity]?.name ??
-                      librarySourceLabel(
+                      resolvedLibrarySourceLabel(
+                        ref,
                         online.firstWhere(
                           (book) =>
                               '${book.engine}:${book.sourceId}' == identity,

@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tachi_books/features/reader/presentation/reader_image_loader.dart';
+import 'package:tachi_books/features/sources/domain/catalogue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
@@ -99,7 +101,7 @@ void main() {
 
         expect(find.byType(PageView), findsNothing);
         final scroll = tester
-            .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+            .widget<SingleChildScrollView>(_verticalView())
             .controller!;
         // Old paged/RTL preferences cannot replace the requested continuous flow.
         expect(
@@ -129,9 +131,17 @@ void main() {
         );
         await _waitForImages(tester);
         final restored = tester
-            .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+            .widget<SingleChildScrollView>(_verticalView())
             .controller!;
-        expect(restored.offset, closeTo(restored.position.maxScrollExtent, 1));
+        final last = tester.getRect(
+          find.byKey(const ValueKey('continuous-image:0:2')),
+        );
+        final viewport = tester.getRect(_verticalView());
+        expect(last.bottom, closeTo(viewport.bottom, 1));
+        expect(
+          restored.offset,
+          lessThanOrEqualTo(restored.position.maxScrollExtent),
+        );
         expect(
           (await fixture.repo.find('paged'))!.progress,
           closeTo(.5, .0001),
@@ -198,7 +208,7 @@ void main() {
           .update(incognitoMode: false);
       await tester.pumpAndSettle();
       final scroll = tester
-          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .widget<SingleChildScrollView>(_verticalView())
           .controller!;
       scroll.jumpTo(scroll.position.maxScrollExtent);
       await tester.pump(const Duration(milliseconds: 600));
@@ -221,7 +231,7 @@ void main() {
       await fixture.repo.clear();
       await fixture.repo.save(replacement);
       final scroll = tester
-          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
+          .widget<SingleChildScrollView>(_verticalView())
           .controller!;
       scroll.jumpTo(scroll.position.maxScrollExtent);
       await tester.pump(const Duration(milliseconds: 600));
@@ -301,6 +311,19 @@ Future<_Fixture> _open(
     overrides: [
       preferencesProvider.overrideWithValue(preferences),
       libraryRepositoryProvider.overrideWithValue(library),
+      ordinaryReaderImageLoaderProvider.overrideWithValue((data, page) async {
+        if (data.images[page].startsWith('data:')) {
+          return loadOrdinaryReaderImage(data, page);
+        }
+        final client =
+            debugNetworkImageHttpClientProvider!() as _PendingImageClient;
+        client.requested = true;
+        final response = await client.response.future as _ImageResponse;
+        if (response.statusCode != 200) {
+          throw const FormatException('Fixture image HTTP error');
+        }
+        return SourceImageData(bytes: response.bytes, mimeType: 'image/png');
+      }),
     ],
   );
   await tester.pumpWidget(
@@ -309,13 +332,19 @@ Future<_Fixture> _open(
       child: const MaterialApp(home: ReaderScreen(id: 'paged')),
     ),
   );
-  await tester.pumpAndSettle();
+  if (layout == 'continuous' && debugNetworkImageHttpClientProvider != null) {
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  } else {
+    await tester.pumpAndSettle();
+  }
   expect(
     find.byType(PageView),
     layout == 'continuous' ? findsNothing : findsOneWidget,
   );
   if (layout == 'continuous') {
-    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    expect(_verticalView(), findsOneWidget);
   }
   return (repo: library, container: container);
 }
@@ -345,6 +374,12 @@ Future<List<String>> _images(WidgetTester tester, int count) async {
 }
 
 Future<void> _waitForImages(WidgetTester tester) async {
+  if (find.byType(PageView).evaluate().isEmpty) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 30)),
+    );
+    await tester.pump();
+  }
   await tester.runAsync(() async {
     await Future.wait(
       tester.widgetList<Image>(find.byType(Image)).map((image) {
@@ -432,3 +467,7 @@ class _ImageResponse extends Stream<List<int>> implements HttpClientResponse {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+Finder _verticalView() => find.byWidgetPredicate(
+  (widget) => widget is SingleChildScrollView && widget.controller != null,
+);

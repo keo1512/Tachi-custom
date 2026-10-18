@@ -10,6 +10,7 @@ import '../../privacy/application/app_lock_controller.dart';
 import '../data/automatic_backup_store.dart';
 import '../data/backup_directory_platform.dart';
 import '../data/external_automatic_backup_store.dart';
+import '../data/coordinated_preferences.dart';
 import 'backup_service_provider.dart';
 import 'automatic_backup_status.dart';
 import 'extension_recovery_controller.dart';
@@ -73,6 +74,40 @@ final automaticBackupSchedulerProvider = Provider<AutomaticBackupScheduler>(
   AutomaticBackupScheduler.new,
 );
 
+class AutomaticBackupInterrupted extends StateError {
+  AutomaticBackupInterrupted()
+    : super('Phiên sao lưu đã bị ngắt. Sẽ thử lại trong lượt sau.');
+}
+
+class AutomaticBackupExecutionGate {
+  int _generation = 0;
+  bool _allowed = true;
+  void allow() => _allowed = true;
+  void expire() {
+    _allowed = false;
+    _generation++;
+  }
+
+  int begin() {
+    if (!_allowed) throw AutomaticBackupInterrupted();
+    return _generation;
+  }
+
+  void check(int generation) {
+    if (!_allowed || generation != _generation) {
+      throw AutomaticBackupInterrupted();
+    }
+  }
+}
+
+final automaticBackupExecutionProvider = Provider<AutomaticBackupExecutionGate>(
+  (ref) {
+    final gate = AutomaticBackupExecutionGate();
+    ref.onDispose(gate.expire);
+    return gate;
+  },
+);
+
 class AutomaticBackupScheduler {
   AutomaticBackupScheduler(this.ref);
   final Ref ref;
@@ -88,6 +123,7 @@ class AutomaticBackupScheduler {
     final policy = ref.read(automaticBackupPolicyProvider);
     final preferences = ref.read(preferencesProvider);
     if (!force && policy.hours == 0) return null;
+    if (!force && ref.read(settingsProvider).incognitoMode) return null;
     final last = preferences.getInt('lastAutomaticBackup');
     if (!force &&
         last != null &&
@@ -109,6 +145,31 @@ class AutomaticBackupScheduler {
         !ref.read(appLockProvider).configurationValid) {
       return null;
     }
+    final gate = ref.read(automaticBackupExecutionProvider);
+    final execution = gate.begin();
+    final repository = ref.read(backupServiceProvider).repository;
+    final revision = repository.replacementRevision;
+    final generation = preferences is CoordinatedPreferences
+        ? preferences.mutationGeneration
+        : 0;
+    void check() {
+      if (!ref.mounted) throw AutomaticBackupInterrupted();
+      gate.check(execution);
+      if (repository.replacementRevision != revision ||
+          (preferences is CoordinatedPreferences &&
+              preferences.mutationGeneration != generation) ||
+          (!force && ref.read(settingsProvider).incognitoMode)) {
+        throw AutomaticBackupInterrupted();
+      }
+      final lock = ref.read(appLockProvider);
+      if (!lock.initialized || lock.locked || !lock.configurationValid) {
+        throw StateError('Ứng dụng đang khóa; sao lưu chưa được tạo.');
+      }
+      if (!force && ref.read(automaticBackupPolicyProvider).hours == 0) {
+        throw AutomaticBackupInterrupted();
+      }
+    }
+
     final status = ref.read(automaticBackupStatusProvider.notifier);
     await status.record(
       AutomaticBackupRunStatus(
@@ -120,10 +181,12 @@ class AutomaticBackupScheduler {
     try {
       final store = await ref.read(automaticBackupStoreProvider.future);
       if (!ref.mounted) return null;
+      check();
       stored = await store.create(
         now,
         keep: policy.keep,
         beforeCapture: () {
+          check();
           if (!ref.mounted) throw StateError('Lượt sao lưu đã đóng.');
           final lock = ref.read(appLockProvider);
           if (!lock.initialized || lock.locked || !lock.configurationValid) {
@@ -136,7 +199,9 @@ class AutomaticBackupScheduler {
             );
           }
         },
+        beforePublish: check,
       );
+      check();
       if (!await preferences.setInt(
         'lastAutomaticBackup',
         now.millisecondsSinceEpoch,
@@ -160,7 +225,9 @@ class AutomaticBackupScheduler {
         try {
           await status.record(
             AutomaticBackupRunStatus(
-              stage: AutomaticBackupRunStage.failed,
+              stage: error is AutomaticBackupInterrupted
+                  ? AutomaticBackupRunStage.interrupted
+                  : AutomaticBackupRunStage.failed,
               startedAt: now,
               finishedAt: DateTime.now(),
               fileName: stored?.name,

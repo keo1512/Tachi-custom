@@ -32,6 +32,8 @@ class BulkSourceMigrationScreen extends ConsumerStatefulWidget {
 class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
   final selected = <String>{};
   final previews = <String, SourceMigrationPreview>{};
+  List<CatalogueSource> targetSources = const [];
+  int targetRevision = 0;
   late int selectionRevision = ref
       .read(libraryRepositoryProvider)
       .replacementRevision;
@@ -40,8 +42,34 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
   String? error;
   bool busy = false;
 
+  Future<void> chooseTargets() async {
+    final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    final candidates = widget.sources
+        .where((s) => source.isEmpty || s.identity != source)
+        .toList();
+    final result = await selectMigrationSources(
+      context,
+      candidates: candidates,
+      selected: targetSources.map((s) => s.identity).toSet(),
+      title: 'Chọn nguồn đích',
+    );
+    if (!mounted ||
+        result == null ||
+        result.isEmpty ||
+        revision != ref.read(libraryRepositoryProvider).replacementRevision) {
+      return;
+    }
+    setState(() {
+      targetSources = result;
+      targetRevision++;
+      previews.clear();
+      error = null;
+    });
+  }
+
   Future<void> choose(LibraryBook book) async {
     final revision = ref.read(libraryRepositoryProvider).replacementRevision;
+    final targetsVersion = targetRevision;
     final candidates = widget.sources
         .where(
           (s) =>
@@ -49,15 +77,30 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
               s.identity != '${book.engine}:${book.sourceId}',
         )
         .toList();
-    final targets = await chooseMigrationSources(
-      context,
-      candidates: candidates,
-      title: book.title,
-    );
+    final List<CatalogueSource>? targets;
+    if (targetSources.isEmpty) {
+      targets = await chooseMigrationSources(
+        context,
+        candidates: candidates,
+        title: book.title,
+      );
+    } else {
+      final identities = candidates.map((s) => s.identity).toSet();
+      targets = targetSources
+          .where((s) => identities.contains(s.identity))
+          .toList();
+      if (targets.isEmpty) {
+        setState(
+          () => error = 'Nguồn đích đã chọn không phù hợp với truyện này. Chọn nguồn khác loại phù hợp và khác nguồn cũ.',
+        );
+        return;
+      }
+    }
     if (targets == null ||
         targets.isEmpty ||
         !mounted ||
-        revision != ref.read(libraryRepositoryProvider).replacementRevision) {
+        revision != ref.read(libraryRepositoryProvider).replacementRevision ||
+        targetsVersion != targetRevision) {
       return;
     }
     final preview = await context.push<SourceMigrationPreview>(
@@ -71,7 +114,8 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
     );
     if (preview != null &&
         mounted &&
-        revision == ref.read(libraryRepositoryProvider).replacementRevision) {
+        revision == ref.read(libraryRepositoryProvider).replacementRevision &&
+        targetsVersion == targetRevision) {
       try {
         final shared = previews.isEmpty
             ? preview
@@ -206,7 +250,10 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
         books.map((b) => '${b.engine}:${b.sourceId}').toSet().toList()..sort();
     final sourceLabels = {
       for (final book in books)
-        '${book.engine}:${book.sourceId}': librarySourceLabel(book),
+        '${book.engine}:${book.sourceId}': resolvedLibrarySourceLabel(
+          ref,
+          book,
+        ),
       for (final known in widget.sources)
         known.identity: sourceDisplayLabel(
           engine: known.engine.name,
@@ -261,8 +308,33 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
                             ],
                             onChanged: busy
                                 ? null
-                                : (v) => setState(() => source = v ?? ''),
+                                : (v) => setState(() {
+                                    source = v ?? '';
+                                    targetSources = targetSources
+                                        .where((s) => s.identity != source)
+                                        .toList();
+                                    targetRevision++;
+                                    previews.clear();
+                                  }),
                           ),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            key: const ValueKey('migration-target-sources'),
+                            onPressed: busy ? null : chooseTargets,
+                            icon: const Icon(
+                              CupertinoIcons.arrow_right_arrow_left,
+                            ),
+                            label: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Text(
+                                targetSources.isEmpty
+                                    ? 'Chọn nguồn đích'
+                                    : 'Nguồn đích: ${targetSources.map((s) => s.name).join(', ')}',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           TextField(
                             enabled: !busy,
                             onChanged: (v) => setState(() => query = v),
@@ -352,8 +424,8 @@ class _BulkMigrationState extends ConsumerState<BulkSourceMigrationScreen> {
                     ),
                     subtitle: Text(
                       previews[book.id] == null
-                          ? '${librarySourceLabel(book)}\nChưa chọn kết quả'
-                          : '${librarySourceLabel(book)}\n→ ${previews[book.id]!.replacement.title}\nGhép ${previews[book.id]!.matches.length}/${book.chapters.length} chương',
+                          ? '${resolvedLibrarySourceLabel(ref, book)}\nChưa chọn kết quả'
+                          : '${resolvedLibrarySourceLabel(ref, book)}\n→ ${previews[book.id]!.replacement.title}\nGhép ${previews[book.id]!.matches.length}/${book.chapters.length} chương',
                     ),
                     trailing: const Icon(CupertinoIcons.search),
                     onTap: busy ? null : () => choose(book),

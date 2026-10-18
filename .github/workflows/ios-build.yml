@@ -6,7 +6,7 @@ on:
       build_number:
         description: Positive iOS build number
         required: true
-        default: '11'
+        default: '13'
         type: string
       native_smoke:
         description: Run native integration checks when UIKit or platform bridges change
@@ -21,19 +21,52 @@ jobs:
   unsigned-ipa:
     name: Compile iPhone and iPad app (unsigned)
     runs-on: xcode-27
-    timeout-minutes: 90
+    timeout-minutes: 55
     env:
       DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
       TACHI_BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
       FLUTTER_SWIFT_PACKAGE_MANAGER: 'false'
+      PYTHONUNBUFFERED: '1'
+      TACHI_PREFLIGHT_RECEIPT: ${{ github.workspace }}/artifacts/ios-preflight.json
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
 
+      - name: Validate build input and selected Xcode before setup
+        shell: bash
+        timeout-minutes: 2
+        env:
+          TACHI_NATIVE_SMOKE: ${{ inputs.native_smoke }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          import shutil
+          import subprocess
+          if not re.fullmatch(r'[1-9][0-9]*', os.environ['TACHI_BUILD_NUMBER']):
+              raise SystemExit('Build number must be a positive integer. No build started.')
+          for command in ('xcodebuild', 'xcrun', 'pod', 'git', 'ditto', 'shasum', 'codesign'):
+              if not shutil.which(command):
+                  raise SystemExit('Missing build tool: ' + command)
+          java_home = subprocess.check_output(['/usr/libexec/java_home', '-v', '21'], text=True, timeout=30).strip()
+          if not os.path.isfile(os.path.join(java_home, 'bin', 'javac')):
+              raise SystemExit('The verified extension engine requires a JDK 21 compiler.')
+          for sdk in ('iphoneos', 'iphonesimulator'):
+              version = subprocess.check_output(['xcrun', '--sdk', sdk, '--show-sdk-version'], text=True, timeout=30).strip()
+              if version.split('.')[0] != '27':
+                  raise SystemExit('Expected iOS 27 SDK: ' + sdk + ' is ' + version)
+          print('Build input, required commands and iOS 27 SDKs checked.')
+          PY
+          if [[ "$TACHI_NATIVE_SMOKE" == 'true' ]]; then
+            bash tools/test_ios_native_tabs.sh --select-only
+          fi
+
       - name: Configure Firebase iOS and Google login
         shell: bash
+        timeout-minutes: 2
         env:
           TACHI_GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.TACHI_GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
         run: |
@@ -64,6 +97,7 @@ jobs:
 
       - name: Install official Flutter 3.47.4
         shell: bash
+        timeout-minutes: 8
         run: |
           set -euo pipefail
           git clone --depth 1 --branch 3.47.4 https://github.com/flutter/flutter.git "$RUNNER_TEMP/tachibooks-flutter"
@@ -72,36 +106,39 @@ jobs:
           "$RUNNER_TEMP/tachibooks-flutter/bin/flutter" --version
           "$RUNNER_TEMP/tachibooks-flutter/bin/flutter" precache --ios
 
+      - name: Check source, Dart tests and Swift before expensive native compilation
+        shell: bash
+        timeout-minutes: 18
+        run: python3 tools/ios_build_preflight.py --receipt "$TACHI_PREFLIGHT_RECEIPT"
+
       - name: Prepare verified on-device extension engine
         shell: bash
+        timeout-minutes: 13
         run: |
           set -euo pipefail
           export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
           export PATH="$JAVA_HOME/bin:$PATH"
-          python3 tools/configure_ios_tachi_runtime.py
+          python3 tools/run_build_phase.py --name extension-engine --timeout 720 \
+            --log artifacts/extension-engine.log --status artifacts/extension-engine.status.json \
+            -- python3 tools/configure_ios_tachi_runtime.py
+
+      - name: Check Objective-C and JNI against real iOS headers
+        shell: bash
+        timeout-minutes: 8
+        run: |
+          python3 tools/run_build_phase.py --name objc-source-checks --timeout 420 \
+            --log artifacts/objc-source-checks.log --status artifacts/objc-source-checks.status.json \
+            -- python3 tools/check_ios_native_sources.py --objc-only
 
       - name: Test native UIKit tabs on an iOS 27 iPhone simulator
         if: ${{ inputs.native_smoke }}
         shell: bash
-        timeout-minutes: 60
+        timeout-minutes: 40
         run: bash tools/test_ios_native_tabs.sh
 
-      - name: Upload native simulator test results
-        if: ${{ always() && inputs.native_smoke }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: TachiBooks-native-tabs-smoke-${{ github.run_number }}
-          path: |
-            artifacts/native-tabs-smoke.xcresult
-            artifacts/native-tabs-smoke.log
-            artifacts/native-tabs-compile.log
-            artifacts/native-tabs-simulator.json
-            artifacts/native-tabs-simulator.png
-          if-no-files-found: warn
-          retention-days: 14
-
-      - name: Analyze, test and compile unsigned IPA
+      - name: Compile and verify unsigned device IPA using checked source
         shell: bash
+        timeout-minutes: 23
         run: bash tools/build_ios.sh "$TACHI_BUILD_NUMBER"
 
       - name: Upload unsigned IPA and build information
@@ -115,6 +152,23 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+
+      - name: Upload build diagnostics even when a check fails
+        if: ${{ always() }}
+        timeout-minutes: 3
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: TachiBooks-build-diagnostics-${{ github.run_number }}
+          path: |
+            artifacts/*.log
+            artifacts/*.status.json
+            artifacts/ios-preflight.json
+            artifacts/native-tabs-smoke.xcresult
+            artifacts/native-tabs-simulator.json
+            artifacts/native-tabs-simulator.png
+            ios/Podfile.lock
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Explain artifact installation status
         shell: bash

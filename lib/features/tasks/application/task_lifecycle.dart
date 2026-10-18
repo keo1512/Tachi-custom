@@ -9,24 +9,53 @@ import '../../library/application/extension_recovery_controller.dart';
 import '../../library/application/library_update_policy.dart';
 import '../../library/application/library_update_report.dart';
 import '../../library/application/library_update_scheduler.dart';
+import '../../library/application/automatic_backup_controller.dart';
+import '../../library/application/automatic_backup_status.dart';
 import '../../privacy/application/app_lock_controller.dart';
 import '../../settings/settings_controller.dart';
 import '../data/task_platform.dart';
 import 'task_notifications.dart';
+import '../../../core/diagnostics/diagnostic_log.dart';
+import '../../../core/diagnostics/diagnostic_listener.dart';
 
 /// Finite execution windows. iOS decides whether a deferred processing request
 /// receives time; every granted window runs the same durable guarded queue.
-class TaskLifecycle extends ConsumerStatefulWidget {
+class TaskLifecycle extends ConsumerWidget {
   const TaskLifecycle({super.key, required this.child});
   final Widget child;
   @override
-  ConsumerState<TaskLifecycle> createState() => _TaskLifecycleState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(taskCoordinatorProvider);
+    return child;
+  }
 }
 
-class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
-    with WidgetsBindingObserver {
+/// One owner per application container, including a native launch without a
+/// FlutterViewController. Attaching the UI reuses this owner and its queues.
+final taskCoordinatorProvider = Provider<TaskCoordinator>((ref) {
+  ref.watch(diagnosticListenerProvider);
+  final coordinator = TaskCoordinator(ref);
+  ref.onDispose(coordinator.dispose);
+  return coordinator;
+});
+
+/// Keep provider listeners active even before a UI exists or while every view
+/// is paused. Riverpod 3 pauses ref.listen dependencies without a live listener.
+/// The application closes this subscription before disposing its container.
+ProviderSubscription<TaskCoordinator> retainApplicationTasks(
+  ProviderContainer container,
+) => container.listen(taskCoordinatorProvider, (_, _) {});
+
+class TaskCoordinator with WidgetsBindingObserver {
+  TaskCoordinator(this.ref) {
+    _initialize();
+    _listen();
+  }
+  final Ref ref;
+  bool get mounted => !disposed && ref.mounted;
   late TaskPlatform platform;
   late LibraryUpdateExecutionGate updateGate;
+  late AutomaticBackupExecutionGate backupGate;
   StreamSubscription<void>? expiration;
   StreamSubscription<void>? continuedExpiration;
   StreamSubscription<int>? scheduled;
@@ -37,15 +66,35 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
   int? scheduledToken;
   bool startingScheduled = false;
   bool scheduledUpdateRunning = false;
+  bool scheduledBackupRunning = false;
+  bool scheduledHadFailure = false;
   bool updateWasWorking = false;
   Future<void> pending = Future.value();
-  @override
-  void initState() {
-    super.initState();
+  void _logBackground(String code) {
+    if (!mounted) return;
+    unawaited(
+      ref
+          .read(diagnosticLogProvider)
+          .record(
+            DiagnosticEvent(
+              'background',
+              code,
+              DiagnosticEvent.safeMessage(code),
+              DateTime.now(),
+            ),
+          )
+          .catchError((Object _) {}),
+    );
+  }
+
+  void _initialize() {
     platform = ref.read(taskPlatformProvider);
     updateGate = ref.read(libraryUpdateExecutionProvider);
+    backupGate = ref.read(automaticBackupExecutionProvider);
     background =
+        ref.read(applicationStartsInBackgroundProvider) ||
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.paused;
+    startingScheduled = ref.read(applicationStartsInBackgroundProvider);
     if (background) updateGate.hold();
     updateExecutions = updateGate.changes.listen((_) {
       if (!mounted) return;
@@ -81,7 +130,7 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
       // waiting for the existing application engine to initialize.
       unawaited(native.backgroundReady().catchError((Object _) {}));
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    scheduleMicrotask(() {
       if (mounted) reconcile();
     });
   }
@@ -98,6 +147,13 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
       return;
     }
     scheduledToken = token;
+    final resumeDownloads =
+        platform is! ScheduledDownloadTaskPlatform ||
+        (platform as ScheduledDownloadTaskPlatform).scheduledDownloadsRequested(
+          token,
+        );
+    scheduledHadFailure = false;
+    _logBackground('background_started');
     startingScheduled = true;
     expired = false;
     stoppedNoticeSent = false;
@@ -126,7 +182,26 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
         }
         updateGate
             .allow(); // The BGProcessingTask is the existing native grant.
+        backupGate.allow();
         var updatesHandled = false;
+        if (platform is BackgroundMaintenancePlatform &&
+            ref.read(automaticBackupPolicyProvider).hours > 0) {
+          scheduledBackupRunning = true;
+          reconcile();
+          try {
+            await ref
+                .read(automaticBackupSchedulerProvider)
+                .check(DateTime.now());
+            updatesHandled = true;
+          } catch (_) {
+            scheduledHadFailure = true;
+          } finally {
+            scheduledBackupRunning = false;
+          }
+        }
+        if (!mounted || scheduledToken != token || !background || expired) {
+          return;
+        }
         if (ref.read(libraryUpdatePolicyProvider).hours > 0 &&
             !ref.read(settingsProvider).incognitoMode) {
           scheduledUpdateRunning = true;
@@ -136,6 +211,8 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
                 .read(libraryUpdateSchedulerProvider)
                 .check(DateTime.now());
             updatesHandled = true;
+          } catch (_) {
+            scheduledHadFailure = true;
           } finally {
             scheduledUpdateRunning = false;
           }
@@ -149,11 +226,12 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
           await _finishScheduled(success: false);
           return;
         }
-        if (!queue.tasks.any(
-          (job) =>
-              job.status == DownloadJobStatus.pending ||
-              job.status == DownloadJobStatus.active,
-        )) {
+        if ((!queue.running && !resumeDownloads) ||
+            !queue.tasks.any(
+              (job) =>
+                  job.status == DownloadJobStatus.pending ||
+                  job.status == DownloadJobStatus.active,
+            )) {
           await _finishScheduled(success: updatesHandled);
           return;
         }
@@ -174,16 +252,23 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
     scheduledToken = null;
     if (token != null && background && !expired) updateGate.hold();
     if (token != null && platform is BackgroundTaskPlatform) {
+      final acceptedSuccess = success && !scheduledHadFailure;
+      _logBackground(
+        acceptedSuccess ? 'background_completed' : 'background_interrupted',
+      );
       await (platform as BackgroundTaskPlatform).completeScheduledBackground(
         token,
-        success: success,
+        success: acceptedSuccess,
       );
     }
   }
 
   Future<void> _suspend({bool continued = false}) async {
     if (!mounted || suspending) return;
-    if (!continued) updateGate.expire();
+    if (!continued) {
+      updateGate.expire();
+      backupGate.expire();
+    }
     final before = ref.read(downloadQueueProvider);
     if (!before.running &&
         !before.tasks.any((task) => task.status == DownloadJobStatus.active)) {
@@ -233,7 +318,11 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
     pending = pending
         .then((_) async {
           if (disposed || !mounted) return;
-          if (startingScheduled && !scheduledUpdateRunning) return;
+          if (startingScheduled &&
+              !scheduledUpdateRunning &&
+              !scheduledBackupRunning) {
+            return;
+          }
           final queue = ref.read(downloadQueueProvider);
           final update = ref.read(libraryUpdateProgressProvider);
           final updateWorking =
@@ -241,6 +330,9 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
           final working =
               queue.running ||
               updateWorking ||
+              scheduledBackupRunning ||
+              ref.read(automaticBackupStatusProvider).stage ==
+                  AutomaticBackupRunStage.running ||
               queue.tasks.any(
                 (task) => task.status == DownloadJobStatus.active,
               );
@@ -278,34 +370,75 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
             if (platform case final BackgroundLibraryUpdatePlatform updates) {
               final policy = ref.read(libraryUpdatePolicyProvider);
               final lock = ref.read(appLockProvider);
+              // A previous private run still suppresses its own notices and
+              // download resume. Future maintenance uses current preferences;
+              // otherwise toggling incognito once disables all later schedules.
               final updateAllowed =
-                  !privateSession &&
                   !ref.read(settingsProvider).incognitoMode &&
                   lock.initialized &&
                   lock.configurationValid &&
                   !lock.locked;
+              final backupPolicy = ref.read(automaticBackupPolicyProvider);
+              final backupLast = ref
+                  .read(preferencesProvider)
+                  .getInt('lastAutomaticBackup');
               final last = ref
                   .read(preferencesProvider)
                   .getInt('libraryLastAutomaticUpdate');
-              await updates.updateBackgroundWorkSnapshot(
-                pending: pendingCount,
-                failed: failedCount,
-                notifyOnPause: resumeRequested && noticeAllowed,
-                resumeRequested: resumeRequested,
-                updatesRequested: updateAllowed && policy.hours > 0,
-                updateEarliestMillis: last == null
-                    ? 0
-                    : last + Duration(hours: policy.hours).inMilliseconds,
-                updateRemaining: update == null
-                    ? 0
-                    : (update.requestedBooks - update.processedBooks).clamp(
-                        0,
-                        1000000,
-                      ),
-                updateFailed: update?.failedBooks ?? 0,
-                notifyUpdatePause:
-                    updateAllowed && noticeAllowed && updateWorking,
-              );
+              final backupEligible = updateAllowed && backupPolicy.hours > 0;
+              final backupEarliest = backupLast == null
+                  ? 0
+                  : backupLast +
+                        Duration(hours: backupPolicy.hours).inMilliseconds;
+              if (updates is BackgroundMaintenancePlatform) {
+                await updates.updateBackgroundWorkSnapshot(
+                  pending: pendingCount,
+                  failed: failedCount,
+                  notifyOnPause: resumeRequested && noticeAllowed,
+                  resumeRequested: resumeRequested,
+                  updatesRequested: updateAllowed && policy.hours > 0,
+                  updateEarliestMillis: last == null
+                      ? 0
+                      : last + Duration(hours: policy.hours).inMilliseconds,
+                  updateRemaining: update == null
+                      ? 0
+                      : (update.requestedBooks - update.processedBooks).clamp(
+                          0,
+                          1000000,
+                        ),
+                  updateFailed: update?.failedBooks ?? 0,
+                  notifyUpdatePause:
+                      updateAllowed &&
+                      !privateSession &&
+                      noticeAllowed &&
+                      updateWorking,
+                  backupsRequested: backupEligible,
+                  backupEarliestMillis: backupEarliest,
+                );
+              } else {
+                await updates.updateBackgroundWorkSnapshot(
+                  pending: pendingCount,
+                  failed: failedCount,
+                  notifyOnPause: resumeRequested && noticeAllowed,
+                  resumeRequested: resumeRequested,
+                  updatesRequested: updateAllowed && policy.hours > 0,
+                  updateEarliestMillis: last == null
+                      ? 0
+                      : last + Duration(hours: policy.hours).inMilliseconds,
+                  updateRemaining: update == null
+                      ? 0
+                      : (update.requestedBooks - update.processedBooks).clamp(
+                          0,
+                          1000000,
+                        ),
+                  updateFailed: update?.failedBooks ?? 0,
+                  notifyUpdatePause:
+                      updateAllowed &&
+                      !privateSession &&
+                      noticeAllowed &&
+                      updateWorking,
+                );
+              }
               if (background && updateWorking && !updateAllowed) {
                 updateGate.expire();
               }
@@ -322,7 +455,10 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
           if (scheduledToken != null) {
             if (!background || !working) {
               await _finishScheduled(
-                success: queue.tasks.isEmpty && queue.storageError == null,
+                success:
+                    !working &&
+                    queue.tasks.isEmpty &&
+                    queue.storageError == null,
               );
             } else {
               if (!expired) updateGate.allow();
@@ -369,14 +505,15 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
       expired = false;
       stoppedNoticeSent = false;
       updateGate.allow();
+      backupGate.allow();
+      if (scheduledToken == null) startingScheduled = false;
     } else {
       return;
     }
     reconcile();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  void _listen() {
     ref.listen(downloadQueueProvider, (previous, next) {
       if (next.running && previous?.running != true) {
         sessionPrivacyGeneration = ref
@@ -396,8 +533,13 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
       reconcile();
     });
     ref.listen(libraryUpdatePolicyProvider, (_, _) => reconcile());
+    ref.listen(automaticBackupPolicyProvider, (_, _) => reconcile());
+    ref.listen(automaticBackupStatusProvider, (_, _) => reconcile());
     ref.listen(appLockProvider, (_, state) {
-      if (background && state.locked) updateGate.expire();
+      if (background && state.locked) {
+        updateGate.expire();
+        backupGate.expire();
+      }
       reconcile();
     });
     ref.listen(settingsProvider.select((settings) => settings.incognitoMode), (
@@ -406,19 +548,21 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
     ) {
       if (value) {
         privateSession = true;
-        if (background) updateGate.expire();
+        if (background) {
+          updateGate.expire();
+          backupGate.expire();
+        }
         unawaited(platform.clearNotifications().catchError((Object _) {}));
       }
       reconcile();
     });
     ref.listen(taskNotificationsProvider, (_, _) => reconcile());
-    return widget.child;
   }
 
-  @override
   void dispose() {
     disposed = true;
     updateGate.expire();
+    backupGate.expire();
     WidgetsBinding.instance.removeObserver(this);
     unawaited(expiration?.cancel());
     unawaited(continuedExpiration?.cancel());
@@ -426,6 +570,5 @@ class _TaskLifecycleState extends ConsumerState<TaskLifecycle>
     unawaited(updateExecutions?.cancel());
     unawaited(_finishScheduled(success: false).catchError((Object _) {}));
     unawaited(platform.endBackground().catchError((Object _) {}));
-    super.dispose();
   }
 }

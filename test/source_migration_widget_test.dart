@@ -282,7 +282,7 @@ void main() {
     sources.dispose();
   });
   testWidgets(
-    'bulk review selects target without writing, then commits default keep-old action',
+    'bulk review uses separated global target selector without writing, then commits default keep-old action',
     (tester) async {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(320, 568);
@@ -351,6 +351,27 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      final targetSelector = find.byKey(
+        const ValueKey('migration-target-sources'),
+      );
+      final originalSource = find.byType(DropdownButtonFormField<String>);
+      final searchField = find.byType(TextField);
+      expect(
+        tester.getRect(targetSelector).top,
+        greaterThan(tester.getRect(originalSource).bottom),
+      );
+      expect(
+        tester.getRect(searchField).top,
+        greaterThan(tester.getRect(targetSelector).bottom),
+      );
+      await tester.tap(targetSelector);
+      await tester.pumpAndSettle();
+      expect(find.text('Chọn nguồn đích'), findsNWidgets(2));
+      await tester.tap(find.widgetWithText(CheckboxListTile, 'New source'));
+      await tester.pump();
+      await tester.tap(find.text('Tìm trong các nguồn này'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nguồn đích: New source'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('migration-bulk-book-old')),
         140,
@@ -363,8 +384,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(BookCover), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('migration-bulk-book-old')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('New source · vi'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ListTile, 'New title').first);
       await tester.pumpAndSettle();

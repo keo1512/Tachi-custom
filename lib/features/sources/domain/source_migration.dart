@@ -153,6 +153,9 @@ class SourceMigration {
           number: c.number,
           scanlator: c.scanlator,
           uploadedAt: c.uploadedAt,
+          sourceMemo: c.sourceMemo,
+          nativeSourceContext: c.nativeSourceContext,
+          sourceUrl: c.sourceUrl,
           read: false,
         ),
     ];
@@ -190,6 +193,8 @@ class SourceMigration {
       sourceId: target.sourceId,
       sourceName: sourceName,
       sourceRef: target.ref,
+      sourceMemo: target.sourceMemo,
+      nativeSourceContext: target.nativeSourceContext,
       status: target.status,
       readingState: old.readingState,
       rating: old.rating,

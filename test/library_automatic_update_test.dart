@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tachi_books/features/library/data/automatic_backup_store.dart';
+import 'package:tachi_books/features/library/data/backup_configuration.dart';
 import 'package:tachi_books/features/downloads/presentation/download_queue_controller.dart';
 import 'package:tachi_books/features/library/application/library_update_policy.dart';
 import 'package:tachi_books/features/library/application/library_update_scheduler.dart';
@@ -79,6 +81,79 @@ _open(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('expanded cycles persist in update and backup settings and validated backup configuration', () async {
+    for (final hours in LibraryUpdatePolicy.intervals) {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final fixture = ProviderContainer(
+        overrides: [preferencesProvider.overrideWithValue(prefs)],
+      );
+      try {
+        await fixture.read(libraryUpdatePolicyProvider.notifier).patch({
+          'hours': hours,
+          'checkAll': true,
+        });
+        await prefs.setString(
+          'automaticBackupPolicyV1',
+          AutomaticBackupPolicy(hours: hours).encode(),
+        );
+        expect(fixture.read(libraryUpdatePolicyProvider).hours, hours);
+        expect(
+          AutomaticBackupPolicy.decode(
+            prefs.getString('automaticBackupPolicyV1'),
+          ).hours,
+          hours,
+        );
+        expect(
+          BackupConfiguration.capture(prefs).values,
+          contains('libraryUpdatePolicyV1'),
+        );
+      } finally {
+        fixture.dispose();
+      }
+    }
+    expect(LibraryUpdatePolicy.fromJson({'hours': 6}).checkAll, isFalse);
+    expect(LibraryUpdatePolicy.fromJson({'hours': -1}).hours, 0);
+    expect(
+      () => AutomaticBackupPolicy.decode('{"hours":-1,"keep":3}'),
+      throwsFormatException,
+    );
+  });
+  test('check all includes completed and excluded-category online books and obeys chosen interval', () async {
+    final source = _Source(
+      (_) async => const [CatalogueChapter(ref: 'a', title: 'A', index: 0)],
+    );
+    final fixture = await _open(
+      [
+        _book('included'),
+        _book('excluded', category: 'No'),
+        _book('done', status: 2),
+        _book('local', engine: 'local'),
+      ],
+      source,
+      settings: {
+        'libraryUpdatePolicyV1': jsonEncode({
+          'hours': 1,
+          'checkAll': true,
+          'skipCompleted': true,
+        }),
+        'libraryCategoriesV1': jsonEncode({
+          'categories': [
+            {'name': 'No', 'update': false, 'download': false},
+          ],
+        }),
+      },
+    );
+    final scheduler = fixture.container.read(libraryUpdateSchedulerProvider);
+    final now = DateTime(2026, 10, 18, 10);
+    await scheduler.check(now);
+    expect(source.calls.toSet(), {'included', 'excluded', 'done'});
+    await scheduler.check(now.add(const Duration(minutes: 59)));
+    expect(source.calls, hasLength(3));
+    await scheduler.check(now.add(const Duration(hours: 1)));
+    expect(source.calls, hasLength(6));
+    expect((await fixture.repository.find('local'))!.chapters, hasLength(1));
+  });
   test('prediction uses distinct known dates and rejects irregular/completed/local books', () {
     LibraryBook dated(
       List<int> days, {

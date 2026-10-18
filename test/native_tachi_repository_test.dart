@@ -83,6 +83,214 @@ void main() {
         client: client ?? MockClient((_) async => http.Response('', 500)),
       );
 
+  for (final withMemo in [false, true]) {
+    test(
+      'native numeric source identities survive book/chapter/image calls with memo=$withMemo',
+      () async {
+        final memo = withMemo
+            ? {
+                'cursor': 'fixture',
+                'nested': [1, true],
+              }
+            : <String, dynamic>{};
+        final chapterMemo = withMemo ? {'mangaId': '123'} : <String, dynamic>{};
+        final host = _Host((method, args) {
+          if (method == 'search') {
+            return {
+              'items': [
+                {'ref': '123', 'title': 'Fixture', 'memo': memo},
+              ],
+            };
+          }
+          if (method == 'detail') {
+            expect(args['ref'], '123');
+            return {'ref': '123', 'title': 'Fixture', 'memo': memo};
+          }
+          if (method == 'chapters') {
+            return [
+              {
+                'ref': '456',
+                'title': 'Fixture one',
+                'index': 0,
+                'memo': chapterMemo,
+                'sourceUrl': 'https://source.example/manga/123/456',
+              },
+            ];
+          }
+          if (withMemo) {
+            expect(args['bookMemo'], memo);
+            expect(args['chapterMemo'], chapterMemo);
+          }
+          if (method == 'chapter') {
+            expect(args['bookRef'], '123');
+            expect(args['ref'], '456');
+            return {
+              'images': ['https://images.example/page.png'],
+            };
+          }
+          expect(method, 'image');
+          expect(args['chapterRef'], '456');
+          return {
+            'base64': base64Encode([255, 216, 255, 1]),
+            'mimeType': 'image/jpeg',
+          };
+        });
+        final repo = repository(host);
+        final book = (await repo.search(_source, 'Fixture')).single;
+        expect(book.nativeSourceContext, isTrue);
+        final detail = await repo.detail(book);
+        expect(detail.sourceMemo, memo);
+        final chapter = (await repo.chapters(detail)).single;
+        expect(chapter.nativeSourceContext, isTrue);
+        expect(chapter.sourceUrl, 'https://source.example/manga/123/456');
+        final content = await repo.chapter(detail, chapter);
+        expect(
+          (await repo.fetchImage(
+            detail,
+            chapter,
+            0,
+            content.images.single,
+          )).bytes,
+          [255, 216, 255, 1],
+        );
+      },
+    );
+  }
+
+  for (final knownRef in [
+    '/read/fixture/one/',
+    'https://source.example/read/fixture/one/',
+  ]) {
+    test(
+      'legacy chapter context repairs only the matching source URL: $knownRef',
+      () async {
+        final methods = <String>[];
+        var first = true;
+        final repo = NativeTachiRepository(
+          storageDirectory: directory,
+          executor: (raw) async {
+            final request = jsonDecode(raw) as Map;
+            final method = request['method'] as String;
+            final args = request['args'] as Map;
+            methods.add(method);
+            if (method == 'chapter' && first) {
+              first = false;
+              return jsonEncode({
+                'ok': false,
+                'error': {'code': 'source_context_missing'},
+              });
+            }
+            return jsonEncode({
+              'ok': true,
+              'result': switch (method) {
+                'initialize' => {},
+                'search' => {
+                  'items': [
+                    {
+                      'ref': '123',
+                      'title': 'Fixture',
+                      'memo': {'mangaPath': '/read/fixture'},
+                    },
+                  ],
+                },
+                'chapters' => [
+                  {
+                    'ref': 'one',
+                    'sourceUrl': 'https://source.example/read/fixture/one/',
+                    'title': 'One',
+                    'index': 0,
+                    'memo': {'mangaPath': '/read/fixture'},
+                  },
+                ],
+                'chapter' => () {
+                  expect(args['bookRef'], '123');
+                  expect(args['bookMemo'], {'mangaPath': '/read/fixture'});
+                  expect(args['ref'], knownRef);
+                  return {
+                    'images': ['https://images.example/page.png'],
+                  };
+                }(),
+                _ => throw StateError('Unexpected $method'),
+              },
+            });
+          },
+        );
+        final restored = CatalogueBook(
+          ref: 'old-id',
+          title: 'Fixture',
+          sourceId: _sourceId,
+          knownChapterRefs: [knownRef],
+          kind: ContentKind.manga,
+          engine: SourceEngine.tachimanga,
+        );
+        expect(
+          (await repo.chapter(
+            restored,
+            CatalogueChapter(ref: knownRef, title: 'One', index: 0),
+          )).images.length,
+          1,
+        );
+        expect(methods, [
+          'initialize',
+          'chapter',
+          'search',
+          'chapters',
+          'chapter',
+        ]);
+      },
+    );
+  }
+
+  test('a retired cover is repaired through the same source and cached without an eager library crawl', () async {
+    final methods = <String>[];
+    final repo = NativeTachiRepository(
+      storageDirectory: directory,
+      client: MockClient(
+        (_) async => fail('Loaded source covers keep the source client'),
+      ),
+      executor: (raw) async {
+        final request = jsonDecode(raw) as Map;
+        final method = request['method'] as String;
+        final args = request['args'] as Map;
+        methods.add(method);
+        if (method == 'cover' &&
+            args['url'] == 'https://retired.example/cover.jpg') {
+          return jsonEncode({
+            'ok': false,
+            'error': {'code': 'http_error', 'httpStatus': 521},
+          });
+        }
+        return jsonEncode({
+          'ok': true,
+          'result': switch (method) {
+            'initialize' => {'protocolVersion': 1},
+            'detail' => {
+              'ref': _book.ref,
+              'title': _book.title,
+              'coverUrl': 'https://new.example/cover.jpg',
+            },
+            'cover' => {
+              'base64': base64Encode([255, 216, 255, 1]),
+              'mimeType': 'image/jpeg',
+            },
+            _ => throw StateError('Unexpected $method'),
+          },
+        });
+      },
+    );
+    final book = CatalogueBook(
+      ref: _book.ref,
+      title: _book.title,
+      sourceId: _sourceId,
+      kind: ContentKind.manga,
+      engine: SourceEngine.tachimanga,
+      coverUrl: 'https://retired.example/cover.jpg',
+    );
+    expect((await repo.fetchCover(book)).bytes, [255, 216, 255, 1]);
+    expect((await repo.fetchCover(book)).bytes, [255, 216, 255, 1]);
+    expect(methods, ['initialize', 'cover', 'detail', 'cover']);
+  });
+
   test(
     'reserved lazy-page hosts are native-only without blocking real image URLs',
     () {

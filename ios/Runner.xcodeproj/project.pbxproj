@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A18C0DEC2DC74DB891503C02 /* TachiImageCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18C0DEC2DC74DB891503C01 /* TachiImageCodecTests.swift */; };
         DE71CE01DC7A4DB891503C02 /* DeviceToolsBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE71CE01DC7A4DB891503C01 /* DeviceToolsBridgeTests.swift */; };
         11C0A120DC7A4DB891503C02 /* LocalComicFilesBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C0A120DC7A4DB891503C01 /* LocalComicFilesBridgeTests.swift */; };
         11C0A120DC7A4DB891503B02 /* LocalComicFilesBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C0A120DC7A4DB891503B01 /* LocalComicFilesBridge.swift */; };
@@ -60,6 +61,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A18C0DEC2DC74DB891503C01 /* TachiImageCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TachiImageCodecTests.swift; sourceTree = "<group>"; };
         DE71CE01DC7A4DB891503C01 /* DeviceToolsBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceToolsBridgeTests.swift; sourceTree = "<group>"; };
         11C0A120DC7A4DB891503C01 /* LocalComicFilesBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalComicFilesBridgeTests.swift; sourceTree = "<group>"; };
         11C0A120DC7A4DB891503B01 /* LocalComicFilesBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalComicFilesBridge.swift; sourceTree = "<group>"; };
@@ -113,6 +115,7 @@
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXGroup;
 			children = (
+				A18C0DEC2DC74DB891503C01 /* TachiImageCodecTests.swift */,
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
 				E91C2A4D27AD415AB284ABB1 /* PrivacyPlatformBridgeTests.swift */,
 				B2610739DC7A4DB891503C01 /* TaskPlatformBridgeTests.swift */,
@@ -330,6 +333,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A18C0DEC2DC74DB891503C02 /* TachiImageCodecTests.swift in Sources */,
 				331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */,
 				E91C2A4D27AD415AB284ABB2 /* PrivacyPlatformBridgeTests.swift in Sources */,
 				B2610739DC7A4DB891503C02 /* TaskPlatformBridgeTests.swift in Sources */,

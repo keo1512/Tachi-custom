@@ -3,6 +3,38 @@ import XCTest
 @testable import Runner
 
 final class TaskPlatformBridgeTests: XCTestCase {
+  func testApplicationUsesOneHeadlessCapableEngineWithoutStoryboardCreatingAnother() async {
+    await MainActor.run {
+      let app = UIApplication.shared.delegate as? AppDelegate
+      XCTAssertNotNil(app?.applicationEngine)
+      if let engine = app?.applicationEngine, let view = engine.viewController {
+        XCTAssertTrue(view.engine === engine)
+      }
+      XCTAssertNil(Bundle.main.object(forInfoDictionaryKey: "UIMainStoryboardFile"))
+      let manifest = Bundle.main.object(forInfoDictionaryKey: "UIApplicationSceneManifest") as? [String: Any]
+      let configurations = manifest?["UISceneConfigurations"] as? [String: Any]
+      let scenes = configurations?["UIWindowSceneSessionRoleApplication"] as? [[String: Any]]
+      XCTAssertNil(scenes?.first?["UISceneStoryboardFile"])
+    }
+  }
+  func testBackupOnlyWindowAndEarliestMaintenanceDeadline() async {
+    await MainActor.run {
+      let snapshot = TaskPauseSnapshot(), now = Date(timeIntervalSince1970: 1_780_000_000)
+      let backup = Int(now.addingTimeInterval(3600).timeIntervalSince1970 * 1000)
+      XCTAssertTrue(snapshot.update(pending: 0, failed: 0, notifyOnPause: false, resumeRequested: false,
+        backupsRequested: true, backupEarliestMillis: backup))
+      XCTAssertTrue(snapshot.eligible)
+      XCTAssertEqual(snapshot.earliestDate(now: now), now.addingTimeInterval(3600))
+      XCTAssertTrue(snapshot.update(pending: 0, failed: 0, notifyOnPause: false, resumeRequested: false,
+        updatesRequested: true, updateEarliestMillis: backup + 7_200_000,
+        backupsRequested: true, backupEarliestMillis: backup))
+      XCTAssertEqual(snapshot.earliestDate(now: now), now.addingTimeInterval(3600))
+      XCTAssertFalse(snapshot.update(pending: 0, failed: 0, notifyOnPause: false, resumeRequested: false,
+        backupsRequested: true, backupEarliestMillis: -1))
+      snapshot.invalidate()
+      XCTAssertFalse(snapshot.eligible)
+    }
+  }
   func testContinuedDownloadIdentifierIsPermittedAndUsesApplicationBundlePrefix() async {
     await MainActor.run {
       let identifier = TaskContinuedDownloads.identifier

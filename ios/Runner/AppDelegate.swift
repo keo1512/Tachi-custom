@@ -9,7 +9,9 @@ import Translation
 import UserNotifications
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+@objc class AppDelegate: FlutterAppDelegate {
+  private(set) var applicationEngine: FlutterEngine?
+  private var applicationChannel: FlutterMethodChannel?
   private var nativeTabsBridge: NativeTabsBridge?
   private weak var nativeTabsController: NativeTabsController?
   private var readerBridge: ReaderPlatformBridge?
@@ -28,6 +30,19 @@ import UserNotifications
   ) -> Bool {
     TaskBackgroundScheduler.shared.register()
     TaskContinuedDownloads.shared.register()
+    let engine = FlutterEngine(name: "tachibooks.application", project: nil, allowHeadlessExecution: true)
+    applicationEngine = engine
+    // Flutter only accepts platform message handlers after its shell is set up.
+    // Dart messages wait on the main queue until this launch callback returns.
+    guard engine.run() else { applicationEngine = nil; return false }
+    let channel = FlutterMethodChannel(name: "dev.tachibooks/application", binaryMessenger: engine.binaryMessenger)
+    applicationChannel = channel
+    channel.setMethodCallHandler { call, result in
+      if call.method == "isBackground" {
+        result(UIApplication.shared.applicationState == .background)
+      } else { result(FlutterMethodNotImplemented) }
+    }
+    configureApplicationEngine(engine)
     UNUserNotificationCenter.current().delegate = self
     if let url = launchOptions?[.url] as? URL {
       TachiDeepLinkInbox.shared.accept(url)
@@ -75,22 +90,27 @@ import UserNotifications
     return super.application(application, open: url, options: options)
   }
 
-  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
-    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    readerBridge = ReaderPlatformBridge(messenger: engineBridge.applicationRegistrar.messenger())
-    privacyBridge = PrivacyPlatformBridge(messenger: engineBridge.applicationRegistrar.messenger())
-    taskBridge = TaskPlatformBridge(messenger: engineBridge.applicationRegistrar.messenger())
-    deepLinkBridge = DeepLinkPlatformBridge(messenger: engineBridge.applicationRegistrar.messenger())
-    syncBridge = SyncPlatformBridge(messenger: engineBridge.applicationRegistrar.messenger())
-    backupDirectoryBridge = BackupDirectoryBridge(messenger: engineBridge.applicationRegistrar.messenger())
-    localComicFilesBridge = LocalComicFilesBridge(messenger: engineBridge.applicationRegistrar.messenger())
-    bookCoverBridge = BookCoverPlatformBridge(messenger: engineBridge.applicationRegistrar.messenger())
-    deviceToolsBridge = DeviceToolsBridge(messenger: engineBridge.applicationRegistrar.messenger())
-    let bridge = NativeTabsBridge(messenger: engineBridge.applicationRegistrar.messenger())
+  private func configureApplicationEngine(_ engine: FlutterEngine) {
+    GeneratedPluginRegistrant.register(with: engine)
+    let messenger = engine.binaryMessenger
+    readerBridge = ReaderPlatformBridge(messenger: messenger)
+    privacyBridge = PrivacyPlatformBridge(messenger: messenger)
+    taskBridge = TaskPlatformBridge(messenger: messenger)
+    deepLinkBridge = DeepLinkPlatformBridge(messenger: messenger)
+    syncBridge = SyncPlatformBridge(messenger: messenger)
+    backupDirectoryBridge = BackupDirectoryBridge(messenger: messenger)
+    localComicFilesBridge = LocalComicFilesBridge(messenger: messenger)
+    bookCoverBridge = BookCoverPlatformBridge(messenger: messenger)
+    deviceToolsBridge = DeviceToolsBridge(messenger: messenger)
+    let bridge = NativeTabsBridge(messenger: messenger)
     nativeTabsBridge = bridge
     if let controller = nativeTabsController {
       bridge.attach(to: controller)
     }
+  }
+
+  func activateApplicationUI() {
+    applicationChannel?.invokeMethod("foreground", arguments: nil)
   }
 
   func attachNativeTabs(to controller: NativeTabsController) {

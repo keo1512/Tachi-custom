@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../deep_links/domain/app_deep_link.dart';
 
+final applicationStartsInBackgroundProvider = Provider<bool>((_) => false);
+
 abstract interface class TaskPlatform {
   Stream<void> get backgroundExpired;
   Future<bool> requestNotificationPermission();
@@ -50,6 +52,12 @@ abstract interface class BackgroundTaskPlatform {
   Future<void> completeScheduledBackground(int token, {required bool success});
 }
 
+/// A maintenance grant is independent of a person's paused download queue.
+/// Legacy platforms may continue sending only an integer token.
+abstract interface class ScheduledDownloadTaskPlatform {
+  bool scheduledDownloadsRequested(int token);
+}
+
 /// Optional extension of the legacy four-field snapshot. A platform without
 /// this capability still supports ordinary finite leases for active updates.
 abstract interface class BackgroundLibraryUpdatePlatform {
@@ -63,6 +71,24 @@ abstract interface class BackgroundLibraryUpdatePlatform {
     required int updateRemaining,
     required int updateFailed,
     required bool notifyUpdatePause,
+  });
+}
+
+abstract interface class BackgroundMaintenancePlatform
+    implements BackgroundLibraryUpdatePlatform {
+  @override
+  Future<void> updateBackgroundWorkSnapshot({
+    required int pending,
+    required int failed,
+    required bool notifyOnPause,
+    required bool resumeRequested,
+    required bool updatesRequested,
+    required int updateEarliestMillis,
+    required int updateRemaining,
+    required int updateFailed,
+    required bool notifyUpdatePause,
+    bool? backupsRequested,
+    int? backupEarliestMillis,
   });
 }
 
@@ -80,7 +106,8 @@ class NativeTaskPlatform
         PausedTaskPlatform,
         LibraryUpdateNotificationPlatform,
         BackgroundTaskPlatform,
-        BackgroundLibraryUpdatePlatform {
+        ScheduledDownloadTaskPlatform,
+        BackgroundMaintenancePlatform {
   NativeTaskPlatform() {
     if (_available) {
       _channel.setMethodCallHandler((call) async {
@@ -89,8 +116,31 @@ class NativeTaskPlatform
         } else if (call.method == 'continuedProcessingExpired' && !_disposed) {
           _continuedExpired.add(null);
         } else if (call.method == 'scheduledBackground' && !_disposed) {
-          final token = call.arguments;
+          final args = call.arguments;
+          final token = args is int
+              ? args
+              : args is Map
+              ? args['token']
+              : null;
+          final resume = args is int
+              ? true
+              : args is Map
+              ? args['resumeDownloads']
+              : null;
+          if (args is! int &&
+              (args is! Map ||
+                  args.length != 2 ||
+                  !args.containsKey('token') ||
+                  !args.containsKey('resumeDownloads'))) {
+            return;
+          }
           if (token is int && token > 0 && token <= 0x7fffffff) {
+            if (resume is! bool ||
+                _scheduledDownloads.containsKey(token) ||
+                _scheduledDownloads.length >= 8) {
+              return;
+            }
+            _scheduledDownloads[token] = resume;
             _scheduled.add(token);
           }
         }
@@ -116,6 +166,10 @@ class NativeTaskPlatform
   }
 
   final _scheduled = StreamController<int>.broadcast(sync: true);
+  final _scheduledDownloads = <int, bool>{};
+  @override
+  bool scheduledDownloadsRequested(int token) =>
+      _scheduledDownloads[token] == true;
   bool _disposed = false;
   bool get _available => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
   @override
@@ -155,11 +209,15 @@ class NativeTaskPlatform
     if (token <= 0 || token > 0x7fffffff) {
       throw ArgumentError('Mã lượt chạy nền không hợp lệ.');
     }
-    if (_available) {
-      await _channel.invokeMethod<void>('completeScheduledBackground', {
-        'token': token,
-        'success': success,
-      });
+    try {
+      if (_available) {
+        await _channel.invokeMethod<void>('completeScheduledBackground', {
+          'token': token,
+          'success': success,
+        });
+      }
+    } finally {
+      _scheduledDownloads.remove(token);
     }
   }
 
@@ -174,7 +232,15 @@ class NativeTaskPlatform
     required int updateRemaining,
     required int updateFailed,
     required bool notifyUpdatePause,
+    bool? backupsRequested,
+    int? backupEarliestMillis,
   }) async {
+    if ((backupsRequested == null) != (backupEarliestMillis == null) ||
+        (backupEarliestMillis != null &&
+            (backupEarliestMillis < 0 ||
+                backupEarliestMillis > 253402300799999))) {
+      throw ArgumentError('Lịch sao lưu nền không hợp lệ.');
+    }
     if ([
           pending,
           failed,
@@ -197,6 +263,8 @@ class NativeTaskPlatform
         'updateFailed': updateFailed,
         'notifyUpdatePause':
             notifyUpdatePause && updateRemaining + updateFailed > 0,
+        'backupsRequested': ?backupsRequested,
+        'backupEarliestMillis': ?backupEarliestMillis,
       });
     }
   }
@@ -306,6 +374,7 @@ class NativeTaskPlatform
   @override
   void dispose() {
     _disposed = true;
+    _scheduledDownloads.clear();
     if (_available) {
       _channel.setMethodCallHandler(null);
       unawaited(endBackground().catchError((Object _) {}));

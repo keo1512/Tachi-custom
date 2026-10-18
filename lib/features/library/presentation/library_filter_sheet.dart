@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../domain/library_book.dart';
+import '../domain/library_authors.dart';
 import '../domain/library_reading.dart';
 import 'library_filter_picker.dart';
 
@@ -34,7 +35,9 @@ class LibraryFilter {
     this.favorite = LibraryTriState.any,
     this.completed = LibraryTriState.any,
     this.source = 'all',
+    this.sources = const {},
     this.excludeSource = false,
+    this.author = '',
     this.scanlator = '',
     this.display = LibraryDisplay.grid,
     this.showCategoryTabs = true,
@@ -55,7 +58,13 @@ class LibraryFilter {
   final bool reverse, compact;
   final LibraryTriState unread, downloaded, bookmarked, favorite, completed;
   final String source;
+  final Set<String> sources;
   final bool excludeSource;
+  final String author;
+  Set<String> get selectedSources => Set.unmodifiable(
+    sources.isNotEmpty ? sources : {if (source != 'all') source},
+  );
+  // Retained for reading old preferences; this filter is no longer applied.
   final String scanlator;
   final LibraryDisplay display;
   final bool showCategoryTabs,
@@ -73,8 +82,8 @@ class LibraryFilter {
   bool get active =>
       kind != 'all' ||
       category != 'Tất cả' ||
-      source != 'all' ||
-      scanlator.isNotEmpty ||
+      selectedSources.isNotEmpty ||
+      author.isNotEmpty ||
       [
         unread,
         downloaded,
@@ -94,9 +103,12 @@ class LibraryFilter {
     'bookmarked': bookmarked.name,
     'favorite': favorite.name,
     'completed': completed.name,
-    'source': source,
+    // Keep the legacy single-source field readable by earlier versions.
+    'source': selectedSources.length == 1 ? selectedSources.single : 'all',
+    'sources': selectedSources.toList()..sort(),
     'excludeSource': excludeSource,
-    'scanlator': scanlator,
+    'author': author,
+    'scanlator': '',
     'display': display.name,
     'showCategoryTabs': showCategoryTabs,
     'showUnreadBadge': showUnreadBadge,
@@ -141,6 +153,28 @@ class LibraryFilter {
     if (seed is! int) {
       throw const FormatException('Thứ tự ngẫu nhiên không hợp lệ.');
     }
+    final rawSources = json['sources'];
+    if (rawSources != null &&
+        (rawSources is! List ||
+            rawSources.length > 10000 ||
+            rawSources.any(
+              (value) =>
+                  value is! String ||
+                  value.isEmpty ||
+                  value == 'all' ||
+                  value.length > 4096,
+            ))) {
+      throw const FormatException('Danh sách nguồn lọc không hợp lệ.');
+    }
+    final author = text('author', '');
+    final legacySource = text('source', 'all');
+    text(
+      'scanlator',
+      '',
+    ); // Validate old backups without applying this condition.
+    if (author.length > 4096) {
+      throw const FormatException('Tác giả lọc không hợp lệ.');
+    }
     return LibraryFilter(
       kind: text('kind', 'all'),
       category: text('category', 'Tất cả'),
@@ -164,9 +198,16 @@ class LibraryFilter {
         LibraryTriState.values,
         LibraryTriState.any,
       ),
-      source: text('source', 'all'),
+      source: rawSources == null
+          ? legacySource
+          : (rawSources as List).length == 1
+          ? rawSources.single as String
+          : 'all',
+      sources: rawSources == null
+          ? const {}
+          : Set.unmodifiable((rawSources as List).cast<String>()),
       excludeSource: flag('excludeSource', false),
-      scanlator: text('scanlator', ''),
+      author: libraryAuthorKey(author),
       display: value('display', LibraryDisplay.values, LibraryDisplay.grid),
       showCategoryTabs: flag('showCategoryTabs', true),
       showUnreadBadge: flag('showUnreadBadge', true),
@@ -185,14 +226,10 @@ class LibraryFilter {
 
   bool matches(LibraryBook book) =>
       (kind == 'all' || book.kind == kind) &&
-      (source == 'all' ||
-          (('${book.engine}:${book.sourceId}' == source) != excludeSource)) &&
-      (scanlator.isEmpty ||
-          book.chapters.any(
-            (chapter) => chapter.scanlator.toLowerCase().contains(
-              scanlator.toLowerCase(),
-            ),
-          )) &&
+      _matchesSource(book) &&
+      (author.isEmpty ||
+          libraryAuthorNames(book.author)
+              .containsKey(libraryAuthorKey(author))) &&
       _tri(unread, book.chapters.length > readChapterCount(book)) &&
       _tri(downloaded, book.chapters.any((chapter) => chapter.downloaded)) &&
       _tri(bookmarked, book.bookmarks.isNotEmpty) &&
@@ -205,6 +242,13 @@ class LibraryFilter {
         'Tất cả' => true,
         _ => book.categories.contains(category),
       };
+
+  bool _matchesSource(LibraryBook book) {
+    final identity = '${book.engine}:${book.sourceId}';
+    return sources.isNotEmpty
+        ? sources.contains(identity) != excludeSource
+        : source == 'all' || (source == identity) != excludeSource;
+  }
 
   int compare(LibraryBook a, LibraryBook b) {
     final result = switch (order) {
@@ -244,7 +288,9 @@ class LibraryFilter {
     LibraryTriState? favorite,
     LibraryTriState? completed,
     String? source,
+    Set<String>? sources,
     bool? excludeSource,
+    String? author,
     String? scanlator,
     LibraryDisplay? display,
     bool? showCategoryTabs,
@@ -270,8 +316,16 @@ class LibraryFilter {
     bookmarked: bookmarked ?? this.bookmarked,
     favorite: favorite ?? this.favorite,
     completed: completed ?? this.completed,
-    source: source ?? this.source,
+    source: sources != null
+        ? (sources.length == 1 ? sources.single : 'all')
+        : source ?? this.source,
+    sources: sources != null
+        ? Set.unmodifiable(sources)
+        : source != null
+        ? const {}
+        : this.sources,
     excludeSource: excludeSource ?? this.excludeSource,
+    author: author ?? this.author,
     scanlator: scanlator ?? this.scanlator,
     display: display ?? this.display,
     showCategoryTabs: showCategoryTabs ?? this.showCategoryTabs,
@@ -315,6 +369,7 @@ class LibraryFilterSheet extends StatefulWidget {
     required this.collections,
     required this.onChanged,
     this.sources = const {},
+    this.authors = const {},
     this.presetsBuilder,
     this.libraryColumns,
     this.onColumnsChanged,
@@ -323,6 +378,7 @@ class LibraryFilterSheet extends StatefulWidget {
   final List<String> collections;
   final ValueChanged<LibraryFilter> onChanged;
   final Map<String, String> sources;
+  final Map<String, String> authors;
   final Widget Function(LibraryFilter, ValueChanged<LibraryFilter>)?
   presetsBuilder;
   final int? libraryColumns;
@@ -334,23 +390,12 @@ class LibraryFilterSheet extends StatefulWidget {
 class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
   late LibraryFilter filter = widget.value;
   late int columns = widget.libraryColumns ?? 5;
-  late final scanlatorController = TextEditingController(
-    text: widget.value.scanlator,
-  );
-
-  @override
-  void dispose() {
-    scanlatorController.dispose();
-    super.dispose();
-  }
-
   void change(LibraryFilter value) {
     setState(() => filter = value);
     widget.onChanged(value);
   }
 
   void reset() {
-    scanlatorController.clear();
     change(
       filter.copyWith(
         kind: 'all',
@@ -362,6 +407,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
         completed: LibraryTriState.any,
         source: 'all',
         excludeSource: false,
+        author: '',
         scanlator: '',
       ),
     );
@@ -392,6 +438,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
   Widget toggle(String label, bool value, ValueChanged<bool> onChanged) =>
       SwitchListTile.adaptive(
         dense: true,
+        visualDensity: VisualDensity.compact,
         title: Text(label),
         value: value,
         onChanged: onChanged,
@@ -409,6 +456,8 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
     ValueChanged<LibraryTriState> onChanged,
   ) => ListTile(
     dense: true,
+    visualDensity: VisualDensity.compact,
+    minTileHeight: 40,
     title: Text(label),
     onTap: () => onChanged(LibraryTriState.values[(value.index + 1) % 3]),
     trailing: PopupMenuButton<LibraryTriState>(
@@ -447,6 +496,8 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
     ValueChanged<String> onSelected,
   ) => ListTile(
     dense: true,
+    visualDensity: VisualDensity.compact,
+    minTileHeight: 48,
     title: Text(title),
     subtitle: Text(
       options[selected] ?? 'Lựa chọn đã lưu',
@@ -476,11 +527,14 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
   Widget filters() {
     final sources = widget.sources.entries.toList()
       ..sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
+    final authors = widget.authors.entries.toList()
+      ..sort((a, b) => a.value.toLowerCase().compareTo(b.value.toLowerCase()));
+    final selectedSources = filter.selectedSources;
     final activeCount = [
       filter.kind != 'all',
       filter.category != 'Tất cả',
-      filter.source != 'all',
-      filter.scanlator.isNotEmpty,
+      selectedSources.isNotEmpty,
+      filter.author.isNotEmpty,
       filter.unread != LibraryTriState.any,
       filter.downloaded != LibraryTriState.any,
       filter.bookmarked != LibraryTriState.any,
@@ -489,7 +543,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
     ].where((active) => active).length;
     return ListView(
       key: const ValueKey('library-filter-options'),
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 8),
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 16, right: 8),
@@ -515,7 +569,6 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
             ],
           ),
         ),
-        section('Phạm vi'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Wrap(
@@ -545,18 +598,55 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
           })
             category: category,
         }, (value) => change(filter.copyWith(category: value))),
-        if (sources.isNotEmpty)
-          picker('Nguồn truyện', filter.source, {
-            'all': 'Tất cả nguồn',
-            for (final source in sources) source.key: source.value,
-          }, (value) => change(filter.copyWith(source: value))),
-        if (sources.isNotEmpty &&
-            (filter.source != 'all' || filter.excludeSource))
+        if (sources.isNotEmpty || selectedSources.isNotEmpty)
+          ListTile(
+            key: const ValueKey('library-sources-filter'),
+            dense: true,
+            visualDensity: VisualDensity.compact,
+            minTileHeight: 48,
+            title: const Text('Nguồn truyện'),
+            subtitle: Text(
+              selectedSources.isEmpty
+                  ? 'Tất cả nguồn'
+                  : selectedSources.length == 1
+                  ? widget.sources[selectedSources.single] ??
+                        selectedSources.single
+                  : '${selectedSources.length} nguồn đã chọn',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: const Icon(CupertinoIcons.chevron_right, size: 16),
+            onTap: () async {
+              final values = await showLibraryFilterMultiPicker(
+                context,
+                title: 'Nguồn truyện',
+                options: {
+                  for (final source in sources) source.key: source.value,
+                  for (final key in selectedSources)
+                    if (!widget.sources.containsKey(key))
+                      key: 'Nguồn đã lưu · $key',
+                },
+                selected: selectedSources,
+              );
+              if (values != null && mounted) {
+                change(filter.copyWith(sources: values));
+              }
+            },
+          ),
+        if (selectedSources.isNotEmpty || filter.excludeSource)
           toggle(
             'Loại trừ nguồn đã chọn',
             filter.excludeSource,
             (value) => change(filter.copyWith(excludeSource: value)),
           ),
+        if (authors.isNotEmpty || filter.author.isNotEmpty)
+          picker('Tác giả', libraryAuthorKey(filter.author), {
+            '': 'Tất cả tác giả',
+            for (final author in authors) author.key: author.value,
+            if (filter.author.isNotEmpty &&
+                !widget.authors.containsKey(libraryAuthorKey(filter.author)))
+              libraryAuthorKey(filter.author): filter.author,
+          }, (value) => change(filter.copyWith(author: value))),
         const Divider(height: 16),
         section('Trạng thái'),
         triChoice(
@@ -583,28 +673,6 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
           'Hoàn thành',
           filter.completed,
           (value) => change(filter.copyWith(completed: value)),
-        ),
-        const Divider(height: 16),
-        ExpansionTile(
-          title: const Text('Nhóm dịch'),
-          subtitle: Text(
-            filter.scanlator.isEmpty ? 'Không giới hạn' : filter.scanlator,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          initiallyExpanded: filter.scanlator.isNotEmpty,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: TextFormField(
-                controller: scanlatorController,
-                key: const ValueKey('library-scanlator'),
-                decoration: const InputDecoration(hintText: 'Tên nhóm dịch'),
-                onChanged: (value) =>
-                    change(filter.copyWith(scanlator: value.trim())),
-              ),
-            ),
-          ],
         ),
       ],
     );
@@ -774,26 +842,37 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
     final media = MediaQuery.of(context);
     final close = IconButton(
       tooltip: 'Đóng bộ lọc',
+      visualDensity: VisualDensity.compact,
       onPressed: () => Navigator.pop(context),
       icon: const Icon(CupertinoIcons.xmark, size: 18),
     );
     return Padding(
       padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
       child: SizedBox(
-        height: (media.size.height - media.viewInsets.bottom) * .65,
+        height:
+            (media.size.height - media.padding.top - media.viewInsets.bottom) *
+            .94,
         child: DefaultTabController(
           length: 3,
           child: Column(
             children: [
+              SizedBox(
+                height: 12,
+                child: Center(
+                  child: Container(
+                    width: 28,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
               if (widget.presetsBuilder != null)
                 Row(
                   children: [
-                    Expanded(
-                      child: widget.presetsBuilder!(filter, (value) {
-                        scanlatorController.text = value.scanlator;
-                        change(value);
-                      }),
-                    ),
+                    Expanded(child: widget.presetsBuilder!(filter, change)),
                     close,
                   ],
                 ),
@@ -802,9 +881,9 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
                   const Expanded(
                     child: TabBar(
                       tabs: [
-                        Tab(text: 'Lọc'),
-                        Tab(text: 'Sắp xếp'),
-                        Tab(text: 'Hiển thị'),
+                        Tab(text: 'Lọc', height: 40),
+                        Tab(text: 'Sắp xếp', height: 40),
+                        Tab(text: 'Hiển thị', height: 40),
                       ],
                     ),
                   ),

@@ -51,28 +51,39 @@ class BookCover extends StatelessWidget {
                 ),
               ),
               if (image != null)
-                Image(
-                  image: image,
-                  fit: BoxFit.cover,
-                  frameBuilder: (_, child, frame, synchronous) =>
-                      synchronous || frame != null
-                      ? child
-                      : const Center(
-                          child: Icon(
-                            Icons.hourglass_top,
-                            key: ValueKey('book-cover-loading'),
-                            size: 20,
-                            color: Colors.white70,
+                LayoutBuilder(
+                  builder: (context, bounds) => Image(
+                    image: ResizeImage.resizeIfNeeded(
+                      bounds.hasBoundedWidth
+                          ? (bounds.maxWidth *
+                                    MediaQuery.devicePixelRatioOf(context))
+                                .round()
+                                .clamp(1, 1536)
+                          : null,
+                      null,
+                      image,
+                    ),
+                    fit: BoxFit.cover,
+                    frameBuilder: (_, child, frame, synchronous) =>
+                        synchronous || frame != null
+                        ? child
+                        : const Center(
+                            child: Icon(
+                              Icons.hourglass_top,
+                              key: ValueKey('book-cover-loading'),
+                              size: 20,
+                              color: Colors.white70,
+                            ),
                           ),
+                    errorBuilder: (_, _, _) => const Center(
+                      child: Tooltip(
+                        message: 'Chưa tải được ảnh bìa',
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          key: ValueKey('book-cover-error'),
+                          size: 24,
+                          color: Colors.white70,
                         ),
-                  errorBuilder: (_, _, _) => const Center(
-                    child: Tooltip(
-                      message: 'Chưa tải được ảnh bìa',
-                      child: Icon(
-                        Icons.broken_image_outlined,
-                        key: ValueKey('book-cover-error'),
-                        size: 24,
-                        color: Colors.white70,
                       ),
                     ),
                   ),

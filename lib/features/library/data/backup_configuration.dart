@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/format/task_intervals.dart';
+
 import '../domain/library_categories.dart';
 import '../domain/library_grouping.dart';
 import '../domain/library_folders.dart';
@@ -357,6 +359,7 @@ class BackupConfiguration {
       case 'libraryUpdatePolicyV1':
         _keys(data, {
           'hours',
+          'checkAll',
           'downloadAhead',
           'skipCompleted',
           'skipUnstarted',
@@ -368,7 +371,7 @@ class BackupConfiguration {
         });
         _booleans(data, except: {'hours', 'downloadAhead'});
         if (data.containsKey('hours') &&
-            ![0, 6, 12, 24, 48, 72].contains(data['hours'])) {
+            !automaticTaskIntervalHours.contains(data['hours'])) {
           throw const FormatException('Lịch cập nhật không hợp lệ.');
         }
         final ahead = data['downloadAhead'];
@@ -380,7 +383,7 @@ class BackupConfiguration {
         _booleans(data);
       case 'automaticBackupPolicyV1':
         _keys(data, {'hours', 'keep'});
-        if (![0, 6, 12, 24, 48, 72].contains(data['hours']) ||
+        if (!automaticTaskIntervalHours.contains(data['hours']) ||
             data['keep'] is! int ||
             (data['keep'] as int) < 1 ||
             (data['keep'] as int) > 10) {

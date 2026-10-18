@@ -107,7 +107,9 @@ class LibraryUpdateScheduler {
     checkLibraryRevision(repo.replacementRevision, revision);
     final selected = before
         .where(
-          (b) => registry.allowsUpdate(b) && policy.skipReason(b, now) == null,
+          (b) =>
+              (policy.checkAll || registry.allowsUpdate(b)) &&
+              policy.skipReason(b, now) == null,
         )
         .toList();
     final oldIds = {
@@ -120,7 +122,7 @@ class LibraryUpdateScheduler {
           expectedRevision: revision,
           skipReasons: {
             for (final book in before)
-              if (!registry.allowsUpdate(book))
+              if (!policy.checkAll && !registry.allowsUpdate(book))
                 book.id: 'Kệ được loại khỏi cập nhật'
               else if (policy.skipReason(book, now) != null)
                 book.id: policy.skipReason(book, now)!,

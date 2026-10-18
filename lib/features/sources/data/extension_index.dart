@@ -151,6 +151,16 @@ class ExtensionIndexRepository {
                 .values(8)
                 .map((s) => _Proto(s).text(3))
                 .toSet();
+            final sources = [
+              for (final rawSource in item.values(8))
+                _indexSource(
+                  _Proto(rawSource).identity(1),
+                  _Proto(rawSource).text(2),
+                  _Proto(rawSource).text(3),
+                  _Proto(rawSource).text(4),
+                  engine,
+                ),
+            ].whereType<CatalogueSource>().toList();
             return CatalogueExtension(
               id: id,
               name: _nonempty(item.text(1)),
@@ -160,6 +170,8 @@ class ExtensionIndexRepository {
               packageUrl: validUrl(resourceBase.resolve(apkUrl).toString())
                   .toString(),
               iconUrl: _iconUrl(resourceBase, resources.text(2)),
+              sources: List.unmodifiable(sources),
+              sourceIds: List.unmodifiable(sources.map((s) => s.id)),
             );
           }),
         ),
@@ -275,6 +287,20 @@ class ExtensionIndexRepository {
                       : ''),
             ),
             lang: lang,
+            sources: List.unmodifiable(
+              [
+                if (raw['sources'] is List)
+                  for (final source in raw['sources'] as List)
+                    if (source is Map)
+                      _indexSource(
+                        '${source['id'] ?? ''}',
+                        '${source['name'] ?? ''}',
+                        '${source['language'] ?? source['lang'] ?? lang}',
+                        '${source['homeUrl'] ?? source['baseUrl'] ?? ''}',
+                        engine,
+                      ),
+              ].whereType<CatalogueSource>(),
+            ),
           );
         })
         .toList(growable: false);
@@ -292,6 +318,32 @@ class ExtensionIndexRepository {
           !RegExp(r'[\x00-\x1f]').hasMatch(value)
       ? value.trim()
       : '';
+
+  static CatalogueSource? _indexSource(
+    String id,
+    String name,
+    String lang,
+    String home,
+    SourceEngine engine,
+  ) {
+    if (id.isEmpty ||
+        id.length > 512 ||
+        name.trim().isEmpty ||
+        name.length > 200 ||
+        RegExp(r'[\x00-\x1f]').hasMatch('$id$name')) {
+      return null;
+    }
+    return CatalogueSource(
+      id: id,
+      name: name.trim(),
+      lang: lang,
+      baseUrl: home,
+      kind: engine == SourceEngine.tachimanga
+          ? ContentKind.manga
+          : ContentKind.novel,
+      engine: engine,
+    );
+  }
 
   static String _nonempty(Object? value) {
     if (value is! String || value.trim().isEmpty || value.length > 4096) {
@@ -353,13 +405,14 @@ class _IndexBytesSink implements Sink<List<int>> {
   void close() {}
 }
 
-// Schema: Mihon NetworkExtensionStore.kt, @ProtoNumber fields. Unknown scalar
-// fields are skipped; lengths and count are bounded before copying any message.
+// Schema: Mihon NetworkExtensionStore.kt, @ProtoNumber fields. Source IDs can
+// use int64 or string fields; BigInt preserves all 64 bits before formatting.
+// Lengths and count are bounded before copying any message.
 class _Proto {
   _Proto(Uint8List bytes) {
     var offset = 0, fields = 0;
-    int varint({bool scalar = false}) {
-      var value = 0;
+    BigInt varintValue({bool scalar = false}) {
+      var value = BigInt.zero;
       for (var shift = 0; shift < 70; shift += 7) {
         if (offset >= bytes.length) {
           throw const FormatException('Protobuf bị cắt.');
@@ -371,11 +424,13 @@ class _Proto {
         if (!scalar && (shift > 28 || (shift == 28 && byte > 15))) {
           throw const FormatException('Protobuf tag hoặc length quá lớn.');
         }
-        if (shift < 35) value |= (byte & 127) << shift;
+        value |= BigInt.from(byte & 127) << shift;
         if (byte < 128) return value;
       }
       throw const FormatException('Protobuf varint quá dài.');
     }
+
+    int varint() => varintValue().toInt();
 
     while (offset < bytes.length) {
       if (++fields > 100000) {
@@ -386,7 +441,7 @@ class _Proto {
         throw const FormatException('Protobuf field không hợp lệ.');
       }
       if (wire == 0) {
-        varint(scalar: true);
+        _scalars.putIfAbsent(field, () => []).add(varintValue(scalar: true));
         continue;
       }
       final length = wire == 1
@@ -408,6 +463,7 @@ class _Proto {
     }
   }
   final _fields = <int, List<Uint8List>>{};
+  final _scalars = <int, List<BigInt>>{};
   List<Uint8List> values(int field) => _fields[field] ?? const [];
   Uint8List? optional(int field) => values(field).firstOrNull;
   Uint8List required(int field) =>
@@ -415,4 +471,7 @@ class _Proto {
       (throw const FormatException('Protobuf thiếu trường bắt buộc.'));
   String text(int field) =>
       optional(field) == null ? '' : utf8.decode(required(field));
+  String identity(int field) => optional(field) != null
+      ? text(field)
+      : _scalars[field]?.firstOrNull?.toSigned(64).toString() ?? '';
 }

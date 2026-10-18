@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tachi_books/features/reader/presentation/reader_image_loader.dart';
+import 'package:tachi_books/features/sources/domain/catalogue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
@@ -212,6 +214,20 @@ Future<_Fixture> _open(
   );
   final container = ProviderContainer(
     overrides: [
+      ordinaryReaderImageLoaderProvider.overrideWithValue((data, page) async {
+        if (data.images[page].startsWith('data:')) {
+          return loadOrdinaryReaderImage(data, page);
+        }
+        final client =
+            debugNetworkImageHttpClientProvider!() as _PendingImageClient;
+        client.requested = true;
+        client.requestCount++;
+        final response = await client.response.future as _ImageResponse;
+        if (response.statusCode != 200) {
+          throw const FormatException('Fixture image HTTP error');
+        }
+        return SourceImageData(bytes: response.bytes, mimeType: 'image/png');
+      }),
       preferencesProvider.overrideWithValue(
         await SharedPreferences.getInstance(),
       ),
@@ -224,7 +240,13 @@ Future<_Fixture> _open(
       child: const MaterialApp(home: ReaderScreen(id: 'manga')),
     ),
   );
-  await tester.pumpAndSettle();
+  if (debugNetworkImageHttpClientProvider != null) {
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  } else {
+    await tester.pumpAndSettle();
+  }
   return (repo: repo, container: container);
 }
 
@@ -246,6 +268,10 @@ Future<String> _png(WidgetTester tester) async =>
     }))!;
 
 Future<void> _waitForImages(WidgetTester tester) async {
+  await tester.runAsync(
+    () => Future<void>.delayed(const Duration(milliseconds: 30)),
+  );
+  await tester.pump();
   await tester.runAsync(() async {
     await Future.wait(
       tester.widgetList<Image>(find.byType(Image)).map((image) {

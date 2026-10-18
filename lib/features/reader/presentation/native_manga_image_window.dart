@@ -52,11 +52,20 @@ class NativeMangaImageWindow extends ChangeNotifier {
     unawaited(_pump());
   }
 
-  @visibleForTesting
   int get retainedImages => _images.length;
   @visibleForTesting
   int get retainedBytes =>
       _images.values.fold(0, (total, image) => total + image.data.bytes.length);
+
+  /// Retain page geometry but release bytes while another chapter is visible.
+  /// An in-flight request may finish; it cannot repopulate a suspended window.
+  void suspend() {
+    if (_disposed || _wanted.isEmpty) return;
+    _wanted = {};
+    _images.clear();
+    _errors.clear();
+    notifyListeners();
+  }
 
   void focus(int index) {
     if (_disposed || count == 0) return;
@@ -257,39 +266,50 @@ class _NativeMangaPageState extends State<NativeMangaPage> {
 }
 
 class ReaderPageError extends StatelessWidget {
-  const ReaderPageError({super.key, required this.error, this.onRetry});
+  const ReaderPageError({
+    super.key,
+    required this.error,
+    this.onRetry,
+    this.retryLabel = 'Thử lại ảnh',
+    this.title = 'Không tải được ảnh',
+    this.scrollable = true,
+  });
+  final String retryLabel;
+  final String title;
+  final bool scrollable;
   final Object error;
   final VoidCallback? onRetry;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.broken_image_outlined,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+  Widget build(BuildContext context) {
+    final content = Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.broken_image_outlined,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 8),
+          Text(title, textAlign: TextAlign.center),
+          const SizedBox(height: 4),
+          Text(
+            userFacingError(error),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (onRetry != null)
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: Text(retryLabel),
             ),
-            const SizedBox(height: 8),
-            const Text('Không tải được ảnh', textAlign: TextAlign.center),
-            const SizedBox(height: 4),
-            Text(
-              userFacingError(error),
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            if (onRetry != null)
-              TextButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Thử lại ảnh'),
-              ),
-          ],
-        ),
+        ],
       ),
-    ),
-  );
+    );
+    return Center(
+      child: scrollable ? SingleChildScrollView(child: content) : content,
+    );
+  }
 }

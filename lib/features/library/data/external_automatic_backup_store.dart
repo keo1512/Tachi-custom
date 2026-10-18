@@ -62,12 +62,14 @@ class ExternalAutomaticBackupStore extends AutomaticBackupStore {
     DateTime now, {
     int keep = 3,
     void Function()? beforeCapture,
+    void Function()? beforePublish,
   }) => _run(() async {
     if (keep < 1 || keep > 10) {
       throw ArgumentError('Giữ từ 1 đến 10 bản sao lưu.');
     }
     final bytes = await backup.export(beforeCapture: beforeCapture);
     backup.validate(bytes);
+    beforePublish?.call();
     final stored = _entry(
       await platform.write(
         location.id,
@@ -78,12 +80,14 @@ class ExternalAutomaticBackupStore extends AutomaticBackupStore {
     if (stored.size != bytes.length) {
       throw const FormatException('Dung lượng bản đã ghi không khớp dữ liệu.');
     }
+    beforePublish?.call();
     // The native write flushes, hashes and verifies before publishing the name.
     // Only the managed subfolder is pruned, never other Files-provider contents.
     for (final old in (await list()).skip(keep)) {
       await read(
         old.name,
       ); // Do not delete foreign or damaged files by name alone.
+      beforePublish?.call();
       await platform.delete(location.id, old.name);
     }
     return stored;

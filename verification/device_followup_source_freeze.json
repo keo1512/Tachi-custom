@@ -1,0 +1,3248 @@
+{
+  "version": 1,
+  "method": "sorted UTF-8 path + NUL + binary SHA256 per file; verification/artifacts/tools-cache excluded",
+  "sha256": "6962e9524d17f9548de2a2842e83de39ad68e5860e1c842c1c74f2d2cfe82df9",
+  "count": 648,
+  "files": [
+    {
+      "path": ".gitattributes",
+      "sha256": "1005e6ff417d92f1a5dac391e20dd182da7b869f15234931af6c26d1206a6d3e",
+      "bytes": 524
+    },
+    {
+      "path": ".github/workflows/ios-build.yml",
+      "sha256": "161f6fd4381b887734be99ae1f32855534d74b9280284d0e5d94a21e1244a361",
+      "bytes": 5198
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "ecbde02d26a8f1d659d378b8e41259837a8c7ce40417682be6420162f5a84594",
+      "bytes": 1628
+    },
+    {
+      "path": ".metadata",
+      "sha256": "0222b70fd8e61a63b5a7cd41b24320c697a9c70d4a5ab2a0c223aa544c3979c2",
+      "bytes": 994
+    },
+    {
+      "path": "PROJECT_STATE.md",
+      "sha256": "d95380f77cafb7e5081973d5324d0d1c69eb345af72fd3b726a64d3d659f802f",
+      "bytes": 119997
+    },
+    {
+      "path": "README.md",
+      "sha256": "ecf27373643eac5de5df818651ec3ef1dbdb147ed43246f56fff187f14289525",
+      "bytes": 15067
+    },
+    {
+      "path": "analysis_options.yaml",
+      "sha256": "8b09e2e66e6fdf86061adc43771dbf35fe5b0c78e11a828585d9b30c72c06cda",
+      "bytes": 1556
+    },
+    {
+      "path": "assets/fonts/notosans-OFL.txt",
+      "sha256": "bf51547e7634b219e85d0391a5836850696497e0cef079857978f286b5d9377f",
+      "bytes": 4489
+    },
+    {
+      "path": "assets/fonts/notosans.ttf",
+      "sha256": "bfb7bb691513f12e734dc346c03a03f784912432d7e3fa8e56efcf906fe86b3d",
+      "bytes": 2049096
+    },
+    {
+      "path": "assets/fonts/notoserif-OFL.txt",
+      "sha256": "bf51547e7634b219e85d0391a5836850696497e0cef079857978f286b5d9377f",
+      "bytes": 4489
+    },
+    {
+      "path": "assets/fonts/notoserif.ttf",
+      "sha256": "4d8e6761424656867019081a1a01336f3cb086982682698714054fc33f782713",
+      "bytes": 1887192
+    },
+    {
+      "path": "assets/licenses/native_notices.json",
+      "sha256": "614b4e4d006dbf17d8bbc1f061af7ce37468cb8c10b84faed4d1230b94971f1d",
+      "bytes": 1147985
+    },
+    {
+      "path": "assets/licenses/unrarkit-2.10-LICENSE",
+      "sha256": "a9f5ac7c1d63015db095751792f1bec8097ac926df219b82d93e99937e8ab28b",
+      "bytes": 1269
+    },
+    {
+      "path": "assets/licenses/unrarkit-2.10-unrar-license.txt",
+      "sha256": "6ecc1687808b7d66b24f874755abfed7464d9751ed0001cd4e8e5d9bf397ff8a",
+      "bytes": 1976
+    },
+    {
+      "path": "assets/licenses/unrarkit.provenance.json",
+      "sha256": "755a56d0921b37c22e124be96cb5819aee673e07e35f3f8a69e873bb923efacd",
+      "bytes": 1125
+    },
+    {
+      "path": "assets/source_catalogue/keiyoushi_names.json",
+      "sha256": "bbfc7f41df10ec0f76a659aa7e23fdbfd69df574425b5e250eb088d295011350",
+      "bytes": 87099
+    },
+    {
+      "path": "codemagic.yaml",
+      "sha256": "400ba2dcdc2ea420a3fbc156e1688d48ae2115e5eca895d9c37a34722973ca2f",
+      "bytes": 1322
+    },
+    {
+      "path": "docs/IOS_RUNTIME_ASSESSMENT.md",
+      "sha256": "59c17ba1c175bd450f9463b6941293c7693cf94fdd7a4e9d27f668c6b040455b",
+      "bytes": 27131
+    },
+    {
+      "path": "docs/SOURCE_SPEC_PARITY_AUDIT.md",
+      "sha256": "f9d41e618a8e7163f52a4441eab03d840b34c69d406e0dfe8995d8b31d1a1646",
+      "bytes": 69078
+    },
+    {
+      "path": "docs/TACHIBOOKS_IMPLEMENTATION_PLAN.md",
+      "sha256": "9859cbaaed57cfbda9e4dbf45cebedef9ebf2b942657db9ca894e828290e601f",
+      "bytes": 45270
+    },
+    {
+      "path": "docs/requirements_traceability.csv",
+      "sha256": "2c320a3c97e21ff556a22442b6b0deffe3fa1ccc0b527490feb7030248cfbd0e",
+      "bytes": 739943
+    },
+    {
+      "path": "firestore.tachibooks.rules",
+      "sha256": "49905652c0779e4be6b1031cf48e8d76fc23a104c99138fb12bd9b85692966ed",
+      "bytes": 5944
+    },
+    {
+      "path": "ios/.gitignore",
+      "sha256": "e85b4db8ba6ed14708e5f7d3c60336e5a3067ce11329b84aa8ba5d98603ee253",
+      "bytes": 603
+    },
+    {
+      "path": "ios/Flutter/AppFrameworkInfo.plist",
+      "sha256": "e51cfa76fca1ae586244b43bf97423577315d2906394c1e7768ef43b8d23e161",
+      "bytes": 744
+    },
+    {
+      "path": "ios/Flutter/Debug.xcconfig",
+      "sha256": "0252d55e8f79bda3b6f336b9523c740fe59d4d1b806e6398a906132b1734b309",
+      "bytes": 109
+    },
+    {
+      "path": "ios/Flutter/Release.xcconfig",
+      "sha256": "f1a2e46792280a99f79c4c2775df5817c2ab803d2c0d928ccf4e3c59721faca2",
+      "bytes": 111
+    },
+    {
+      "path": "ios/Podfile",
+      "sha256": "7d8a110f136ac39097013b4d4c66fcbbb0006be5b9adb96779a969356b14db77",
+      "bytes": 1413
+    },
+    {
+      "path": "ios/Runner.xcodeproj/project.pbxproj",
+      "sha256": "a41e79167a64dbd4bc126b5be55e78a9ec7be21eda332b6bd0f4b5c823daa7b4",
+      "bytes": 36436
+    },
+    {
+      "path": "ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
+      "sha256": "ac28b35c2b940210bec0fff8e424b07fd0efe9112ab178a10533583f251a386c",
+      "bytes": 142
+    },
+    {
+      "path": "ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+      "sha256": "d557c2c32fc6258ec28981fa45dc847b76c9968beb90a2e26d13ef9c4ea45c30",
+      "bytes": 246
+    },
+    {
+      "path": "ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
+      "sha256": "dd64c0308ab2971c456871b990b24a008bdc3ece09833e8dbe9675e33a496e74",
+      "bytes": 234
+    },
+    {
+      "path": "ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme",
+      "sha256": "a46c0d064503db8bf9f452b492c61fdf76f9febb8894005fe30b2facec21e550",
+      "bytes": 4836
+    },
+    {
+      "path": "ios/Runner.xcworkspace/contents.xcworkspacedata",
+      "sha256": "706a4c812f2a1e220e6785c27580020d58048e2ae4d30d1280f3c43344ce6b38",
+      "bytes": 159
+    },
+    {
+      "path": "ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist",
+      "sha256": "d557c2c32fc6258ec28981fa45dc847b76c9968beb90a2e26d13ef9c4ea45c30",
+      "bytes": 246
+    },
+    {
+      "path": "ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings",
+      "sha256": "dd64c0308ab2971c456871b990b24a008bdc3ece09833e8dbe9675e33a496e74",
+      "bytes": 234
+    },
+    {
+      "path": "ios/Runner/AppDelegate.swift",
+      "sha256": "497d405c7655f0f9d08e1d99d9acab9df1fe3dae705ee0bffe69d1c6dd39c094",
+      "bytes": 14960
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "sha256": "5f8b941b774bde4496d73347c1f79cbdd786bb76fbdab9ed1f3f0cb78a0fb0d3",
+      "bytes": 2641
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png",
+      "sha256": "e546186e8992bc10dfc7fe459fd4c96e678c6f47a0c5ee8243201da84ef736f0",
+      "bytes": 31192
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png",
+      "sha256": "cd0bef6508e0c16dda0ff46581ea54f22eb4c6f2e5417b508a76000771e71c35",
+      "bytes": 611
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png",
+      "sha256": "003cdb458d4308503e3288e141a29762e69313fa14dc461f0cc80d5e8854f122",
+      "bytes": 1220
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png",
+      "sha256": "c2933a65baa2e2ae771636c1ec691a72eac6929004607b0f3a2bba9ee998cd9a",
+      "bytes": 1895
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png",
+      "sha256": "0fdfe59028fabb537dafda1055e470a766d2f4c27359206206413532f72a4614",
+      "bytes": 880
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png",
+      "sha256": "c71675236616836e52e1d3a13161d8bd251c91eb512be455ea0909aeb75ea81d",
+      "bytes": 1851
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png",
+      "sha256": "25f2dc29deadeb7d94640109dac0c79f1a60d7596993ae86fa9b2b6a7bf2a45a",
+      "bytes": 2768
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png",
+      "sha256": "003cdb458d4308503e3288e141a29762e69313fa14dc461f0cc80d5e8854f122",
+      "bytes": 1220
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png",
+      "sha256": "75ef8a02df371deb5bd6febe19b06c5ce53675c75d801beace01706f1994342d",
+      "bytes": 2497
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png",
+      "sha256": "ec008524474bc33d3977c6f8324d1216f95f56a97a18ce3d669ad635ea7e8e41",
+      "bytes": 3918
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png",
+      "sha256": "ec008524474bc33d3977c6f8324d1216f95f56a97a18ce3d669ad635ea7e8e41",
+      "bytes": 3918
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png",
+      "sha256": "9288b7a651cb16e339057e91ad9167dec12a02604fe3dddb889359f1dfb8bb7a",
+      "bytes": 5897
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png",
+      "sha256": "47db033cc3e5e3ffedae5384b6782eff12e1712c9f4464d2b835934e88282f4e",
+      "bytes": 2308
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png",
+      "sha256": "d50d732a66543c52d22665a10c25d568a1ab344fb0f99f11c982d7b8ce70611c",
+      "bytes": 4867
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png",
+      "sha256": "c6116aa72d4d42c0cddad475d6cf33f3e95c3354af13f7291f9b6547cdf4f868",
+      "bytes": 5432
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json",
+      "sha256": "fbd112a9f3b541a1d811f71ac8e4fe68b6176687d973a5f4d99b7aa4a722e94e",
+      "bytes": 414
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png",
+      "sha256": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+      "bytes": 68
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png",
+      "sha256": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+      "bytes": 68
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png",
+      "sha256": "93ae7d494fad0fb30cbf3ae746a39c4bc7a0f8bbf87fbb587a3f3c01f3c5ce20",
+      "bytes": 68
+    },
+    {
+      "path": "ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md",
+      "sha256": "853ac958e2416fe2540f6f61165283a3618b71a7ba5f85f65ac41c2158dfcd21",
+      "bytes": 340
+    },
+    {
+      "path": "ios/Runner/BackupDirectoryBridge.swift",
+      "sha256": "268b54b701528e32bc50c7d1ac45c4b4dd88e68119479a3ef85226ee68a7b829",
+      "bytes": 12074
+    },
+    {
+      "path": "ios/Runner/Base.lproj/LaunchScreen.storyboard",
+      "sha256": "bc3644fbb251ff1e18de25a4932c927850ae1a025be3dd1447940429633fe4b2",
+      "bytes": 2414
+    },
+    {
+      "path": "ios/Runner/Base.lproj/Main.storyboard",
+      "sha256": "dcea4686c02065e56217fd19fcfb73d7509b41872e7486126149d47a18559363",
+      "bytes": 1631
+    },
+    {
+      "path": "ios/Runner/BookCoverPlatformBridge.swift",
+      "sha256": "3a873a5bf7b4683812bda2a9e8dea0e6bef55c6a3645a59d5f5dac49651d81a6",
+      "bytes": 4847
+    },
+    {
+      "path": "ios/Runner/DeepLinkPlatformBridge.swift",
+      "sha256": "79e323bb9b6defd7a5aaea782713bf7cad635b0bdd99716405a03cf2509754e2",
+      "bytes": 1731
+    },
+    {
+      "path": "ios/Runner/DeviceToolsBridge.swift",
+      "sha256": "60a7a7fe2c744bfe81c2b15835479eb39ff6694216ffc27890283133fa5b1295",
+      "bytes": 6520
+    },
+    {
+      "path": "ios/Runner/Info.plist",
+      "sha256": "f846cfb24240654c1c0909b3f0d495e69a0f801c89ee9dffc8d5f5ae10a1b00e",
+      "bytes": 3801
+    },
+    {
+      "path": "ios/Runner/LocalComicFilesBridge.swift",
+      "sha256": "5d41d35edaf2c2beac9bf710b509735ac18b20117241076804ac2c94cc58f61a",
+      "bytes": 12223
+    },
+    {
+      "path": "ios/Runner/LocalComicRarReader.h",
+      "sha256": "bde62035348e0e9477853ba23ba7ff246d8dae86a28fdbd564c3de8a71013903",
+      "bytes": 257
+    },
+    {
+      "path": "ios/Runner/LocalComicRarReader.m",
+      "sha256": "6b50c10015e46910ecffd0da5c181653aec5743d70818c8b9878c9b9e1d1761e",
+      "bytes": 6127
+    },
+    {
+      "path": "ios/Runner/NativeTabsController.swift",
+      "sha256": "6113b7e8fd1372005fecb55625967c99c2f8a68607eb5c6eb69b6b17428c2035",
+      "bytes": 9523
+    },
+    {
+      "path": "ios/Runner/PrivacyPlatformBridge.swift",
+      "sha256": "3d59d3f5d554df5501e9f7ebf4dde904409dd7df1fee1704e7fc7a6f91c4ad89",
+      "bytes": 6324
+    },
+    {
+      "path": "ios/Runner/Runner-Bridging-Header.h",
+      "sha256": "faa5a3a7ac76811cd4204bfc863749729b7c8381ad0663b03ad84eef1b281a88",
+      "bytes": 72
+    },
+    {
+      "path": "ios/Runner/SceneDelegate.swift",
+      "sha256": "89620fa711615041cfee18407cbe67ef60a14476bb55613e97f9832b1a7802d8",
+      "bytes": 2941
+    },
+    {
+      "path": "ios/Runner/SyncPlatformBridge.swift",
+      "sha256": "51597ae03d0da3f761407b8033b8005da70b48a8b66b0a01dff18a8409b23481",
+      "bytes": 2383
+    },
+    {
+      "path": "ios/Runner/TaskPlatformBridge.swift",
+      "sha256": "3a385ddd38c172a92512c7b3e1b0a94886dae9f3cd4cf89b93b37d75c7dfca2b",
+      "bytes": 35757
+    },
+    {
+      "path": "ios/RunnerTests/BackupDirectoryBridgeTests.swift",
+      "sha256": "536042e6fddb312e774df166f45d2b7904ea8a7b041f0f87caa5f7430f79f3b2",
+      "bytes": 2294
+    },
+    {
+      "path": "ios/RunnerTests/DeepLinkPlatformBridgeTests.swift",
+      "sha256": "b358feaf39f093891a09ab86a2a85130eb0fe547b0efa5ebda60bead56d2d6d7",
+      "bytes": 1533
+    },
+    {
+      "path": "ios/RunnerTests/DeviceToolsBridgeTests.swift",
+      "sha256": "ab10e48c489a1227b3d419bda2e730de85c3a064d832448149af1f84875d7e2b",
+      "bytes": 2026
+    },
+    {
+      "path": "ios/RunnerTests/LocalComicFilesBridgeTests.swift",
+      "sha256": "c93ffc0ebb4203a84152c04235f4db231917840fb8f86ace1930a4fd307b9732",
+      "bytes": 2463
+    },
+    {
+      "path": "ios/RunnerTests/PrivacyPlatformBridgeTests.swift",
+      "sha256": "ff7801cb5794462f7944e98a9aac16ec3ca269ee15c5a911a947cd59ab173fe6",
+      "bytes": 2007
+    },
+    {
+      "path": "ios/RunnerTests/RunnerTests.swift",
+      "sha256": "1f316c20ef2af267a0685c6e1e4263bb7b6b5e10b5421921ba91499d6c043590",
+      "bytes": 15187
+    },
+    {
+      "path": "ios/RunnerTests/TachiImageCodecTests.swift",
+      "sha256": "b0abd5b37e148e61d50752526b2b924479ae9739b37513ecc38671a4506c1dcf",
+      "bytes": 2223
+    },
+    {
+      "path": "ios/RunnerTests/TachiSourceBrowserTests.swift",
+      "sha256": "573cfc6d6daec827542fd4470690829de01c86ebca01c14a986d85b9fc2f8295",
+      "bytes": 21466
+    },
+    {
+      "path": "ios/RunnerTests/TaskPlatformBridgeTests.swift",
+      "sha256": "4e59153a042c1aca71e29686e9e8ddcb9318c9596310be68db9c88af3d50c566",
+      "bytes": 13263
+    },
+    {
+      "path": "lib/app.dart",
+      "sha256": "75ed858213e9cf08c1b4e596e59bf03e9435e4931ec32aa929678c768add940b",
+      "bytes": 10011
+    },
+    {
+      "path": "lib/core/diagnostics/diagnostic_error_type.dart",
+      "sha256": "eb115362cc2f68c25810cb27b564421d6384414b0207c2fad7c85cb041637ab4",
+      "bytes": 1409
+    },
+    {
+      "path": "lib/core/diagnostics/diagnostic_listener.dart",
+      "sha256": "e53372281255fb5b4bf479e8a99dab25677e3634dea7bc0ea13402e768b93084",
+      "bytes": 2603
+    },
+    {
+      "path": "lib/core/diagnostics/diagnostic_log.dart",
+      "sha256": "ec1c47a5d1dae8f5eef823e08f0e6e7b2d5b44326bc3a9d596a2fada12b0df7c",
+      "bytes": 13254
+    },
+    {
+      "path": "lib/core/format/error_messages.dart",
+      "sha256": "d2f281f1515efd88c3cf8f1582615b1c17bbc2495a3a8ad6107dfc05dde00571",
+      "bytes": 7776
+    },
+    {
+      "path": "lib/core/format/task_intervals.dart",
+      "sha256": "5b9ebef277ca1851b863da5ca4461c29ac3f0b984ffaa071ac0a14d486c61370",
+      "bytes": 272
+    },
+    {
+      "path": "lib/core/format/vietnamese_format.dart",
+      "sha256": "75c39d6db82e27a6f8d1308720cf952af7abdf9031d708b87d13f01511bb67db",
+      "bytes": 872
+    },
+    {
+      "path": "lib/core/platform/application_recovery.dart",
+      "sha256": "83e334e7fd292306d493ba93875981150e7ddb4805d0315b62cab2866398a1b3",
+      "bytes": 234
+    },
+    {
+      "path": "lib/core/platform/book_cover_platform.dart",
+      "sha256": "181bbbddab510f092940b81771593a2c44bd542f108aeb35e50c93b7261f79bc",
+      "bytes": 730
+    },
+    {
+      "path": "lib/core/platform/device_tools.dart",
+      "sha256": "0b0cf781d1d39bc952199fa7b698be00222c004155843476fe11cca7a8e5c828",
+      "bytes": 2009
+    },
+    {
+      "path": "lib/core/platform/native_tabs.dart",
+      "sha256": "4deebdbec2581ff378c656aa4ee4ea317191b8c00555987af172308479efb6df",
+      "bytes": 6299
+    },
+    {
+      "path": "lib/core/platform/reader_platform.dart",
+      "sha256": "4daf07e1ac5115f22a5b1fe2cf6bca9ca66ad55fcb5683d17547fdf6c011f33e",
+      "bytes": 2224
+    },
+    {
+      "path": "lib/core/source_memo.dart",
+      "sha256": "48eb4f7b88566fd7212fc5dae1ccf422bb6e800b07d2b8a09b413bb3acea0c72",
+      "bytes": 1354
+    },
+    {
+      "path": "lib/core/theme/app_theme.dart",
+      "sha256": "c3a88c6ae6c9a074e46a243dd3ac74a2784ed1e1036acdedbf249429a1e5dc6b",
+      "bytes": 2991
+    },
+    {
+      "path": "lib/core/widgets/book_cover.dart",
+      "sha256": "42448b1e0e9adb8ac8c92f4118f8cc5172847a9d694526615259e90f48e17f7d",
+      "bytes": 6698
+    },
+    {
+      "path": "lib/core/widgets/feedback.dart",
+      "sha256": "5963d17fc1bfe2ce63d880e288715cc397dc7a05260896ba28ef517dd4ed27dc",
+      "bytes": 2421
+    },
+    {
+      "path": "lib/core/widgets/main_navigation_shell.dart",
+      "sha256": "bc7fb4b1abfe2bc2cb530344f59fac58959a69a7bf00f1091ef7db254d7fddee",
+      "bytes": 2236
+    },
+    {
+      "path": "lib/features/deep_links/application/deep_link_queue.dart",
+      "sha256": "6fb038e07279418e559b52f60d7ab04c7d107552ad45513cb615325c0c0724ac",
+      "bytes": 4158
+    },
+    {
+      "path": "lib/features/deep_links/data/deep_link_platform.dart",
+      "sha256": "ae6584ececa2fc6bd041529ffc5ebe57e299ab50646447f6b662aa6edff4dff9",
+      "bytes": 1525
+    },
+    {
+      "path": "lib/features/deep_links/domain/app_deep_link.dart",
+      "sha256": "bedae0d675deaba4b99ad41ec760922a3acf49dd90e4ef0f5d5f7c43cd1b6221",
+      "bytes": 7910
+    },
+    {
+      "path": "lib/features/deep_links/presentation/deep_link_gate.dart",
+      "sha256": "b4541bfdbd5d21f5e4011b2e66e4d4398d38e816abc1f596730b46abae71ee7e",
+      "bytes": 7588
+    },
+    {
+      "path": "lib/features/downloads/data/cbz_export_service.dart",
+      "sha256": "0543bc685f21974b5537d4825abd6de946e1cdb37b1f61f6f8fe3efceb33b174",
+      "bytes": 6887
+    },
+    {
+      "path": "lib/features/downloads/data/download_queue_repository.dart",
+      "sha256": "31c1af5804dc2fb92ab42da219d74c3e58856a0a7d6d13111540957f317e79ba",
+      "bytes": 2880
+    },
+    {
+      "path": "lib/features/downloads/domain/download_deletion.dart",
+      "sha256": "091310abe81c14c2f42196bba30f47ea558b5dcfed67876b3a62a15bde37e54b",
+      "bytes": 1692
+    },
+    {
+      "path": "lib/features/downloads/domain/download_job.dart",
+      "sha256": "a7107d7b14161280b0d9d7e08844187dbb0dec8c93bbb77fede92a653d2bded8",
+      "bytes": 1512
+    },
+    {
+      "path": "lib/features/downloads/presentation/download_actions.dart",
+      "sha256": "a51d051a5923e4a7c17e4d4b92e3593952de8caa357cab18a3bd6704116b9826",
+      "bytes": 4552
+    },
+    {
+      "path": "lib/features/downloads/presentation/download_deletion_controller.dart",
+      "sha256": "255d6372e9ef8ed5fb1e50b780a01b2ece9fc88d44d7addbac6857d74ded245a",
+      "bytes": 6552
+    },
+    {
+      "path": "lib/features/downloads/presentation/download_queue_bulk_actions.dart",
+      "sha256": "77c973b22abc68c9accd0e8285f39ab6c76b1b4951f19684387c800d73ebc255",
+      "bytes": 9361
+    },
+    {
+      "path": "lib/features/downloads/presentation/download_queue_controller.dart",
+      "sha256": "a1757b11ad37ee3b56b68af9721ecefb9c28df694e484ede270f9fbb1f2df234",
+      "bytes": 26827
+    },
+    {
+      "path": "lib/features/downloads/presentation/download_settings_screen.dart",
+      "sha256": "52e774cc1a173dd88abfbb92f55a99a112e80681dfbae0922a059099c48b26a8",
+      "bytes": 3402
+    },
+    {
+      "path": "lib/features/downloads/presentation/downloads_screen.dart",
+      "sha256": "37f82a745b88109ffb2b4a0111ed253de0fbbd2c2e0005b9a17affd30eff101e",
+      "bytes": 36274
+    },
+    {
+      "path": "lib/features/library/application/automatic_backup_controller.dart",
+      "sha256": "e49088a9d121d68898ce91bc4acc52720058d11211ac4d6da84392c2ae711ae1",
+      "bytes": 10681
+    },
+    {
+      "path": "lib/features/library/application/automatic_backup_status.dart",
+      "sha256": "2c2e2676414d3013d2218103087ad5142e7047d4fdf040bf812c59ff6dd55090",
+      "bytes": 3578
+    },
+    {
+      "path": "lib/features/library/application/backup_activity.dart",
+      "sha256": "8b102945384855e4c9487fbc6ac0d24749a8f2c37d792354a987b98ce82be0b1",
+      "bytes": 3682
+    },
+    {
+      "path": "lib/features/library/application/backup_service_provider.dart",
+      "sha256": "7abd581d6a4cef872daca15887cedefe778f803baefbd8190bd10173353b0f94",
+      "bytes": 4628
+    },
+    {
+      "path": "lib/features/library/application/backup_source_availability.dart",
+      "sha256": "86a14a4d0b49816e819b54b9b4fe8f2d24444a565c3cf7f765766c8108190006",
+      "bytes": 3716
+    },
+    {
+      "path": "lib/features/library/application/book_cover_import.dart",
+      "sha256": "03fb085c3d56ebc6d0efe11d382ec1222256c959915c8ac704819cf345ee183e",
+      "bytes": 2932
+    },
+    {
+      "path": "lib/features/library/application/extension_recovery_controller.dart",
+      "sha256": "b32209e4b962590501fb6990225a1dd0586727d23d0e24d6367a8b8c485ec3dc",
+      "bytes": 3229
+    },
+    {
+      "path": "lib/features/library/application/library_bulk_actions.dart",
+      "sha256": "76301a7ce6da25456ea8241cd08becad84d7fdd1ca4a2ea454f6f0e8ce224ba4",
+      "bytes": 2782
+    },
+    {
+      "path": "lib/features/library/application/library_diagnostics.dart",
+      "sha256": "3dad04e9d7a3e61b72cd841f77c662d780f9f1cf781ec74a81ce70ea00520a1a",
+      "bytes": 18271
+    },
+    {
+      "path": "lib/features/library/application/library_update_policy.dart",
+      "sha256": "a7d254500d7e2bdaaedc4a6d55cf81452ebf078ac02556e7e4468013d5d49ced",
+      "bytes": 4124
+    },
+    {
+      "path": "lib/features/library/application/library_update_report.dart",
+      "sha256": "ad67d1b5602a7b4c5c0517e568786b48506ad14b9f7132282decd48d6f339e8a",
+      "bytes": 3399
+    },
+    {
+      "path": "lib/features/library/application/library_update_scheduler.dart",
+      "sha256": "483e972c3580c8341eec9423880d9732d7d4e8bdb8c83256c59127e681021893",
+      "bytes": 10824
+    },
+    {
+      "path": "lib/features/library/application/reading_statistics_controller.dart",
+      "sha256": "69398846595903ca048b3f33bd513f834ed1586947a45aeead831986603ef07a",
+      "bytes": 3435
+    },
+    {
+      "path": "lib/features/library/application/reading_time_recorder.dart",
+      "sha256": "83ec5e5aac0600c1034787ae710c9240ca662623fe92fcd77e4db174a3cae833",
+      "bytes": 3566
+    },
+    {
+      "path": "lib/features/library/application/storage_maintenance.dart",
+      "sha256": "852d42c0a2059870f5797d3db67ea7ebbf35d257acff4f7d5f2f955d9c740661",
+      "bytes": 3985
+    },
+    {
+      "path": "lib/features/library/data/attachment_gc.dart",
+      "sha256": "3b6de80d118ff16aa1418da5f2a3fa2cc8bcdb4c7730142046bafdfce922c69d",
+      "bytes": 3267
+    },
+    {
+      "path": "lib/features/library/data/attachment_store.dart",
+      "sha256": "7497baf8ca36582022b073e12c2b26f4364a92647d3f28e79b9ea2666ea03978",
+      "bytes": 94
+    },
+    {
+      "path": "lib/features/library/data/attachment_store_native.dart",
+      "sha256": "3651a036f4850169676013cd11b33c187bbbe08ed5375512013b14b8e75ed54e",
+      "bytes": 5094
+    },
+    {
+      "path": "lib/features/library/data/attachment_store_web.dart",
+      "sha256": "3f9be586aa7f4924b4bd495136547e57a778e12e255f8d52e07ef31e6de5bf8f",
+      "bytes": 610
+    },
+    {
+      "path": "lib/features/library/data/automatic_backup_store.dart",
+      "sha256": "6470815a22d33760240e3da9d6c374cae23a2ab49d17b7cbe2f1728afcc0638c",
+      "bytes": 4616
+    },
+    {
+      "path": "lib/features/library/data/backup_compatibility/backup_reader.dart",
+      "sha256": "7e0b40d71d8a79d0317d43a673da8fe05674757ffa3d9db40e5692c021cecd82",
+      "bytes": 1764
+    },
+    {
+      "path": "lib/features/library/data/backup_compatibility/bounded_archive.dart",
+      "sha256": "640ea690c40eff04c34cea90df7517ef210dfa7408a86224773e1954d99d9db7",
+      "bytes": 3344
+    },
+    {
+      "path": "lib/features/library/data/backup_compatibility/external_library.dart",
+      "sha256": "c8c97f6cdcd47c1c7792b1b02439560ad1bb0806936f57fabd1fb4c021b8376c",
+      "bytes": 8025
+    },
+    {
+      "path": "lib/features/library/data/backup_compatibility/mihon_backup.dart",
+      "sha256": "1167a5bd71bc92f0c1ce78c676f9414efd20fd8758b7fffcd32f3e6d027e4761",
+      "bytes": 7384
+    },
+    {
+      "path": "lib/features/library/data/backup_compatibility/mihon_backup_exporter.dart",
+      "sha256": "ffcfe03d79882d7e32698257ad434e520cdb5969024a9100a55f7cf825600b7e",
+      "bytes": 13440
+    },
+    {
+      "path": "lib/features/library/data/backup_compatibility/mihon_tracking.dart",
+      "sha256": "8838b1353b9c544b6eb2094e74745a57e564a10e8f63de61733fd094f7c394c8",
+      "bytes": 812
+    },
+    {
+      "path": "lib/features/library/data/backup_compatibility/protobuf_reader.dart",
+      "sha256": "613484fc164250aeb53c1b1f53d577cac0fa016c99b49c088203a231bf75bb1f",
+      "bytes": 6457
+    },
+    {
+      "path": "lib/features/library/data/backup_compatibility/protobuf_writer.dart",
+      "sha256": "4aa64092fc4f5cac37a88f9916bb197a6e64ed7744b8efa0a8d50402edf0a494",
+      "bytes": 3134
+    },
+    {
+      "path": "lib/features/library/data/backup_compatibility/tachimanga_backup.dart",
+      "sha256": "41429b8ec9e626bcbeb7cebbc5cda9a93fbc6e4cb69da7d52bd6b99f91467009",
+      "bytes": 14982
+    },
+    {
+      "path": "lib/features/library/data/backup_configuration.dart",
+      "sha256": "019a9ee73cf31a95c01ee4009deadfb163086c2831954373954d29c0f73dbc82",
+      "bytes": 16293
+    },
+    {
+      "path": "lib/features/library/data/backup_directory_platform.dart",
+      "sha256": "ed131fb429450154dbc89bca6b922ead3c4346c2709e720627c1404ab5be47c1",
+      "bytes": 4628
+    },
+    {
+      "path": "lib/features/library/data/backup_restore_progress.dart",
+      "sha256": "864d129c9f60d59d0eeb8901ec0cf0b9db1350f3b183ef9be1ef79c76297650e",
+      "bytes": 1452
+    },
+    {
+      "path": "lib/features/library/data/backup_service.dart",
+      "sha256": "c72ae7bcca6ba6b23b7bc218f0be3b9d8a74968edec7ad889fa19978f0dd14bf",
+      "bytes": 12905
+    },
+    {
+      "path": "lib/features/library/data/backup_validation.dart",
+      "sha256": "3cd347ac8f4f6e25b4879e4f271479f08345a82c06be8790ed01dfd9c6160c15",
+      "bytes": 15008
+    },
+    {
+      "path": "lib/features/library/data/configuration_restore_files.dart",
+      "sha256": "e43f864afc7fd7e3208d263d4fa9f4be5a2cadc6a97f8ef03e7066b906e90c2d",
+      "bytes": 5058
+    },
+    {
+      "path": "lib/features/library/data/coordinated_preferences.dart",
+      "sha256": "edc10428d4ed3b513ccdc2ddd2ca6c4cc0c308272a1aeca20348a2c368dbd703",
+      "bytes": 17584
+    },
+    {
+      "path": "lib/features/library/data/document_importer.dart",
+      "sha256": "efbaae7b1aa139f05a4eab65cb7ce03d9f4d4f7f6e1af7838976bfc20a23326e",
+      "bytes": 21927
+    },
+    {
+      "path": "lib/features/library/data/extension_backup_store.dart",
+      "sha256": "d0638bf8f13bda9467244c7b48755240a47544f05979669f811042a17b502d82",
+      "bytes": 9324
+    },
+    {
+      "path": "lib/features/library/data/external_automatic_backup_store.dart",
+      "sha256": "a1a9f276c80024900d475c54bc852366dd68dbdbb92445c909d5d888d09b808e",
+      "bytes": 3380
+    },
+    {
+      "path": "lib/features/library/data/folder_comic_importer.dart",
+      "sha256": "3c709c674fee371eaa1b84aa104fcf715abb157beba654e6eb8cf28c0d6b49f3",
+      "bytes": 11836
+    },
+    {
+      "path": "lib/features/library/data/isar_models.dart",
+      "sha256": "ac6e9e7d87ca4cce578f853164c4ad7016c22e9785685d6f33ae4e582d326dd5",
+      "bytes": 526
+    },
+    {
+      "path": "lib/features/library/data/isar_models.g.dart",
+      "sha256": "8e76e051de229e5ff28fc276d9932384836857108ca6cda101363918bfbf880c",
+      "bytes": 72460
+    },
+    {
+      "path": "lib/features/library/data/library_cache_maintenance.dart",
+      "sha256": "f2bce003ac9560976d66054fa25b56959bda4a80d3c494d4a0fd64ef2a7980e0",
+      "bytes": 4211
+    },
+    {
+      "path": "lib/features/library/data/library_mutation.dart",
+      "sha256": "1c66b0e1440d64adc4f729434f0f9f9291932d949cad869a8f1e9cd46f62f6b4",
+      "bytes": 6342
+    },
+    {
+      "path": "lib/features/library/data/library_recovery_store.dart",
+      "sha256": "01a4ac59cbc678561d6d2a222291d1132f95c49f00013ed163121dd6db2654a5",
+      "bytes": 15914
+    },
+    {
+      "path": "lib/features/library/data/library_repository.dart",
+      "sha256": "97bc0b4b9144bd17f6c51f273c1ceb734bf92e079750372eaf53629fc3af40fa",
+      "bytes": 27693
+    },
+    {
+      "path": "lib/features/library/data/library_repository_native.dart",
+      "sha256": "458e827c78460e7cd8745ced6c0107487d2603a4f4dadb67d7584fc83cac796e",
+      "bytes": 36072
+    },
+    {
+      "path": "lib/features/library/data/library_repository_web.dart",
+      "sha256": "4278474ae929e4f732eaec1c1a96880666f300a20694bfd0560f190fe2b310ad",
+      "bytes": 234
+    },
+    {
+      "path": "lib/features/library/data/library_snapshot.dart",
+      "sha256": "41b60485d81dfa2261f28bdbe2973e20687832a437195c716b34a2a8d0f4ec39",
+      "bytes": 3359
+    },
+    {
+      "path": "lib/features/library/data/local_comic_files_platform.dart",
+      "sha256": "2aad719b3f3a4c0aada38f2bacb9c6c61f1cbdd57452902730eefc841f43f287",
+      "bytes": 6086
+    },
+    {
+      "path": "lib/features/library/data/local_comic_metadata.dart",
+      "sha256": "b24fe074ab58ecc2cc6a724d688d723f46635fb2256cd78447ae3a54db57ac87",
+      "bytes": 3183
+    },
+    {
+      "path": "lib/features/library/data/storage_directory.dart",
+      "sha256": "8d90971fc961698617db32062a6e512719ba5fbe9d17fdec4c62af90d9b74b44",
+      "bytes": 903
+    },
+    {
+      "path": "lib/features/library/domain/book_daily_reading_times.dart",
+      "sha256": "feeef1538aed351d6466bb0b90658f5b7b0e2624f6cc9532f589a63eaa9d1439",
+      "bytes": 4668
+    },
+    {
+      "path": "lib/features/library/domain/book_reading_times.dart",
+      "sha256": "9db207cdccfb827a3c69f2a251a5f4e803b9321aa1d4f44d0b6e46719d4d34e2",
+      "bytes": 1254
+    },
+    {
+      "path": "lib/features/library/domain/chapter_list_options.dart",
+      "sha256": "e077ddc0b162f1578d6fd801abb71cf713629c13481263dff950316f3b9d7431",
+      "bytes": 7439
+    },
+    {
+      "path": "lib/features/library/domain/external_backup_metadata.dart",
+      "sha256": "da5ec08991b23fbbc8332a05dba2ee68ac48f8a8a0765ce57469427d04b5da70",
+      "bytes": 5072
+    },
+    {
+      "path": "lib/features/library/domain/legacy_chapter_identity.dart",
+      "sha256": "1fd3d75c2d042125b0210c030fe705a80112d87be1a12108d8c8a2e9938946af",
+      "bytes": 2670
+    },
+    {
+      "path": "lib/features/library/domain/library_authors.dart",
+      "sha256": "b9fc87c9099c57620034e5e060322c7bc85f7857773f10f20ef721fd057e9531",
+      "bytes": 570
+    },
+    {
+      "path": "lib/features/library/domain/library_book.dart",
+      "sha256": "2a72f284573472c54ffc926d29e49d0fe8252b288764806acbe8f82167da3882",
+      "bytes": 14845
+    },
+    {
+      "path": "lib/features/library/domain/library_categories.dart",
+      "sha256": "3fdc9691c18a1afc772c1596a59ae18bdefe334a7c048637b2c24ab5eb257560",
+      "bytes": 5074
+    },
+    {
+      "path": "lib/features/library/domain/library_duplicates.dart",
+      "sha256": "0581e4c9705bcd67ae614a05968bad50c1591b1e2dad1755bbd6cf172ca00184",
+      "bytes": 654
+    },
+    {
+      "path": "lib/features/library/domain/library_folders.dart",
+      "sha256": "50e1734b606e5037b4c9f10975195979b6e58a82374f98f90b4ffcb07eb4f76b",
+      "bytes": 5289
+    },
+    {
+      "path": "lib/features/library/domain/library_grouping.dart",
+      "sha256": "f0273cf4eda5213b35375981581900d9f2587d0cfe5b963e3c19b5d00066fae2",
+      "bytes": 2673
+    },
+    {
+      "path": "lib/features/library/domain/library_reading.dart",
+      "sha256": "7c625c06593ba2f985ce0208925c81a13859ead86aef016fc5a79f795b593336",
+      "bytes": 658
+    },
+    {
+      "path": "lib/features/library/domain/library_search.dart",
+      "sha256": "189c79aebca9297a0276d81c2979836a6893eb410b35d06b01e25988b9f3c9a2",
+      "bytes": 5588
+    },
+    {
+      "path": "lib/features/library/domain/library_update_events.dart",
+      "sha256": "b3db819b93cb318f25c9b86707ec4437826daadefa61c90a8b7ac48803ad70d4",
+      "bytes": 1927
+    },
+    {
+      "path": "lib/features/library/domain/library_update_result.dart",
+      "sha256": "a2472b711a7f3ccafd5b889ac8faf78196a2bee30ffed494abea87b81e63dcf2",
+      "bytes": 1993
+    },
+    {
+      "path": "lib/features/library/domain/reading_statistics.dart",
+      "sha256": "a52f5a9ea135291bf3c9debc285dc521290ee0e5ca4d7c4acfb6c60c4d2f637d",
+      "bytes": 11511
+    },
+    {
+      "path": "lib/features/library/domain/release_prediction.dart",
+      "sha256": "9724b819f142c51db56d4893ed93f6b0d8a1a784f9373c902cb8570244367933",
+      "bytes": 1552
+    },
+    {
+      "path": "lib/features/library/presentation/activity_book_cover.dart",
+      "sha256": "89d9cbe0fd8043774dd5e51899bc2834b9e6317d0caa94a57dbfbc45f864b90c",
+      "bytes": 1684
+    },
+    {
+      "path": "lib/features/library/presentation/activity_screens.dart",
+      "sha256": "f06a339f0594b43360432a13c829a87bba5f59231798d038db1598b90ab92cd1",
+      "bytes": 45046
+    },
+    {
+      "path": "lib/features/library/presentation/book_cover_viewer.dart",
+      "sha256": "0387f99527a93d06b3e528662cbfbfb3bdfc8e5447b23370157259ba0890f459",
+      "bytes": 5893
+    },
+    {
+      "path": "lib/features/library/presentation/book_detail_header.dart",
+      "sha256": "42a49badcd7e9e6e64ad32012f952f084dfe82b79dc1a2d3e583586c1e29658e",
+      "bytes": 20030
+    },
+    {
+      "path": "lib/features/library/presentation/book_detail_screen.dart",
+      "sha256": "17d380e75a9de49a3abf0b857adf0bb2cf4c502b95e632922b53f12f7c44de01",
+      "bytes": 54016
+    },
+    {
+      "path": "lib/features/library/presentation/book_metadata_editor.dart",
+      "sha256": "54336e1e6e80d795317d0d8d46924e0c6567dcb36642835900057b39a188d847",
+      "bytes": 4542
+    },
+    {
+      "path": "lib/features/library/presentation/chapter_options_sheet.dart",
+      "sha256": "91fcbf1efd78e6563dc9eb77fd66dbb09d78b4f2d2faedbb0dc39ce7efec8d36",
+      "bytes": 7491
+    },
+    {
+      "path": "lib/features/library/presentation/chapter_range_dialog.dart",
+      "sha256": "3164014d1ba58ac6b96c6e4de1cec018706bdac861c1efb661f88698e9cbc64d",
+      "bytes": 2605
+    },
+    {
+      "path": "lib/features/library/presentation/library_add_categories.dart",
+      "sha256": "5cad983cb0582a3bf3a488301b09fa82b6c0a5b60e010e40ab98c94a1cd1ae32",
+      "bytes": 4450
+    },
+    {
+      "path": "lib/features/library/presentation/library_book_metadata.dart",
+      "sha256": "75a05f61745fad0a33d0e86fb717f754dba75305702a2437fc28bffde950966b",
+      "bytes": 5210
+    },
+    {
+      "path": "lib/features/library/presentation/library_book_tile.dart",
+      "sha256": "f15bc0f72695597a1d2a71cde0fa87eb6406f6d44c98dad651b260abcd4b4da6",
+      "bytes": 4459
+    },
+    {
+      "path": "lib/features/library/presentation/library_categories_screen.dart",
+      "sha256": "508059b059b1882872006d0e6c345ada31e440e8942c31fd01d6ecb01bb0916c",
+      "bytes": 11524
+    },
+    {
+      "path": "lib/features/library/presentation/library_category_controller.dart",
+      "sha256": "edf51723d40aabd41c08fb79708cea92f0eb3c729cef37cadc0a4d95ff70efc8",
+      "bytes": 10621
+    },
+    {
+      "path": "lib/features/library/presentation/library_category_preference_migration.dart",
+      "sha256": "0dfe32f83d3d973c3d93211a7d4d98413827d67d60d527e924124a04795b8bb1",
+      "bytes": 4480
+    },
+    {
+      "path": "lib/features/library/presentation/library_duplicate_sheet.dart",
+      "sha256": "3614ac052010672c4865c2fdf6921f8a179b4901f189f226847e2ad83881d436",
+      "bytes": 2163
+    },
+    {
+      "path": "lib/features/library/presentation/library_filter_controller.dart",
+      "sha256": "4cf871eae5c03c6470d56a0697376ff623c9b0955759e0385974f7ba648f5f7d",
+      "bytes": 7529
+    },
+    {
+      "path": "lib/features/library/presentation/library_filter_picker.dart",
+      "sha256": "f606bd784f140e2f88ebe47e30b1b383640ceb3876a2f87a4677853424e6c164",
+      "bytes": 8693
+    },
+    {
+      "path": "lib/features/library/presentation/library_filter_presets_bar.dart",
+      "sha256": "14de1dfb8865fb9628a1665c9cbacab316edea168c7478f52818a209f8b94df8",
+      "bytes": 3865
+    },
+    {
+      "path": "lib/features/library/presentation/library_filter_sheet.dart",
+      "sha256": "331adaf7a1d196c9c06ca513e913bbde162f9f95dd48bd65b80d53ff8672ce4a",
+      "bytes": 30787
+    },
+    {
+      "path": "lib/features/library/presentation/library_folder_download_selection.dart",
+      "sha256": "22ce5b2ac34041e08ca03ef5845b1a4d890a7b3784d3a297a56a199ddaa439c6",
+      "bytes": 917
+    },
+    {
+      "path": "lib/features/library/presentation/library_folder_name_dialog.dart",
+      "sha256": "9c1faecc3c30096554afae55ae6623f73bd72e2076c34dfbab71a44b121b8489",
+      "bytes": 1500
+    },
+    {
+      "path": "lib/features/library/presentation/library_folder_tile.dart",
+      "sha256": "ea1aadcaba54e9c75c55e00f8a59dd43ecb4b9038e8418713bcc76044854a401",
+      "bytes": 2398
+    },
+    {
+      "path": "lib/features/library/presentation/library_folders_controller.dart",
+      "sha256": "d8c9c833397965f23cb89a25688735c7061d53426e93c62bc7bb3a34b7162175",
+      "bytes": 3830
+    },
+    {
+      "path": "lib/features/library/presentation/library_group_dialog.dart",
+      "sha256": "dba9c31ee1cebd37eaa30989531b9c0d88076e1f45fc52d5a02c88937deea92e",
+      "bytes": 9240
+    },
+    {
+      "path": "lib/features/library/presentation/library_group_order_controller.dart",
+      "sha256": "f7e3c02d1ee6a0fc4ea6d038983eb3734222b58b9ca9ff6b9bd11f8edef2f38d",
+      "bytes": 2873
+    },
+    {
+      "path": "lib/features/library/presentation/library_group_order_sheet.dart",
+      "sha256": "46f872e952859c18277a677f38b7740f5b52862b2d88fde2b7bbffbf0c3bea01",
+      "bytes": 4467
+    },
+    {
+      "path": "lib/features/library/presentation/library_group_tabs.dart",
+      "sha256": "499ff3309efd85329927b16d76d86796bef9d23961bd71e8ebb1ff8885d57921",
+      "bytes": 3399
+    },
+    {
+      "path": "lib/features/library/presentation/library_grouping_controller.dart",
+      "sha256": "da9cbe22a508e780831e096c1fae49c3f731441273b4e73e867258ee8fe74542",
+      "bytes": 953
+    },
+    {
+      "path": "lib/features/library/presentation/library_locations.dart",
+      "sha256": "0e3686be4611131694da2588535062df67fe91c8a5f5ec7062a0306d0287efbd",
+      "bytes": 1102
+    },
+    {
+      "path": "lib/features/library/presentation/library_preference_writes.dart",
+      "sha256": "6c4bedd9bd77d7befcb3c815df32edc8a2fbba6392778bace0813c0d716e8f14",
+      "bytes": 596
+    },
+    {
+      "path": "lib/features/library/presentation/library_screen.dart",
+      "sha256": "a33e6339124effe4533aa159eaf9aa54ca2775504463d620f8e49290bb4505e7",
+      "bytes": 57679
+    },
+    {
+      "path": "lib/features/library/presentation/library_source_label.dart",
+      "sha256": "5e2ca331b3d4b8ddf2ae14bd3495ea74e2241ddc24732894f8e24ec2393af22a",
+      "bytes": 3840
+    },
+    {
+      "path": "lib/features/library/presentation/library_update_report_panel.dart",
+      "sha256": "aae63e6ea2b33f5b9f4865bc1d615cc4324141e652b28551111f2b2352a88fe6",
+      "bytes": 4210
+    },
+    {
+      "path": "lib/features/library/presentation/library_view_model.dart",
+      "sha256": "c48cb9479e8594584bddd6394d8182da5b53df2bc4ff21072596f4a2e29e3788",
+      "bytes": 44929
+    },
+    {
+      "path": "lib/features/library/presentation/library_view_session.dart",
+      "sha256": "8999b09dd6b7212074ad715834a05035cafa202dfe238d11b98b9a943cf1b3b2",
+      "bytes": 645
+    },
+    {
+      "path": "lib/features/library/presentation/local_comic_library_screen.dart",
+      "sha256": "83becb8213ca58b6d9bf7af2666f88a8cdde929fa073361fa5a3a045b6429b63",
+      "bytes": 10120
+    },
+    {
+      "path": "lib/features/library/presentation/upcoming_screen.dart",
+      "sha256": "cf147e27444af817fb699329a6e39464843dced56216cd72a77df269097f58e8",
+      "bytes": 5505
+    },
+    {
+      "path": "lib/features/privacy/application/app_lock_controller.dart",
+      "sha256": "9afb587e8dd3f63e3d6d3033e4a0d4c72761aed5865f56a8bdf99f14e9dce7ab",
+      "bytes": 12460
+    },
+    {
+      "path": "lib/features/privacy/data/privacy_platform.dart",
+      "sha256": "7d930fe97321f002cd00628da6f212693472b03685930d083cd9a6131dfe0500",
+      "bytes": 1470
+    },
+    {
+      "path": "lib/features/privacy/domain/privacy_preferences.dart",
+      "sha256": "b2a3bc50fe49944200e00cf85b0bfcd79dd378745d545ff55abcf10e195a2e87",
+      "bytes": 2237
+    },
+    {
+      "path": "lib/features/privacy/presentation/privacy_gate.dart",
+      "sha256": "a66e578b3bcc3430e62127a99cac7b85f7a8548eac16038143531c7e380ccaf0",
+      "bytes": 6479
+    },
+    {
+      "path": "lib/features/privacy/presentation/privacy_settings.dart",
+      "sha256": "d2c3d0f04d2c90403f3194d240225b0dca6be4815d5b68b48ff7ebade49ae09a",
+      "bytes": 6201
+    },
+    {
+      "path": "lib/features/reader/domain/reader_options.dart",
+      "sha256": "6e4226930b79290d0a685481a4bec0b18cc33460b020e89a3ddf7aec0873a353",
+      "bytes": 8871
+    },
+    {
+      "path": "lib/features/reader/presentation/continuous_manga_reader.dart",
+      "sha256": "46490a282ef3dd557dfe3322e0368acff581d4796e3268bacee6624936f49e28",
+      "bytes": 21521
+    },
+    {
+      "path": "lib/features/reader/presentation/manga_page_layout.dart",
+      "sha256": "dbbeb958f24d278aac4ba50a1aa269e9f7f300d76154495b9cbcf5baaf9776ee",
+      "bytes": 1260
+    },
+    {
+      "path": "lib/features/reader/presentation/native_manga_image_window.dart",
+      "sha256": "b0b6944c2bd7650a56e0054675d7752670a7d76cf47f017b1ba4aa65496ebc28",
+      "bytes": 9910
+    },
+    {
+      "path": "lib/features/reader/presentation/paged_manga_reader.dart",
+      "sha256": "793dee1ebc32c6184bf391b704b38ebadcbc8997c9f68ff61eb3d12693f3e451",
+      "bytes": 2643
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_advanced_settings.dart",
+      "sha256": "33b51e3cbb0888ceb29ab6b52c9291a7e9e613126c0250cd85ff3c2427bbf29b",
+      "bytes": 16498
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_auto_scroll.dart",
+      "sha256": "602aa7aeb42544dfe179deea090d7a8f2d282e69a049ec0701ae3926fe4776c1",
+      "bytes": 2545
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_chapter_boundary.dart",
+      "sha256": "b2b54cbf68dda93edb1bcf75cbcabb888e7a03953fad7ff098ae7ba289b90785",
+      "bytes": 1615
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_controls.dart",
+      "sha256": "7d1a9c9eaded209abb57387f53ca6a64132c17375a8f7f5dd5b7200fabaecf7f",
+      "bytes": 8066
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_display_settings.dart",
+      "sha256": "4ac9eac7eeabcee1de3ec0c95ae5bae25b6b1f1274911749afbbfe7d0ff48703",
+      "bytes": 5735
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_hold_scroll.dart",
+      "sha256": "a82acc06e0150a5ff332f1f383571e6f01db70616a6cd8908e5dcd00f611a5ec",
+      "bytes": 2203
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_image_loader.dart",
+      "sha256": "95fab1705691fb6508be461321e5257b1aed106ca513ccfb897142b24b83818e",
+      "bytes": 2583
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_image_region.dart",
+      "sha256": "0ccc340f738c52f24322e1858abd47ab8ef2b1b926ebc009924c065ac27cff99",
+      "bytes": 9669
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_keyboard_controls.dart",
+      "sha256": "d8937a6fb13b38312229d55b09a447bf1e785460d21d7e63a7e4e650c074f6ed",
+      "bytes": 2574
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_options_controller.dart",
+      "sha256": "bcb0568036ab88597f6912153950ffcf2216dbfe25808b30e10a0ca4689b6651",
+      "bytes": 2475
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_pinch_scroll_guard.dart",
+      "sha256": "737a3f1455184eba77b9ca9feeedbda1b24650b94115d6fd35dd55b50b4d56d5",
+      "bytes": 1301
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_screen.dart",
+      "sha256": "ba08bc4c2c4a12d420d2ef646999420e65d0798b4ea08feb96edecce542e4850",
+      "bytes": 78649
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_settings_sheet.dart",
+      "sha256": "f2d18243aa8a887abf2188fce21bc95f9adae0392a15200edb17507323310574",
+      "bytes": 9671
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_system_ui.dart",
+      "sha256": "9cfa6f43f07fe667c9bdfc019a89da1327508de12d0aba8fd8e1bc53609567de",
+      "bytes": 1606
+    },
+    {
+      "path": "lib/features/reader/presentation/reader_tap_zones.dart",
+      "sha256": "95d84700064fdd3c7924eef727d4a76d8bcbfbc596535cdacfeffad39241a0ee",
+      "bytes": 5093
+    },
+    {
+      "path": "lib/features/reader/presentation/zoomable_manga_page.dart",
+      "sha256": "849afdf33ef18206cf1ead39ff739a99cfc7c3b497080965ada7790df4417928",
+      "bytes": 1761
+    },
+    {
+      "path": "lib/features/settings/navigation_preferences.dart",
+      "sha256": "59910b701984e0942a5c2bf29212dcf21e719813f7733fe8f9ac32d93c8d59d6",
+      "bytes": 4295
+    },
+    {
+      "path": "lib/features/settings/presentation/advanced_settings_screen.dart",
+      "sha256": "916cc31f7c5d086f11e581c2421bf48459dabccefaf44911eb9986d145ea1fd7",
+      "bytes": 1395
+    },
+    {
+      "path": "lib/features/settings/presentation/app_settings_screens.dart",
+      "sha256": "759924c7bdfac00f81ffedc167332b1e3fa603650e6e010208c41dcd63825165",
+      "bytes": 15963
+    },
+    {
+      "path": "lib/features/settings/presentation/automatic_backup_screen.dart",
+      "sha256": "63e25a2c16063c7e1defe469ceb2e663182c96158ab1f64aa33c42617f0ae1ef",
+      "bytes": 13441
+    },
+    {
+      "path": "lib/features/settings/presentation/backup_restore_progress_screen.dart",
+      "sha256": "9be013e64c7f862fc6cdf20fd3526b5116798cdaf220016baad879efa267411a",
+      "bytes": 3631
+    },
+    {
+      "path": "lib/features/settings/presentation/backup_settings_screen.dart",
+      "sha256": "fc068d1852ee92307f011c11e365d56316a50b0571716f9400f87afe507ade9e",
+      "bytes": 18751
+    },
+    {
+      "path": "lib/features/settings/presentation/book_reading_time_screen.dart",
+      "sha256": "14a0257312fd80c5eafba8163fd6b62c9d8c767b8e2a09d71b53739938e124db",
+      "bytes": 3601
+    },
+    {
+      "path": "lib/features/settings/presentation/connection_dialog.dart",
+      "sha256": "42eb656f12dd7824b41c377b7de87530b5aac6a9b2b410c29797fdb3a553997c",
+      "bytes": 5142
+    },
+    {
+      "path": "lib/features/settings/presentation/help_licenses_screen.dart",
+      "sha256": "8ff3cfdb0135d8b7a5f1d385dddcf62e24922500a63f56c589bdfb40deee2da5",
+      "bytes": 16102
+    },
+    {
+      "path": "lib/features/settings/presentation/library_diagnostics_screen.dart",
+      "sha256": "fb357a68574058b3e13f7bb6691c39daa73efdfb1d2b100bad46af4758b74ba1",
+      "bytes": 9378
+    },
+    {
+      "path": "lib/features/settings/presentation/library_recovery_screen.dart",
+      "sha256": "4ce21a08a85609f9281041eb74f28ee5a50573a17e6e0f1b592ac27b60398c4b",
+      "bytes": 8328
+    },
+    {
+      "path": "lib/features/settings/presentation/library_update_settings_screen.dart",
+      "sha256": "5a29aad6b2a1acd0f2778c413b6a3f2362468edc581fa28f6f2c0da1c54ce310",
+      "bytes": 5044
+    },
+    {
+      "path": "lib/features/settings/presentation/log_diagnostics_screen.dart",
+      "sha256": "7c620a42f05e1173cdbd4abdab651109511ea2b94f6892dd74057bb5b4e2c1ed",
+      "bytes": 14655
+    },
+    {
+      "path": "lib/features/settings/presentation/more_screen.dart",
+      "sha256": "8792f7d7d1d383c3a57d596321becc136ca9142ed6a201ad17279cdbfc4ad383",
+      "bytes": 4084
+    },
+    {
+      "path": "lib/features/settings/presentation/navigation_settings_screen.dart",
+      "sha256": "ab2f33e41e6334558491661eae7dd62389d8aafdacdebc537a67d974be130932",
+      "bytes": 4450
+    },
+    {
+      "path": "lib/features/settings/presentation/network_tools_screen.dart",
+      "sha256": "db4e1c2fc0fee39a899ebea064bca43e865223830f869584b7a6a46fc824c086",
+      "bytes": 4401
+    },
+    {
+      "path": "lib/features/settings/presentation/reading_info_screen.dart",
+      "sha256": "e22cdf61a19578e393e11af2276f8c4c333a59a4cb74b012a25483fcee1770a6",
+      "bytes": 11248
+    },
+    {
+      "path": "lib/features/settings/presentation/reading_statistics_book_list.dart",
+      "sha256": "bcd2af7c65f3bb44373aaab2187b53ff7daab9ce4fd4ebcc67617f55cbc50ed1",
+      "bytes": 13895
+    },
+    {
+      "path": "lib/features/settings/presentation/reading_statistics_charts.dart",
+      "sha256": "eb4cc4934009734d4cb3ca1a2d9aa92340b9f8d3c5a2c5755d7ad373721e4098",
+      "bytes": 4582
+    },
+    {
+      "path": "lib/features/settings/presentation/settings_home_screen.dart",
+      "sha256": "7495ea8cbfe9a17821616953925f972284f9602456b1e2c013b7d9700edf0e38",
+      "bytes": 3564
+    },
+    {
+      "path": "lib/features/settings/presentation/settings_widgets.dart",
+      "sha256": "e6d8a5cfb7977dd5021ad5daf22fb3f5c822207829158d03a12cbf4c9f0f1858",
+      "bytes": 5775
+    },
+    {
+      "path": "lib/features/settings/presentation/storage_maintenance_screen.dart",
+      "sha256": "3f7789d83a4ce89947bfe04ae4dfe9db085161b5e5da4f7788e9c59d23ec6b1f",
+      "bytes": 16565
+    },
+    {
+      "path": "lib/features/settings/presentation/tracking_settings_screen.dart",
+      "sha256": "6bea2fb2ab71f97cfcb2884bc36d44c22a767bd0f173daad36818203c9defe03",
+      "bytes": 1017
+    },
+    {
+      "path": "lib/features/settings/settings_controller.dart",
+      "sha256": "9c362439f19c3e816eef4fb503bb14bc121e1cbf4d420724c98f451ed962bd5f",
+      "bytes": 7055
+    },
+    {
+      "path": "lib/features/sources/application/migration_search.dart",
+      "sha256": "89bb95093000d6faeebb6261dff04ee8ff0505faae9fe06b2d52715894ac7567",
+      "bytes": 3491
+    },
+    {
+      "path": "lib/features/sources/application/native_runtime_provider.dart",
+      "sha256": "603dbb1feb504499e1ac492468bd4979d2490010970778457b8ab11c926176f6",
+      "bytes": 3649
+    },
+    {
+      "path": "lib/features/sources/application/source_maintenance.dart",
+      "sha256": "417756a2bf03aa8b9e4a111153e108049b7be73ee9ac8d88ef80e94f457ed69a",
+      "bytes": 2647
+    },
+    {
+      "path": "lib/features/sources/application/source_migration_service.dart",
+      "sha256": "4ae13b75bdb23dfe63bcd9c98d0c9f59b8a568e8fa781d2c2eb4fe7ede256780",
+      "bytes": 912
+    },
+    {
+      "path": "lib/features/sources/data/extension_index.dart",
+      "sha256": "10253dedc71cf68b4bd56286d72776bf4a3c163585b10a34ce866dbd229d8733",
+      "bytes": 16917
+    },
+    {
+      "path": "lib/features/sources/data/extension_mutation_queue.dart",
+      "sha256": "101451f9ac989800c3bc1525fa9165ab75660df156c629a2ab8aaf3bbd565a87",
+      "bytes": 2497
+    },
+    {
+      "path": "lib/features/sources/data/native_tachi_repository.dart",
+      "sha256": "0014e5a5d07c2939dce15403d1511ed54ed88538a8c5558042d745856c761ec5",
+      "bytes": 53818
+    },
+    {
+      "path": "lib/features/sources/data/native_vbook_package.dart",
+      "sha256": "86a8878b38454239f5962f769290f4f9d666c1d5f79ba57dbe87ee02a55db4f3",
+      "bytes": 7558
+    },
+    {
+      "path": "lib/features/sources/data/native_vbook_repository.dart",
+      "sha256": "b2dadd31a4398a3b2bba839138b0772ec398ee788f75696738dbe17691d2dc45",
+      "bytes": 30374
+    },
+    {
+      "path": "lib/features/sources/data/on_device_source_repository.dart",
+      "sha256": "f880edfe049361c93c912b39e8bdf59fe5f1d67e6e85bfa22f9d9af32ca47c19",
+      "bytes": 9220
+    },
+    {
+      "path": "lib/features/sources/data/source_cover_cache.dart",
+      "sha256": "e7a85651617dad26b55485871216d2cd168be22b6dbe111767499d4dc844841f",
+      "bytes": 3689
+    },
+    {
+      "path": "lib/features/sources/data/source_repository.dart",
+      "sha256": "4231e4370fb8492c83e8099c07994c2e97470d2f2d5e9c4cd64b97979191e7a6",
+      "bytes": 32946
+    },
+    {
+      "path": "lib/features/sources/domain/catalogue.dart",
+      "sha256": "da5a454ca3f3b484fb447aa4a179044137f24176c761a4a7d66846e52b8600d4",
+      "bytes": 5750
+    },
+    {
+      "path": "lib/features/sources/domain/extension_backup.dart",
+      "sha256": "97352977c0ae603f10ed0f2f988ffec052ecf249bc8f04036c25b56cd49dbd26",
+      "bytes": 12348
+    },
+    {
+      "path": "lib/features/sources/domain/native_page_locator.dart",
+      "sha256": "5d0ff576ad859d39f72a620ec300b3af4f6a94bb26b2fb6b6fa9b6943c1d23a1",
+      "bytes": 737
+    },
+    {
+      "path": "lib/features/sources/domain/native_source_engine.dart",
+      "sha256": "edd79e7e6b3b674b0041a0c4da98364a00cbd262f417a99175107ed5a2d2decc",
+      "bytes": 3524
+    },
+    {
+      "path": "lib/features/sources/domain/source_filters.dart",
+      "sha256": "4aaf1b135ee13d68f43cbf84a3065d7c620d8939e6b6952e32f1d8c014165042",
+      "bytes": 5224
+    },
+    {
+      "path": "lib/features/sources/domain/source_languages.dart",
+      "sha256": "b7d2e786fda135f7a871b16febd116d97f87cf84782bbd6dec58a692f781a47d",
+      "bytes": 1422
+    },
+    {
+      "path": "lib/features/sources/domain/source_migration.dart",
+      "sha256": "0a880102618a97445c5753acbc8a77e63ad488d8550ca3fe553be7b1d5c2a2d4",
+      "bytes": 19297
+    },
+    {
+      "path": "lib/features/sources/presentation/browse_dialogs.dart",
+      "sha256": "d2d568d3ca82e8370647ed223d9b7f2219901a32500f2ba36c1f7cef187564c2",
+      "bytes": 6066
+    },
+    {
+      "path": "lib/features/sources/presentation/browse_screen.dart",
+      "sha256": "d86858ddb5bfa05fea57e00c117beac01120d537818dc0ca4e924daab9f6a015",
+      "bytes": 28574
+    },
+    {
+      "path": "lib/features/sources/presentation/browse_widgets.dart",
+      "sha256": "9531b53b0a60ebed2daf62d32fb9da64901b0eb483a432a92f013c047eb83c73",
+      "bytes": 6094
+    },
+    {
+      "path": "lib/features/sources/presentation/extension_catalogue_controller.dart",
+      "sha256": "0ef8fd6396f4561c36f6f6be79c6868a8d5ee745162153fe0dd63c0fa376fbb3",
+      "bytes": 8348
+    },
+    {
+      "path": "lib/features/sources/presentation/extension_catalogue_view.dart",
+      "sha256": "fef0c79087b29535248b5abcf0ba46ef026d8d5b193a2972804fa576acdda7be",
+      "bytes": 13440
+    },
+    {
+      "path": "lib/features/sources/presentation/extension_file_import.dart",
+      "sha256": "0c4107e18248876226eb97df3ff9fbe3356572f919c5056aa63f90e921bb796c",
+      "bytes": 1295
+    },
+    {
+      "path": "lib/features/sources/presentation/extension_repository_screen.dart",
+      "sha256": "2f088084cf2a2725f2e6c9fdbabaae43aa6564ebd711ccbf980220f5dc9d30d0",
+      "bytes": 10721
+    },
+    {
+      "path": "lib/features/sources/presentation/global_search_controller.dart",
+      "sha256": "d5d7de26c9ff87ca9d71746d049023ed2f24bf299dece3735fd2aa1ae2656fa2",
+      "bytes": 4051
+    },
+    {
+      "path": "lib/features/sources/presentation/global_search_screen.dart",
+      "sha256": "e4e82259962d68b80d46506b43a23491f5a0588f68c17dc4d4ddb861560412fc",
+      "bytes": 10832
+    },
+    {
+      "path": "lib/features/sources/presentation/local_source_screen.dart",
+      "sha256": "f81e92234cd0342636f15cd0b6cdc41909ee7d1ac13fbff6a6c8312af3e50e7c",
+      "bytes": 4969
+    },
+    {
+      "path": "lib/features/sources/presentation/migration_source_selection.dart",
+      "sha256": "45cd050ad27bd28bb0e88d50fa01abb26a815d21db6704ad9b040f9642759d3c",
+      "bytes": 4834
+    },
+    {
+      "path": "lib/features/sources/presentation/source_bulk_migration_screen.dart",
+      "sha256": "2dd2a615baa8e2ded33ba89cd3dc10b0288f524f8623bbe843fb6e713896f618",
+      "bytes": 18062
+    },
+    {
+      "path": "lib/features/sources/presentation/source_catalogue_tools.dart",
+      "sha256": "d1c359dfd2afb80a8b8efab0e1f723a7a593569163dc8142aead6d1b1381c5b0",
+      "bytes": 1926
+    },
+    {
+      "path": "lib/features/sources/presentation/source_cover_image.dart",
+      "sha256": "4ff24c93790cf7549adf65d522f8baf902d48cba343926156350a77840059f40",
+      "bytes": 6145
+    },
+    {
+      "path": "lib/features/sources/presentation/source_filter_presets.dart",
+      "sha256": "96d434e42b66b3d058b0ded1b9cb2139b6c2ac32d638f9c7ea4e63e6a85e5231",
+      "bytes": 5562
+    },
+    {
+      "path": "lib/features/sources/presentation/source_filter_sheet.dart",
+      "sha256": "b74c222a97439ad6d3952ee912aef5ac1a61ae8d6ac13d3f0f4c2052beb9e42d",
+      "bytes": 16403
+    },
+    {
+      "path": "lib/features/sources/presentation/source_languages_controller.dart",
+      "sha256": "f7aa9ccf21d62b49967fff09f388df94c6b627c804f73c3ffbe2596d9f604668",
+      "bytes": 1810
+    },
+    {
+      "path": "lib/features/sources/presentation/source_languages_sheet.dart",
+      "sha256": "3bca7779ec4e39a8e83ded0ec26793f2c357a9ff1615785383e83770cb2e19b5",
+      "bytes": 8031
+    },
+    {
+      "path": "lib/features/sources/presentation/source_migration_library_screen.dart",
+      "sha256": "759073356790bdb956ab6f147b5e96f1be91e01863f1dae257f2465283159df7",
+      "bytes": 8372
+    },
+    {
+      "path": "lib/features/sources/presentation/source_migration_screen.dart",
+      "sha256": "113fd039b41f9a16d5e9ae10d5c149611a787a05cc84496073a49293e8278d79",
+      "bytes": 17946
+    },
+    {
+      "path": "lib/features/sources/presentation/source_migration_view.dart",
+      "sha256": "6966d2431d03aee84b6f844453aa87a621f5c8c0da2dd8089a255637ce584914",
+      "bytes": 5828
+    },
+    {
+      "path": "lib/features/sources/presentation/source_order_sheet.dart",
+      "sha256": "9ea3a0d61c0f554aeb7829bc289e5c7b3d550b9c5a9c2e41a1c8bd87e1e0803d",
+      "bytes": 1826
+    },
+    {
+      "path": "lib/features/sources/presentation/source_preferences_dialog.dart",
+      "sha256": "e4a6bfc844e1118bbfc2fd0e136d4153f7b33bc635ca8ee4e251d6ff732d224c",
+      "bytes": 10552
+    },
+    {
+      "path": "lib/features/sources/presentation/source_result_tile.dart",
+      "sha256": "4208c6082c2949cb5519efa5f76c25a23f8c8935e207b08c128b3a2c47607883",
+      "bytes": 2771
+    },
+    {
+      "path": "lib/features/sources/presentation/source_search_screen.dart",
+      "sha256": "b57d0875937293578fc14cd75bf94bab6d7b8709c4943f604a0e4389673df532",
+      "bytes": 18344
+    },
+    {
+      "path": "lib/features/sync/application/sync_controller.dart",
+      "sha256": "83a20a962c951f5e6d1bad171463ffa3400af02a81d3f5fdfa38cd961a8e8198",
+      "bytes": 11857
+    },
+    {
+      "path": "lib/features/sync/application/sync_lifecycle.dart",
+      "sha256": "2b83c9e5ac5eb383e27ed121757af28dad98737a6b6ec059c21f6c968d3e4c50",
+      "bytes": 6781
+    },
+    {
+      "path": "lib/features/sync/data/backup_sync_local.dart",
+      "sha256": "274c82126c5f214b7a7b709ed56f1b5608eed0927dc275c8c49e383c42c37d54",
+      "bytes": 2555
+    },
+    {
+      "path": "lib/features/sync/data/firestore_sync_remote.dart",
+      "sha256": "2d4271e62b862081067401520b49b2c5e77e0779612507e68e535c2b222320af",
+      "bytes": 15198
+    },
+    {
+      "path": "lib/features/sync/data/google_session.dart",
+      "sha256": "511023bc5af422786917d5150e58fbc74cfe89fc9aa4f102088517a307ac4a21",
+      "bytes": 4846
+    },
+    {
+      "path": "lib/features/sync/data/sync_blob_cache.dart",
+      "sha256": "c665c05ba4ac92ceb539acc0b429129b9634585f9dfc0688a2436bfd6de1661c",
+      "bytes": 2292
+    },
+    {
+      "path": "lib/features/sync/data/sync_chunk_plan.dart",
+      "sha256": "4b1ab33aae9f665832d8f6b2a60af7e3f6466f97aa862c3c1ef895a4108b9b04",
+      "bytes": 9317
+    },
+    {
+      "path": "lib/features/sync/data/sync_link_store.dart",
+      "sha256": "3430e2a2a75b85d3c8525f6b19dd045b7392df4686d9c2a0daed0ba178299e77",
+      "bytes": 2189
+    },
+    {
+      "path": "lib/features/sync/data/sync_manifest_cache.dart",
+      "sha256": "d4ca85feb2ca4608cbfa741a88cfbc6968d8a6b20556747db739d82e9a0db87a",
+      "bytes": 1111
+    },
+    {
+      "path": "lib/features/sync/data/sync_platform.dart",
+      "sha256": "abff6d0b6fec4dc0fd31a0fa5c7a88064c4254d902d85a05c8e0115858d07760",
+      "bytes": 1152
+    },
+    {
+      "path": "lib/features/sync/domain/sync_engine.dart",
+      "sha256": "37423044b244cabfb5ec10710ed513c17a769b0030d8260639d0b2c0fae84e51",
+      "bytes": 11206
+    },
+    {
+      "path": "lib/features/sync/domain/sync_merge_plan.dart",
+      "sha256": "8007058e21acb21422c5b1dc8075512b52eb6c4c9f99459ce45d8b7b556e40a9",
+      "bytes": 8901
+    },
+    {
+      "path": "lib/features/sync/presentation/sync_merge_screen.dart",
+      "sha256": "776b9ffe8d651aa0e32d3a4d78d0938110f3df53614d9d5241609a6b04533610",
+      "bytes": 9090
+    },
+    {
+      "path": "lib/features/sync/presentation/sync_screen.dart",
+      "sha256": "632944db8fdb77467e264a8b4b583be75ec50796ac9ea7c121d01d1a7682ea50",
+      "bytes": 10526
+    },
+    {
+      "path": "lib/features/sync/presentation/sync_setting_comparison.dart",
+      "sha256": "d14f9dc3759929cff18c7255c053980960c7ee1a2fa7a18ce0621c1a116a38b3",
+      "bytes": 14544
+    },
+    {
+      "path": "lib/features/sync/presentation/sync_status_panel.dart",
+      "sha256": "b03e80a50de6874197866ea1798d4a7c8cd257c548f7ff10376d12c099797868",
+      "bytes": 3710
+    },
+    {
+      "path": "lib/features/tasks/application/task_lifecycle.dart",
+      "sha256": "e51cc854eea7e36ac1e4210ce8665491ab3067491661ec95f90cefcf4029c188",
+      "bytes": 21157
+    },
+    {
+      "path": "lib/features/tasks/application/task_notifications.dart",
+      "sha256": "4f3dc7a8518b2f6d98fe83010b74eeca19fa6d33a5c24fd80f23ae07aed94f74",
+      "bytes": 6038
+    },
+    {
+      "path": "lib/features/tasks/data/task_platform.dart",
+      "sha256": "027695376b96155be4067cfaab9df8c9c85d836cac3f4c9a3291906dfa2f5d06",
+      "bytes": 11799
+    },
+    {
+      "path": "lib/features/tasks/presentation/task_settings_screen.dart",
+      "sha256": "100690cd8048028859ab63efc66d2cb45a63f94a63ebbb3379ab7caa1d7d5c17",
+      "bytes": 2754
+    },
+    {
+      "path": "lib/main.dart",
+      "sha256": "ae15efe96b686edecce0aaf27df5b248d22c94160fd0f16e190b27364d578c7e",
+      "bytes": 6514
+    },
+    {
+      "path": "packages/tachi_runtime/ios/Classes/TachiImageCodec.h",
+      "sha256": "b031f38820d4014c8603c1ea4f63913613b6e224c699c308f552048f357623a9",
+      "bytes": 567
+    },
+    {
+      "path": "packages/tachi_runtime/ios/Classes/TachiImageCodec.m",
+      "sha256": "1b7406337ad27c3481fe53f6c0bc0e9e70f36e2df09082fb471d5919f06c6025",
+      "bytes": 7183
+    },
+    {
+      "path": "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.h",
+      "sha256": "13c46cd4b9294b9d95fcafdf2da9b61ba09d88c03abd06caad1783c0cba6912d",
+      "bytes": 95
+    },
+    {
+      "path": "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.m",
+      "sha256": "f3d7391eebaafd2a52f3133d2e7b166de12c9cf3ab46766576fb48ea732e6c24",
+      "bytes": 11830
+    },
+    {
+      "path": "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.h",
+      "sha256": "3dc25a11448038cf3e1cc0a6ffa1e932d32a7607d86bca3a127910be500619a0",
+      "bytes": 320
+    },
+    {
+      "path": "packages/tachi_runtime/ios/Classes/TachiSourceBrowser.m",
+      "sha256": "eb1d7567d2731b1834b90427b007282e0f7e207c78a69877f91db4efe1af8c1d",
+      "bytes": 32430
+    },
+    {
+      "path": "packages/tachi_runtime/ios/tachi_runtime.podspec",
+      "sha256": "b9925a816f183f6580ca8490a72f14ff429ae67c3c22f2ff1103c39e487b655d",
+      "bytes": 881
+    },
+    {
+      "path": "packages/tachi_runtime/lib/tachi_runtime.dart",
+      "sha256": "a2b2af7d63d58b3f3dc9ce345672209203b68d3a752f213ee5ebf63c9f71804a",
+      "bytes": 1327
+    },
+    {
+      "path": "packages/tachi_runtime/pubspec.yaml",
+      "sha256": "3f7bf415534d4888b782654e5fd7cffb92ce6273ee8a3c6cdf8a6658c2ddb36e",
+      "bytes": 298
+    },
+    {
+      "path": "packages/vbook_runtime/LICENSE",
+      "sha256": "d821eebbdb2d564744ed916741e3ee3edee9ef1f18dae7e277e57e9aee654c55",
+      "bytes": 1101
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Classes/VbookFetch.swift",
+      "sha256": "a0ea34acc6423347bcab5bc447cbe680b99fb06e88ff2eb474d9712fb9b51c44",
+      "bytes": 9207
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Classes/VbookHtmlBridge.swift",
+      "sha256": "4e24704a3d5ddf2b78f8b3049ed69b3efab5588c11888f3341ce08396141eb76",
+      "bytes": 4509
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Classes/VbookRuntimePlugin.swift",
+      "sha256": "a66034b4aec322effbc6b0beb6bf4bcc355267c5cc2841369c4a9361bb47e63b",
+      "bytes": 9582
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Resources/crypto-js.LICENSE",
+      "sha256": "f729d14b7e1bf8adca0dcc38b93b929d14d53fcd5db56c3d1c9b2daa7aa69396",
+      "bytes": 1169
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Resources/crypto-js.js",
+      "sha256": "ee02257ffbaf0a9b481c7039b0f3bb20c360c9674fe4be8b38ae709b2ea59bbe",
+      "bytes": 219092
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Resources/crypto-js.provenance.json",
+      "sha256": "cf9b32652fe8ab15f18a1fa82cf39bdf34a1ce888f76fdd515108fe3b06cde17",
+      "bytes": 420
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Resources/host.js",
+      "sha256": "a13674a48f6f4a28aa6f34915d664e98f8fe1e4f61e344b0a4805fc0f4c97c62",
+      "bytes": 9896
+    },
+    {
+      "path": "packages/vbook_runtime/ios/Tests/VbookScriptEngineTests.swift",
+      "sha256": "44e436e0e1fed6f1a01e1e632acf563f2a6f42232f5319df8fe9dabd6ffec149",
+      "bytes": 2715
+    },
+    {
+      "path": "packages/vbook_runtime/ios/vbook_runtime.podspec",
+      "sha256": "a84506076c9c5fd92e7b26548fcee24ca1191dc1623441eb1ad0a64bfbbcc7da",
+      "bytes": 842
+    },
+    {
+      "path": "packages/vbook_runtime/lib/vbook_runtime.dart",
+      "sha256": "88a8076eabda18987b8a77f6ad793049bd11dea0b99aedf6d6049ef54d975b97",
+      "bytes": 74
+    },
+    {
+      "path": "packages/vbook_runtime/pubspec.yaml",
+      "sha256": "072fd180fd084e289930e615d9bdc8161cf30460b086fc58e2f168448d53c458",
+      "bytes": 328
+    },
+    {
+      "path": "packages/vbook_runtime/test/host.test.mjs",
+      "sha256": "f666ba16e869c31723b612a46a563a0ca0f857de8660786cfde48bae26c8dec0",
+      "bytes": 10371
+    },
+    {
+      "path": "pubspec.lock",
+      "sha256": "9db35edcf358c94f98dccdbc86c4752b3ab20d42b5627791fdde565fc7059000",
+      "bytes": 35386
+    },
+    {
+      "path": "pubspec.yaml",
+      "sha256": "37d55282cc4b38db91aea3d5cdc0ebec0275246d7956f3007b68b3e3e9f7b887",
+      "bytes": 1373
+    },
+    {
+      "path": "runtime/.gitignore",
+      "sha256": "775e90be4c33687bb47071222759bf70ca93f306c99f4b9245845553e21a68a1",
+      "bytes": 30
+    },
+    {
+      "path": "runtime/README-Suwayomi.md",
+      "sha256": "59ed87f8d64ccb3d65f547f1e8945d6333c2f13ae38a98d9324019cff752d81a",
+      "bytes": 8581
+    },
+    {
+      "path": "runtime/README.md",
+      "sha256": "8cc81ab5c1eb186b0ebabfb202f728ffa2f4e13730f9ce2ad62fd8f8ec3dab29",
+      "bytes": 7386
+    },
+    {
+      "path": "runtime/errors.mjs",
+      "sha256": "e351399591d3784d61c01ef40b8659e91a9c945f9089d266ea125650fdeb1dd6",
+      "bytes": 315
+    },
+    {
+      "path": "runtime/executor.mjs",
+      "sha256": "76d7365f5c374237736390f5e2c6765f611b120a6ebcfcf37addeb0dd36e9c64",
+      "bytes": 1807
+    },
+    {
+      "path": "runtime/host.mjs",
+      "sha256": "e622f8866872c35034058e98f8f02a0708a1531b95fd3476e7c38cf8851f382e",
+      "bytes": 10925
+    },
+    {
+      "path": "runtime/html.mjs",
+      "sha256": "0eda71354247f755e8196915f050cc19a9d52fee7cc2f9967da4097cd0070078",
+      "bytes": 4372
+    },
+    {
+      "path": "runtime/package.json",
+      "sha256": "f801cd11c5bdaacb5e946f1b31f983427849c5cb8ca14a0b29be0a3499725dbb",
+      "bytes": 344
+    },
+    {
+      "path": "runtime/package.mjs",
+      "sha256": "4c389f62b087392c6b76d720fe74816d3898ad2a60ef9b9a458348fcd519b207",
+      "bytes": 8082
+    },
+    {
+      "path": "runtime/pnpm-lock.yaml",
+      "sha256": "70bcac590bea186702f4302ae90e917ea087285289fe02281f0aa40353d2061b",
+      "bytes": 8730
+    },
+    {
+      "path": "runtime/server.mjs",
+      "sha256": "627a4e9081a04fc3ec3475a9a2132584fc81bafd5801b478bbce16235c97587b",
+      "bytes": 6584
+    },
+    {
+      "path": "runtime/store.mjs",
+      "sha256": "7545468f9d66202bcdae1afe72b1144d903e98f7bb49ad788bedcd23c351aaf7",
+      "bytes": 11920
+    },
+    {
+      "path": "runtime/test/real-packages.test.mjs",
+      "sha256": "c027b6e7dc6db6642c7d2b3b515b1637c9558c423d85ce868d011a2522713187",
+      "bytes": 4905
+    },
+    {
+      "path": "runtime/test/runtime.test.mjs",
+      "sha256": "e7b015c4051a4ee61ff7e39938106e27a60ac0dd96cfc2be9ff02cf05cd9aeca",
+      "bytes": 12626
+    },
+    {
+      "path": "runtime/test/suwayomi-live.test.mjs",
+      "sha256": "57cc7fd88412cb3155465ec635606e96e8fcbcfc0958b44be149cfcaa6d2b323",
+      "bytes": 3041
+    },
+    {
+      "path": "runtime/tools/setup-komga-fixture.mjs",
+      "sha256": "4025f11a363a5743742a6cf5b3c023ec14e2112f9fda7d34e3a2849144b8c66b",
+      "bytes": 3978
+    },
+    {
+      "path": "runtime/worker.mjs",
+      "sha256": "1dd87fb482b9c9802e280fbba471a1a4e9c124c7cc1b5fbc5f34a7da8abcc2ed",
+      "bytes": 663
+    },
+    {
+      "path": "scripts/compare_backend_reference.py",
+      "sha256": "3cfeb3286d2590a2a0e804e8dd206e42a5b704262bb20c29852e8f42e3888a3e",
+      "bytes": 21157
+    },
+    {
+      "path": "scripts/ipa_reference.py",
+      "sha256": "e2b49087d62ec667699cbe6368351bbec3573cd170e11889f5ab7def1c317a51",
+      "bytes": 30167
+    },
+    {
+      "path": "scripts/repack_ipa.py",
+      "sha256": "64ba172d1b64aa02ed460cd768191ad3eb8c32b258395c31dc13be9865e81a6d",
+      "bytes": 8213
+    },
+    {
+      "path": "test/activity_downloads_widget_test.dart",
+      "sha256": "d1e3515554779a0db35f9446f822292768b819a53bd971007660089580d2fc5d",
+      "bytes": 10184
+    },
+    {
+      "path": "test/activity_spec_interactions_test.dart",
+      "sha256": "0e9b5b6b2f59141f546abd57d772d0a90b60628d2e81a65134e21b7de7edf559",
+      "bytes": 9700
+    },
+    {
+      "path": "test/adaptive_navigation_test.dart",
+      "sha256": "fd7048c50ab6d857b486d1d0e345ceafa239d91c60b2c2f9c5272ed7dbfe6769",
+      "bytes": 9396
+    },
+    {
+      "path": "test/attachment_store_integrity_test.dart",
+      "sha256": "69adc9816556e565fe197652686da827f79a662dabc94015946c6492573ec72a",
+      "bytes": 4550
+    },
+    {
+      "path": "test/automatic_backup_test.dart",
+      "sha256": "91ccbad3c33ff575d8978091cd8a1bf69e9734040d40e1263aa4ee16e1d7c3b5",
+      "bytes": 13605
+    },
+    {
+      "path": "test/background_maintenance_test.dart",
+      "sha256": "bb01d9759a0655b5116a3e6a32a03baef3379f71c4c828212bdc5733a2644c5f",
+      "bytes": 11294
+    },
+    {
+      "path": "test/backup_activity_test.dart",
+      "sha256": "f5944dcbc8b5820b6d7dc56ef55929952b6bf8181369be59b46118164f943177",
+      "bytes": 4213
+    },
+    {
+      "path": "test/backup_compatibility_test.dart",
+      "sha256": "bcb05e99751ed8b95ed7202c90f1295cb2d39a1143149b5e9671a5cb49ad9070",
+      "bytes": 8780
+    },
+    {
+      "path": "test/backup_configuration_test.dart",
+      "sha256": "c373d370f0999ef73d579cdbf30c322d538fe234753f6d233566872fa5b9dc40",
+      "bytes": 28253
+    },
+    {
+      "path": "test/backup_preview_configuration_widget_test.dart",
+      "sha256": "c57c77735fced391649552250fa324c196e6f5dc5945525d911d497cf2c973d3",
+      "bytes": 2603
+    },
+    {
+      "path": "test/backup_preview_widget_test.dart",
+      "sha256": "60084cccce7a446ef7bad6a62ea10eff1fa95a64f7554bed99e7eee41cf4e306",
+      "bytes": 3464
+    },
+    {
+      "path": "test/backup_progress_help_widget_test.dart",
+      "sha256": "1b6ae6472e4874479dca1dd7fba1ab03c6572f70a639ca227194bbe93821ec24",
+      "bytes": 4017
+    },
+    {
+      "path": "test/backup_restore_completion_widget_test.dart",
+      "sha256": "75be4dd1f00307bbc45937246f44c8257c5d1145f6c46328987b1be6ad47db13",
+      "bytes": 7413
+    },
+    {
+      "path": "test/backup_restore_progress_test.dart",
+      "sha256": "e0dfc44a195c0797552ec82e1fb20fda492ad90da9c70dcf72ec64a464edcd0c",
+      "bytes": 4144
+    },
+    {
+      "path": "test/backup_service_test.dart",
+      "sha256": "f5f6680a7517e3cf505ccca790e39ede8304b436fca486924ee4250904335000",
+      "bytes": 11982
+    },
+    {
+      "path": "test/backup_source_availability_test.dart",
+      "sha256": "3ef284eca4b3b257e21d552bc16e011310645db63b99f0852c9f7ec73851292d",
+      "bytes": 9141
+    },
+    {
+      "path": "test/backup_source_names_test.dart",
+      "sha256": "fb9f75ac7d340f040d8d58d32b7bf5b2197dc753d2055d5d4d37d2e752bb1784",
+      "bytes": 6833
+    },
+    {
+      "path": "test/book_cover_compact_badges_test.dart",
+      "sha256": "047529856ef7a616bf24dfb0ac45e6944bc10e9b2dd73c599214e9d6760fe870",
+      "bytes": 1589
+    },
+    {
+      "path": "test/book_cover_viewer_test.dart",
+      "sha256": "15c802c9018f0c8a44cc0d18d79d9b60ecebf35a0ed46c7c1bda88c0edfca398",
+      "bytes": 11729
+    },
+    {
+      "path": "test/book_daily_reading_times_test.dart",
+      "sha256": "5494fed2a590a8d442c3c9f39ce04de3c3c468fddd51a2cebb0d37aa501c8f91",
+      "bytes": 13912
+    },
+    {
+      "path": "test/book_detail_layout_test.dart",
+      "sha256": "9f15a1368a4271c23f48497e4436bf3e9d74a83fd3233d32b7ec2acb687d4bf9",
+      "bytes": 27691
+    },
+    {
+      "path": "test/book_detail_reading_state_test.dart",
+      "sha256": "9c7358ca262224cae71b8fca995e7576f16895277ba23c1c535d3a4ebb09a518",
+      "bytes": 6885
+    },
+    {
+      "path": "test/book_metadata_management_test.dart",
+      "sha256": "e152b08abb94cd55f7ce48ddac705cf03701cae6b64f9bc7309e99db59a593a9",
+      "bytes": 12660
+    },
+    {
+      "path": "test/book_reading_times_test.dart",
+      "sha256": "06035f163ce76aa51673b9a96aeaa7c398f8bf1815e7561b0b7edfb7f9a49d48",
+      "bytes": 3608
+    },
+    {
+      "path": "test/bulk_download_queue_test.dart",
+      "sha256": "ea18ae48dccbfecc23155e67993086ff8fc48c00f97e8837b15bd5c5b9f1fbb1",
+      "bytes": 8751
+    },
+    {
+      "path": "test/cbz_export_service_test.dart",
+      "sha256": "ff4b54c0c9dc1478a8aadbc366fa45b6b3f1c3214e8f8677655918d0fc60df6f",
+      "bytes": 10496
+    },
+    {
+      "path": "test/chapter_list_management_test.dart",
+      "sha256": "652918c162802f5d8feb16330aa5915d74200ebf4295e85433da1228016ba76b",
+      "bytes": 6413
+    },
+    {
+      "path": "test/chapter_navigation_test.dart",
+      "sha256": "58433f56ff083ecbe43ce9dafca4ceb7de68bb7bd3d6172ba38e9fc947e5201e",
+      "bytes": 20085
+    },
+    {
+      "path": "test/configuration_restore_files_test.dart",
+      "sha256": "9c3f532bbca21a06b2c69b6a5efc35e980433f8b9b623969eeffe763af70b27a",
+      "bytes": 27586
+    },
+    {
+      "path": "test/configuration_sync_lifecycle_test.dart",
+      "sha256": "1997f2447c8d4bd58458863914267b4c74bc8a11a40c16d0b862c1244e60702f",
+      "bytes": 5858
+    },
+    {
+      "path": "test/continuous_reader_test.dart",
+      "sha256": "4616974a78d0359693bf128b40c8e8aea1b8e15e4f376b8a97b584706948eb55",
+      "bytes": 6817
+    },
+    {
+      "path": "test/cover_ui_integration_test.dart",
+      "sha256": "9c08e921a14211c5e562ca2b534c590d806f98870855be57dd21d4e03c6ab777",
+      "bytes": 7613
+    },
+    {
+      "path": "test/deep_link_reader_handoff_test.dart",
+      "sha256": "9e03ed27aab6f992ff6ff87e605abdb86f518a3e2431bf6961e3084490b4c2ac",
+      "bytes": 12777
+    },
+    {
+      "path": "test/deep_link_test.dart",
+      "sha256": "f55935779fcae73c06c43afc7fe9b480f3b38a40f28c479d24137657f608e97f",
+      "bytes": 20815
+    },
+    {
+      "path": "test/diagnostic_log_test.dart",
+      "sha256": "cf8c08835f1fb810cad04f62bf0680404421ddca68b032c4f4c21d41256b6c89",
+      "bytes": 11698
+    },
+    {
+      "path": "test/document_importer_test.dart",
+      "sha256": "006cb2aef6a35131ba7e2e4e5838977b4702c21e7b02325ed2756bcb92c06dea",
+      "bytes": 22231
+    },
+    {
+      "path": "test/download_batch_deletion_test.dart",
+      "sha256": "56088c43a982fbfefe137233816a583babc6a74155e0ae8e8a1bcb8b5846a122",
+      "bytes": 12635
+    },
+    {
+      "path": "test/download_cancellation_pipeline_test.dart",
+      "sha256": "86ac9da27e140e9dccd874778f01a81cf02322e06321678cca1a6df2b9beab08",
+      "bytes": 10025
+    },
+    {
+      "path": "test/download_deletion_test.dart",
+      "sha256": "1df4c5c3cc930ff8c9a5eac32478884bdcfa4fa48291514501d559791eac3be5",
+      "bytes": 17567
+    },
+    {
+      "path": "test/download_deletion_widget_test.dart",
+      "sha256": "3715d382747c31dd83ca51aa7a8ba7af979ac1a65da596a7595b1ddb5281f494",
+      "bytes": 7252
+    },
+    {
+      "path": "test/download_job_pause_test.dart",
+      "sha256": "49589a7d12f089810647d01592ea2d3bf4a2f8c028d1fb7fba431878ef73d2d3",
+      "bytes": 9769
+    },
+    {
+      "path": "test/download_management_widget_test.dart",
+      "sha256": "1e595dabd8dc85332bc558d480c253e1fd9ef6948268fba71cdbaa22cb291f16",
+      "bytes": 12105
+    },
+    {
+      "path": "test/download_page_progress_test.dart",
+      "sha256": "7b446478fd83d2fb3de0c54d826a96390f1cb43bfeed26720ef0627bf1ab248f",
+      "bytes": 5032
+    },
+    {
+      "path": "test/download_queue_bulk_controls_test.dart",
+      "sha256": "7b21ac693fdc2bdd8c5388e287763c3f9ee2dabf5b9105f880a10a4330468aae",
+      "bytes": 13608
+    },
+    {
+      "path": "test/download_queue_management_test.dart",
+      "sha256": "688ff769462436abd527d0adc7db4be03b3dfe95812c3a1763a399829de5ac56",
+      "bytes": 15605
+    },
+    {
+      "path": "test/download_queue_test.dart",
+      "sha256": "46725e74c84c7a63d54ca00a6cdd7cd8bfe5ea85cb30ce1d77d2d7e3c5d1be1b",
+      "bytes": 12229
+    },
+    {
+      "path": "test/download_source_concurrency_test.dart",
+      "sha256": "17c7133ce274642c888037b531fd7889c1a50681cb7cbf886f4437666e3a49b7",
+      "bytes": 5578
+    },
+    {
+      "path": "test/extension_catalogue_controller_test.dart",
+      "sha256": "a162610cfaa54b5ad38fe84d850cfafb5faa018de34f5cc20b7578f8c8e02598",
+      "bytes": 17445
+    },
+    {
+      "path": "test/extension_catalogue_icon_widget_test.dart",
+      "sha256": "a02b84a8c14143afb93f37b480b7a99b00e92a8eb7909d8d3a23eaeca8ef3151",
+      "bytes": 8964
+    },
+    {
+      "path": "test/extension_index_test.dart",
+      "sha256": "c8b500a8f97e2b86ed2bf7f707b18bec2ffafe54344a3b9c6e55f0369d13c2e2",
+      "bytes": 20652
+    },
+    {
+      "path": "test/extension_mutation_queue_test.dart",
+      "sha256": "4b7657d1adf283bbd01e5da3251354ed3c0de17dcf237417a73f44e3c85be424",
+      "bytes": 2033
+    },
+    {
+      "path": "test/extension_package_live_test.dart",
+      "sha256": "c2ca048544e70582287a6bf164c4c759464e6347c44b3f89c66b8580498091b0",
+      "bytes": 13683
+    },
+    {
+      "path": "test/extension_portability_test.dart",
+      "sha256": "f2c467cf38b63a42c377aeb5543b8cedc0e43c4724d76bd4a58fbf641fcc1008",
+      "bytes": 28470
+    },
+    {
+      "path": "test/extension_recovery_lifecycle_test.dart",
+      "sha256": "e08de05042f1fe5fa285a52175e9c93be63b548eed312cecdab48e7709f7e974",
+      "bytes": 5440
+    },
+    {
+      "path": "test/extension_repository_widget_test.dart",
+      "sha256": "403173906971af7df92c7e8eaefb5738e04b680b63239a04ca80232f03024f02",
+      "bytes": 17101
+    },
+    {
+      "path": "test/external_automatic_backup_test.dart",
+      "sha256": "f9870ba7ba2794ac5fb33c0017b2cfba4d85ed3917fdeb36bf437c2062a3e36e",
+      "bytes": 5617
+    },
+    {
+      "path": "test/external_backup_metadata_test.dart",
+      "sha256": "94a724da957930dc177285597fac524999d7b697193211389f06f9ed06af5027",
+      "bytes": 7045
+    },
+    {
+      "path": "test/folder_comic_import_test.dart",
+      "sha256": "b48d871a629000e8b2a1b9298030cfb4e39b9fbf4b8d69e2edaaf4ef1e811e82",
+      "bytes": 15956
+    },
+    {
+      "path": "test/google_account_actions_test.dart",
+      "sha256": "51bf2e45658739f2db89f8ef81a25069c0da46225d9be55820ff69384b8d6e89",
+      "bytes": 1244
+    },
+    {
+      "path": "test/history_selection_test.dart",
+      "sha256": "8ffe241ebd6f18566d367914f7e3cc0a8216ebd07af591bf2ee0651a4c542525",
+      "bytes": 9323
+    },
+    {
+      "path": "test/incognito_reader_test.dart",
+      "sha256": "6ebbc004969c6745cdba683ad875316eafe5b8adb91751374f1fe486cfeea2bf",
+      "bytes": 15221
+    },
+    {
+      "path": "test/legacy_chapter_remap_test.dart",
+      "sha256": "41571ef35e576a76077970ad024d6c632f680923d76f0c26ee2edddd08fa5c26",
+      "bytes": 6589
+    },
+    {
+      "path": "test/library_add_categories_test.dart",
+      "sha256": "9f059aa79f52350313f603b0b92485e8b397551784ecf45a3f7443a4046f0ec1",
+      "bytes": 10652
+    },
+    {
+      "path": "test/library_author_sources_filter_test.dart",
+      "sha256": "1e3a1da7d5517eeb76b30b8bd4fe606878ea0e6ead67a8c8672ddc8ff61a3e88",
+      "bytes": 10368
+    },
+    {
+      "path": "test/library_automatic_update_test.dart",
+      "sha256": "a94c253062d33227941f7e994fd7b18c68f7cd729ca7714fd4ff809fa4c19e6e",
+      "bytes": 14979
+    },
+    {
+      "path": "test/library_bulk_actions_test.dart",
+      "sha256": "f1654e99dba36ac47b1d3e4ce895fdc17654d5dbbc5097ddbbe66008cc781e56",
+      "bytes": 5092
+    },
+    {
+      "path": "test/library_bulk_download_widget_test.dart",
+      "sha256": "f32765a9b4c749310df556200f4553672215029fdf2a2bcc99206a6d3880cf58",
+      "bytes": 18281
+    },
+    {
+      "path": "test/library_cache_maintenance_test.dart",
+      "sha256": "613dd8605faf0e16964d004c1b0537850415ec0df0e6f28cf99f4201c8688c2e",
+      "bytes": 10998
+    },
+    {
+      "path": "test/library_categories_filters_test.dart",
+      "sha256": "87e2684800be9f0a9dbf991a7674b54728f29618ee17f1322fdc5fda1b723516",
+      "bytes": 15374
+    },
+    {
+      "path": "test/library_category_preference_migration_test.dart",
+      "sha256": "686866a61f6de019a7a30a394e61c2c2704348dc6e8be8f76821dcab08508821",
+      "bytes": 8822
+    },
+    {
+      "path": "test/library_category_refresh_widget_test.dart",
+      "sha256": "e5f1c42168edffe63ba94e600f06187e0a00df679d80d7abf1ad2eb762dc752c",
+      "bytes": 13596
+    },
+    {
+      "path": "test/library_category_registry_test.dart",
+      "sha256": "f2fcceb40c5f08940ea5881647810ff06c26a39f9cbd05b6bd278309f6260891",
+      "bytes": 11616
+    },
+    {
+      "path": "test/library_diagnostics_test.dart",
+      "sha256": "17ecf4101415c1512fb12c860cf8feb25c1a1f9112261893c82c4bc4eb9ecf63",
+      "bytes": 7187
+    },
+    {
+      "path": "test/library_display_metadata_test.dart",
+      "sha256": "d0983f1b7bea3185488cd6bc9fbaf5f22f431b61c206893b03fde4475f4684c2",
+      "bytes": 9681
+    },
+    {
+      "path": "test/library_filter_layout_test.dart",
+      "sha256": "279a6c52edaf69af4d83c0bf144ce093d65e3ba4031a77e55564f3feea7004fd",
+      "bytes": 8995
+    },
+    {
+      "path": "test/library_filter_presets_test.dart",
+      "sha256": "cac7b93e5a3562920782ab27bf07e64be23b9ea58fd12907004803ded5f232cb",
+      "bytes": 3838
+    },
+    {
+      "path": "test/library_folders_test.dart",
+      "sha256": "321be5a673cd514d5e01d7b2ce18597422a7883d2e5139081d2a48ab10b6a298",
+      "bytes": 8041
+    },
+    {
+      "path": "test/library_folders_widget_test.dart",
+      "sha256": "be1ab15e175948272510c760c98aa3c2238625d377b474162bc3b6fb317f9398",
+      "bytes": 8439
+    },
+    {
+      "path": "test/library_group_order_test.dart",
+      "sha256": "48fed65c815cba865cc47e20e361ba693ef5823e574a695edf485114adc82dcd",
+      "bytes": 13591
+    },
+    {
+      "path": "test/library_grouping_test.dart",
+      "sha256": "a71ac1c45ef7c522f69c73f9f1de3c033e52dddf08c82f9ef46d2ba37c3942c8",
+      "bytes": 6533
+    },
+    {
+      "path": "test/library_grouping_widget_test.dart",
+      "sha256": "9ad6c2c7f6465db8d2f38a12403295f1feae8f114613b31dcaa875dee5409167",
+      "bytes": 10899
+    },
+    {
+      "path": "test/library_insert_restore_test.dart",
+      "sha256": "db731c463143f39439a9686c52ff9ea5cdc3aa6c92f151d1b409f407faef536a",
+      "bytes": 12531
+    },
+    {
+      "path": "test/library_maintenance_widget_test.dart",
+      "sha256": "f9c96077f114eef2594aba71545faea4defd04358afe1738d19f728d1f6bf31d",
+      "bytes": 6654
+    },
+    {
+      "path": "test/library_metadata_batch_test.dart",
+      "sha256": "02e39412c97729b52996e50877b8b38f15e593d2d0fb7b6683810c7afd99100f",
+      "bytes": 5206
+    },
+    {
+      "path": "test/library_opaque_navigation_test.dart",
+      "sha256": "7cc94ac59aa09e0c97dc6310db8058c4b954f7872c32c13fd4474bb9ddd81740",
+      "bytes": 5966
+    },
+    {
+      "path": "test/library_recovery_store_test.dart",
+      "sha256": "8289288050c74ccfce4900c1bc71bdeaad361338c10a3fa18a613804f33d4ba9",
+      "bytes": 10107
+    },
+    {
+      "path": "test/library_safe_repair_test.dart",
+      "sha256": "c4b7a46a4f97f56b47a034856b36fbcb9e7ffa124ec0407001f29addfe771afd",
+      "bytes": 6097
+    },
+    {
+      "path": "test/library_scoped_update_test.dart",
+      "sha256": "def31c96f34ad05fc0c7da19e2534d60dfbb030e80eece1e7a7c580f8943c8d9",
+      "bytes": 16369
+    },
+    {
+      "path": "test/library_search_test.dart",
+      "sha256": "627ef8d051f50885c3012b5eb6bda447050d50fe092565fe92a592ecadfc8dc6",
+      "bytes": 3311
+    },
+    {
+      "path": "test/library_update_events_test.dart",
+      "sha256": "c102cd172b3c22f19554f0fc7a53a61556706cf1714a12e89997ea3794e9f568",
+      "bytes": 17360
+    },
+    {
+      "path": "test/library_update_notifications_test.dart",
+      "sha256": "d5205101e0c1250c3b620051486a3fa060d6d45b895bad1758f1f98b23f56607",
+      "bytes": 9208
+    },
+    {
+      "path": "test/library_update_report_widget_test.dart",
+      "sha256": "554e636d0d0a79a87e0e80c37c90d6ccc91d1133627b0d215e61cad5b0123d13",
+      "bytes": 3384
+    },
+    {
+      "path": "test/library_view_model_test.dart",
+      "sha256": "1c91520cd02cfff93fb2e05ae4e490b93d45600df006e5e9c409fabe88ffab8c",
+      "bytes": 19745
+    },
+    {
+      "path": "test/library_view_session_test.dart",
+      "sha256": "b79c4638e75e7ec52326a68a031a8c93e1e89b2140af3d3e60d9b341e3f9dfb6",
+      "bytes": 4156
+    },
+    {
+      "path": "test/local_comic_import_test.dart",
+      "sha256": "fd8a42c8c85ae789b196ddd91af1b306b8caceac3c2cda4d027e0c3e6a9cd554",
+      "bytes": 4439
+    },
+    {
+      "path": "test/log_diagnostics_widget_test.dart",
+      "sha256": "44b25a03c4bffa8c36c89f6547d53d7af8c70d253642c5615e63107adf51c4f6",
+      "bytes": 7134
+    },
+    {
+      "path": "test/manga_completion_validation_test.dart",
+      "sha256": "d85d857cde0592bb52cdbf7b827e3867694080783c475865527128c0fdc82764",
+      "bytes": 12716
+    },
+    {
+      "path": "test/migration_multi_source_test.dart",
+      "sha256": "02fb24f39015ab932c2954b229e0d67f4f543eb8037e2490aacda992703694c2",
+      "bytes": 12693
+    },
+    {
+      "path": "test/mihon_backup_exporter_test.dart",
+      "sha256": "9be980566ded64c31fc1dbfb6056ef73c4f59e60283cb021ac60c9175b1c4611",
+      "bytes": 11875
+    },
+    {
+      "path": "test/mihon_export_ui_test.dart",
+      "sha256": "fa483f801bd3d76b8d7cae6bccc7ddd172d4b63557968d5156363dd699dc34d4",
+      "bytes": 7935
+    },
+    {
+      "path": "test/native_cloudflare_session_test.dart",
+      "sha256": "edb37b904c09fcb325a6e5d562322277c7b5f6c0528a105618402759d5e67b56",
+      "bytes": 10513
+    },
+    {
+      "path": "test/native_cover_repository_test.dart",
+      "sha256": "c21cfbf9dc71a7aacb40b0ead54b6a905af021852c833debeeed6cbd36785fea",
+      "bytes": 12131
+    },
+    {
+      "path": "test/native_image_pipeline_test.dart",
+      "sha256": "f1dca13e3c0145ed0397b67238500ef40150658c85af734fcaad1cf05ad6b96d",
+      "bytes": 29241
+    },
+    {
+      "path": "test/native_runtime_lifetime_test.dart",
+      "sha256": "1800a46948bc4ea6024c772f39b923a516d720cb114a7c8db8f3f816581dd3b8",
+      "bytes": 6858
+    },
+    {
+      "path": "test/native_runtime_timeout_boundary_audit_test.dart",
+      "sha256": "7baadd4edfaea73ef4e8ff2224451633ec32aa2dee5190197344ef3ad96e40da",
+      "bytes": 5072
+    },
+    {
+      "path": "test/native_tabs_test.dart",
+      "sha256": "261a9ceb04f379a11314c5f33b5529d729ed041d49edc144a76c25ba23e7201e",
+      "bytes": 9771
+    },
+    {
+      "path": "test/native_tachi_repository_test.dart",
+      "sha256": "77357548b31dc87b3159cb1009172b65736dcf28742e4f989d2b7db3977536a4",
+      "bytes": 52219
+    },
+    {
+      "path": "test/native_vbook_repository_test.dart",
+      "sha256": "f631708f104b12b2164e4c2bd2997d5ce0b99861f54fbdc320361609bd0adcfa",
+      "bytes": 23185
+    },
+    {
+      "path": "test/navigation_preferences_test.dart",
+      "sha256": "bbc642f2e697df3b4e659f759038afaa288e3edf5a1076ae9d8db33ef693d57b",
+      "bytes": 4957
+    },
+    {
+      "path": "test/network_tools_test.dart",
+      "sha256": "2b2e0e2f7426b25baf4b00ebf1eef07f21b419312eb9d314563f9b6194336950",
+      "bytes": 7470
+    },
+    {
+      "path": "test/on_device_source_repository_test.dart",
+      "sha256": "fe09c46a708122779955bf16fba73d8e092012946808f12cac35e04d1ea0563f",
+      "bytes": 9529
+    },
+    {
+      "path": "test/paged_read_completion_test.dart",
+      "sha256": "85a0b5134b3ffe23dcb136df95881d0012fcbb07021699f4e2129a95dd3c14e5",
+      "bytes": 17078
+    },
+    {
+      "path": "test/privacy_app_lock_test.dart",
+      "sha256": "172247b0dbb2e88e778f04a7ccff7d5d720502429c7bda7ba4ddd093ef819c3f",
+      "bytes": 21560
+    },
+    {
+      "path": "test/privacy_native_boundary_test.dart",
+      "sha256": "f6886422a6e8cbd06289ab5126311a9af2fbec5a14fed79e5675b4676e8f5e0d",
+      "bytes": 2236
+    },
+    {
+      "path": "test/privacy_navigation_integration_test.dart",
+      "sha256": "cb06b6f02b9c1d135a8f0e2bcb8afbc22264ae5d5a74d872577164ed3b1a55bb",
+      "bytes": 5317
+    },
+    {
+      "path": "test/reader_advanced_settings_layout_test.dart",
+      "sha256": "3e8e2b6cca4424a8e2d5e07fcea3ced76f99d194ef65bf1ec0430fae38a01e64",
+      "bytes": 6178
+    },
+    {
+      "path": "test/reader_auto_scroll_test.dart",
+      "sha256": "507f8a7b3c7b82df70acbc6f6bcd189afaad314951a0f0fcd7ed5974a9ed7aa9",
+      "bytes": 2756
+    },
+    {
+      "path": "test/reader_download_restore_race_test.dart",
+      "sha256": "24aad1b4b9412fa25521434a1a06d8a6c498bd380f5cd72509f0d1a04c0e3bc6",
+      "bytes": 7581
+    },
+    {
+      "path": "test/reader_hold_scroll_test.dart",
+      "sha256": "645ab7a65cad1415c2063e846a8ca6795b0e50ad5c851ea28992bc02f29774e2",
+      "bytes": 3631
+    },
+    {
+      "path": "test/reader_image_loader_test.dart",
+      "sha256": "730073498c1349f0945447df212262b83c14be345e571f1c17a0db3d212b88e3",
+      "bytes": 2888
+    },
+    {
+      "path": "test/reader_image_region_test.dart",
+      "sha256": "d2b9ec30923fe8256bbb13564b0d9551ddf7e9a3e9b193bdda1b01711d4c96a8",
+      "bytes": 4393
+    },
+    {
+      "path": "test/reader_keyboard_controls_test.dart",
+      "sha256": "1e7973d49d9b4e72b81d325d352362c7c3cf7a7d1488ac19de2410a6c8a48b9a",
+      "bytes": 2224
+    },
+    {
+      "path": "test/reader_options_test.dart",
+      "sha256": "259ed77327532cc966285c173de1758290e2e980c5fb793dc00dfa908fd25053",
+      "bytes": 11588
+    },
+    {
+      "path": "test/reader_platform_test.dart",
+      "sha256": "49a28d9915a31101d36eaeacfdb46b539463bfb48d83598c9915b25e024e8e97",
+      "bytes": 3575
+    },
+    {
+      "path": "test/reader_progress_test.dart",
+      "sha256": "0fccec8a62cfdb4dad9c6fbc2bd1ce3498db71a0c6057e9b96cc5fad22731e80",
+      "bytes": 10862
+    },
+    {
+      "path": "test/reader_system_ui_test.dart",
+      "sha256": "50110f9d23a2add94ff9f6cf062a9bd6ba761e169c3abec22bf17b763a46a9be",
+      "bytes": 2165
+    },
+    {
+      "path": "test/reader_tap_regions_test.dart",
+      "sha256": "3c816436037a49a40f31e24717b4959769a56339534c8e974bd8dc9e6ca52089",
+      "bytes": 3829
+    },
+    {
+      "path": "test/reader_ui_test.dart",
+      "sha256": "36f0b2f3e8740648d262e8333b9bb6a365668d237cea0ef1638a8d30d69871b3",
+      "bytes": 43686
+    },
+    {
+      "path": "test/reading_info_extended_widget_test.dart",
+      "sha256": "6eefcedd1df5c4baab9a04e9a37d9c55942d370ddd47300b519edbd6418e2423",
+      "bytes": 7084
+    },
+    {
+      "path": "test/reading_statistics_extended_test.dart",
+      "sha256": "76a1299bb9746f05319b94f334872dadfe040658a5abc343a71c9c50ae2449d1",
+      "bytes": 11363
+    },
+    {
+      "path": "test/reading_statistics_test.dart",
+      "sha256": "c8efa4ed93e4a5ab564e30b76127a7370b604c2f6d8dc5ab02fa9a67066f4dee",
+      "bytes": 1661
+    },
+    {
+      "path": "test/restored_native_reader_test.dart",
+      "sha256": "c6b203bb112419173cc1b1e2b86c9e16df13c99d3e905402adb474d21eb1893d",
+      "bytes": 6270
+    },
+    {
+      "path": "test/restored_source_live_test.dart",
+      "sha256": "672e0285c50373fab975790e43f82663d34a72c60b8fed3dc138d198eb18de93",
+      "bytes": 2664
+    },
+    {
+      "path": "test/restored_source_reference_test.dart",
+      "sha256": "ed37c08694adca223dd2ac53a3f9bf19e39f53bdc367d252c6319750d4aafbfb",
+      "bytes": 5071
+    },
+    {
+      "path": "test/source_browse_widget_test.dart",
+      "sha256": "1dffc43d8145fcac121c8ada0e3f7b2dc966af5e2c5ac9bbfa69d73cb1649f95",
+      "bytes": 17887
+    },
+    {
+      "path": "test/source_catalogue_features_test.dart",
+      "sha256": "eb5cdfc38823a4a39ce70c3b6a478719522700d647ae47c1624e6c56c068415a",
+      "bytes": 9343
+    },
+    {
+      "path": "test/source_catalogue_widget_test.dart",
+      "sha256": "310a454851e9919ab4f29b709db18c101e0bdbd42d0c9ff15510b1d712ec32ed",
+      "bytes": 16846
+    },
+    {
+      "path": "test/source_cover_image_test.dart",
+      "sha256": "c755436e17b5da142a2a29d1f86ec295210a9efd193ab4fa3190e9f653a8ec97",
+      "bytes": 10427
+    },
+    {
+      "path": "test/source_filters_test.dart",
+      "sha256": "07c670bdc23c86514325fcc3411c1e449d70ca717227fd4ecdab784008d67053",
+      "bytes": 17161
+    },
+    {
+      "path": "test/source_icon_widget_test.dart",
+      "sha256": "4e8308e0510d347fe21f5e452697ae280e13baffe8958cf37d20c049d5965ece",
+      "bytes": 3954
+    },
+    {
+      "path": "test/source_languages_settings_widget_test.dart",
+      "sha256": "18d9b595bf65f473aa39015c0ec79db44ac53fc3311ffbed8bbe49bbed6aea71",
+      "bytes": 7249
+    },
+    {
+      "path": "test/source_languages_test.dart",
+      "sha256": "db8167d9f0460970e6068f56ab0efea99127886a011972d1a2d7eaade024d00c",
+      "bytes": 3623
+    },
+    {
+      "path": "test/source_memo_test.dart",
+      "sha256": "75a75a0b7ee3888063861aac0371045d3906d3c96cccb952803374409cb2064f",
+      "bytes": 4979
+    },
+    {
+      "path": "test/source_migration_configuration_test.dart",
+      "sha256": "87b1e976d8f87c3cfd6210b9286cfb711b296425ac43e441f0d726ac72de2fce",
+      "bytes": 27920
+    },
+    {
+      "path": "test/source_migration_test.dart",
+      "sha256": "27b09ae91ca63d1471b45d4ad37739fb918173a8f4ebb93b72cf1c683aef7fce",
+      "bytes": 14538
+    },
+    {
+      "path": "test/source_migration_widget_test.dart",
+      "sha256": "6daa77d6571dad86427a69d0e4f57e1fc11e73cf908f523c24d7d31379cbf3c6",
+      "bytes": 21502
+    },
+    {
+      "path": "test/source_preferences_widget_test.dart",
+      "sha256": "830f198c604291e1b7f1ec45c9e952930c4e5e96318af972c9eb9d8e423e8f26",
+      "bytes": 8618
+    },
+    {
+      "path": "test/source_recents_privacy_test.dart",
+      "sha256": "bf8f155d8029e1adb14016702b89dbdc39f1c312cda9a08845bd2413f37ebd85",
+      "bytes": 1789
+    },
+    {
+      "path": "test/source_repository_test.dart",
+      "sha256": "3439b44b5eb84eb3ecc9874d8707a019fc987861f0f60d347a601825a0772340",
+      "bytes": 20835
+    },
+    {
+      "path": "test/spec_library_activity_gaps_test.dart",
+      "sha256": "43abc72fbb1037b767aaeff8c9363f536e2ae45e173fc0de5a22179f8f0c85e0",
+      "bytes": 12877
+    },
+    {
+      "path": "test/spec_library_states_test.dart",
+      "sha256": "dc342315ccca5f4e6bda3bd74af99e1f4e7f41ed39b1d7a2a78c468f4c815370",
+      "bytes": 7968
+    },
+    {
+      "path": "test/spec_sources_layout_test.dart",
+      "sha256": "875cbc7b623e49b8ca795f7fb7d1242430a92fa88b668cd4e454a531072a1048",
+      "bytes": 14121
+    },
+    {
+      "path": "test/stable_source_chapter_identity_test.dart",
+      "sha256": "f5948164a192b3450b25ca4405fde65acc5eec76f3635c064475dd580ac3c6b9",
+      "bytes": 7872
+    },
+    {
+      "path": "test/storage_maintenance_widget_test.dart",
+      "sha256": "a6076c1f9c8a086604bff8bbce9c2d40f5f8095076e74f0f9e96bd6aa1dde299",
+      "bytes": 5141
+    },
+    {
+      "path": "test/support/backup_fixtures.dart",
+      "sha256": "9d4da4e458d93c2fcf6f583ca04f78c70a5ff4734503036dbe0c5a5dd0ae582b",
+      "bytes": 8449
+    },
+    {
+      "path": "test/support/sync_fakes.dart",
+      "sha256": "0e495cecc5fc1a1fc255733426f925998499ebd3165c93ee9a683e8351cccc88",
+      "bytes": 3544
+    },
+    {
+      "path": "test/support/unlocked_app_lock.dart",
+      "sha256": "7763656eb95efd14b48ca33f8093560896ac535654c11d4af104a4fbc95c6f3a",
+      "bytes": 422
+    },
+    {
+      "path": "test/sync_auth_test.dart",
+      "sha256": "42d9bb845f22737565f5acd164370cf440db69d97d4acd0013b84cd1f93649a6",
+      "bytes": 9891
+    },
+    {
+      "path": "test/sync_auto_resume_test.dart",
+      "sha256": "5f39b45682059aaf4f9b0808a7c00fa868cce7e982a2735ebefd3ba9076d6de9",
+      "bytes": 6595
+    },
+    {
+      "path": "test/sync_backup_integration_test.dart",
+      "sha256": "692631d9e160bbf6caa6f7a4604ba6d789030dd8bd164552c498076de548c44a",
+      "bytes": 4924
+    },
+    {
+      "path": "test/sync_cloud_validation_test.dart",
+      "sha256": "3fd0795932113530747c17a5b448c57110bc63cb657d7fd823284b6db23e71d5",
+      "bytes": 1634
+    },
+    {
+      "path": "test/sync_engine_test.dart",
+      "sha256": "a9a55b0093b59ffdfb7e9d35eaf59456ddb28f9e0226636ff9041e8d34336675",
+      "bytes": 7046
+    },
+    {
+      "path": "test/sync_extension_retention_test.dart",
+      "sha256": "c7340893659adadb68588ea6e3a3dd0d252970197cdb8c61e228ef120e4cae2e",
+      "bytes": 11818
+    },
+    {
+      "path": "test/sync_incremental_test.dart",
+      "sha256": "b794ba97ef7056e1220b8b7a5c86069d0abc18e69d28911742a64d1150c98c9d",
+      "bytes": 8960
+    },
+    {
+      "path": "test/sync_lifecycle_test.dart",
+      "sha256": "254d6bbd9bc131b92244332504f1281ba0b3ecc97e95cdf6ab863e536931a7f3",
+      "bytes": 8373
+    },
+    {
+      "path": "test/sync_manifest_cache_test.dart",
+      "sha256": "2b548dd3500f784a1eaa9ae79fa0653eac54d12a37e4736a4ba01c5d41918892",
+      "bytes": 1675
+    },
+    {
+      "path": "test/sync_merge_legacy_test.dart",
+      "sha256": "e1c9a8f8a2c8c83997cd7b75bdb23410d7ce69ba11d7f02f10b4bce38ab4ce26",
+      "bytes": 3772
+    },
+    {
+      "path": "test/sync_merge_widget_test.dart",
+      "sha256": "b0312d35710159f9e8f252e68ac3519941d284ef1b10e692293566f1d42b768d",
+      "bytes": 7541
+    },
+    {
+      "path": "test/sync_record_resolution_test.dart",
+      "sha256": "4f5ee38fe9da8be3fb17c6a62a647d8694a5779335bc051db7bec74ae3add3e7",
+      "bytes": 5511
+    },
+    {
+      "path": "test/sync_screen_test.dart",
+      "sha256": "b65f34a31a422007cd2fb20da06e33c7597dc0e131545c733add3a122f93c606",
+      "bytes": 3837
+    },
+    {
+      "path": "test/sync_setting_comparison_widget_test.dart",
+      "sha256": "4edf530dd39f50eb57d732523f4bb17261ecda19f51703dbc689696a1a7f181c",
+      "bytes": 10384
+    },
+    {
+      "path": "test/task_lifecycle_test.dart",
+      "sha256": "7e1282f18358cdde661ff7046126dcd488477443b509bd480c455b568e4807cc",
+      "bytes": 32846
+    },
+    {
+      "path": "test/task_platform_test.dart",
+      "sha256": "e7cc7e79418f4d44a16b92ecd653ef6ded58d2f7dcdd1b183a659b6917e732df",
+      "bytes": 8225
+    },
+    {
+      "path": "test/ui_spec_cover_settings_followup_test.dart",
+      "sha256": "d175be649ffdbf6f1f513269074700fdac7388bd0185e5120619f6f2e2c67c80",
+      "bytes": 5085
+    },
+    {
+      "path": "test/ui_spec_settings_test.dart",
+      "sha256": "3eaafb352c50c0e5fd3ba9dcf4b9f7c3c4666ad66a555b966d174c7d88a589b6",
+      "bytes": 11108
+    },
+    {
+      "path": "test/ui_spec_sync_status_test.dart",
+      "sha256": "312a16a56a7b98c71fd37f58201261b47a39829be8084a68b072b533b27a5407",
+      "bytes": 3616
+    },
+    {
+      "path": "test/vietnamese_presentation_test.dart",
+      "sha256": "2416a0aa856dd541f28b0c99a18ab593ff8e3995574cefd76a3daa7a0e5b7fb9",
+      "bytes": 5538
+    },
+    {
+      "path": "test/widget_test.dart",
+      "sha256": "421efe1ec1fa19bfe2ea26861fa544fd80f64e489268ae01f1146f9809359f9d",
+      "bytes": 5924
+    },
+    {
+      "path": "tests/test_backend_reference.py",
+      "sha256": "9307a1d8e17e5e014dfbd224b6dbf63d3662d2a6798bdf95b06c6eb5f36983f5",
+      "bytes": 12485
+    },
+    {
+      "path": "tests/test_inspect_vbook.py",
+      "sha256": "ffcacfe5901a9ffe5212210db9aa3a1547e4138e926a1c77bb37d74eaf0a48c9",
+      "bytes": 10852
+    },
+    {
+      "path": "tests/test_ipa_reference.py",
+      "sha256": "a765c6efcd702a3654689311ea67b6c61044d85b1eccf72d8e299021b6d5d6a4",
+      "bytes": 21046
+    },
+    {
+      "path": "tools/build_ios.sh",
+      "sha256": "54a51d76be0c48b58215fb02e4a8ee917af6daed63f7dc751478b20c25b1bfbd",
+      "bytes": 6335
+    },
+    {
+      "path": "tools/check_native_runtime_bundle.py",
+      "sha256": "191aa95bc7b0555477a4e3a1e9d3641b75d2f242fcc7f29aa5cf79145ec1bb92",
+      "bytes": 13163
+    },
+    {
+      "path": "tools/configure_firebase_ios.py",
+      "sha256": "ccaec88f94b26b45741e03ea8c4adcd9b654489d3ff300eb09aacc72eca4b80c",
+      "bytes": 8086
+    },
+    {
+      "path": "tools/configure_ios_tachi_runtime.py",
+      "sha256": "cbc8e3bbd46f0b0bffd2d5b22edfe97243c93fa3d178da5e3845495ae71914b2",
+      "bytes": 14246
+    },
+    {
+      "path": "tools/inspect_ipa.py",
+      "sha256": "6dc27f97593ea9388382a72e3be16fdf7c241454a5a178694d3810b8537e0587",
+      "bytes": 28645
+    },
+    {
+      "path": "tools/inspect_vbook.py",
+      "sha256": "7cf3646023d061d86b2d49b33af2bc4b410b7fd4fc2bd2035063591d9feee446",
+      "bytes": 17569
+    },
+    {
+      "path": "tools/native_extension_engine/build.py",
+      "sha256": "5e9e0a78d29a97ca45b9dfcc895ee7cebd1e4a23a70f62077f510bf05b14f67b",
+      "bytes": 15497
+    },
+    {
+      "path": "tools/native_extension_engine/coverage/CompressionCoverageProof.java",
+      "sha256": "9fee8b42370dbf4dc9e19debd106ad891b311fe5d52d649ccbe2c8243c7ff2cb",
+      "bytes": 2800
+    },
+    {
+      "path": "tools/native_extension_engine/coverage/HostCoverageBridge.java",
+      "sha256": "0c901ec7f15143dff29b022d4787d778eba0c840c8bd15801e5c1cbf196695d4",
+      "bytes": 1896
+    },
+    {
+      "path": "tools/native_extension_engine/coverage/HostCoverageDiagnostic.java",
+      "sha256": "96dabd849204817b47cdbee27d3478d6309bfd601d808c8d8a5259072dd599b4",
+      "bytes": 2540
+    },
+    {
+      "path": "tools/native_extension_engine/coverage/compression-fixtures.json",
+      "sha256": "4f6bedd5a97a7b9371c6cd1ba270dc92e60638742309777c68446854f004058e",
+      "bytes": 1677
+    },
+    {
+      "path": "tools/native_extension_engine/coverage/matrix.json",
+      "sha256": "0df6b232ee9ff869f53a7cb10083a3e4e9510ad2c86f7539985923d2663fd6b8",
+      "bytes": 7460
+    },
+    {
+      "path": "tools/native_extension_engine/coverage/run.py",
+      "sha256": "80294986e1de46e4fe350799c759c157e9d78d3c53ba02ea3d1ad0bd3576e294",
+      "bytes": 20726
+    },
+    {
+      "path": "tools/native_extension_engine/coverage/test_run.py",
+      "sha256": "37556a58d3b940d05fae26961c34f4d728f4cafa633233f4d1597a4afc4a5892",
+      "bytes": 8879
+    },
+    {
+      "path": "tools/native_extension_engine/dex-compat/ConversionMigrationProof.java",
+      "sha256": "5976008a6e8a896569b97cbdeb72d16b0473e4120e197b23ff9d07fd3810a62e",
+      "bytes": 4246
+    },
+    {
+      "path": "tools/native_extension_engine/dex-compat/ConvertPrepared.java",
+      "sha256": "60f7f2d8cd378199a8ef366cc3c75bb018ec8e0ef0cfc32d28d3bd7a68c94f99",
+      "bytes": 546
+    },
+    {
+      "path": "tools/native_extension_engine/dex-compat/DexCompatibilityProof.java",
+      "sha256": "ea31d8f3d4d3a27165297d46fb6d2cc902866a5f9e47ed06eda8cc7ddb540822",
+      "bytes": 7652
+    },
+    {
+      "path": "tools/native_extension_engine/dex-compat/OriginalFilterProof.java",
+      "sha256": "a4cc01cceab80d93adf3b63bc7787573032d544d77bfba0dbdea9ed346f785e9",
+      "bytes": 3899
+    },
+    {
+      "path": "tools/native_extension_engine/dex-compat/PrimitiveArrayProof.java",
+      "sha256": "18b7f1240d67124d03623362fcf12cecbb912ed51ec4ab5165d81c5b2f8a7096",
+      "bytes": 3093
+    },
+    {
+      "path": "tools/native_extension_engine/dex-compat/java/dev/tachibooks/engine/DexCompatibility.java",
+      "sha256": "cd9d4e523bead6d80ceb6c354300ebddeed4f6fb7b2244d3021b6a521b4dcd0c",
+      "bytes": 17795
+    },
+    {
+      "path": "tools/native_extension_engine/java/android/graphics/Bitmap.java",
+      "sha256": "4a807b18d773b9a78ae2616f511107fc60f2763863fdfc53df3c45c774e96259",
+      "bytes": 4297
+    },
+    {
+      "path": "tools/native_extension_engine/java/android/graphics/BitmapFactory.java",
+      "sha256": "93c63027babf07cafe5c81e7bbdd754ea582a51501178f8951b86422e32b2b91",
+      "bytes": 2008
+    },
+    {
+      "path": "tools/native_extension_engine/java/android/graphics/Canvas.java",
+      "sha256": "d78510e7fd1eb81e65d9ebc906cf5cf9dafc2ad04c3dd92347da321045a9115c",
+      "bytes": 1780
+    },
+    {
+      "path": "tools/native_extension_engine/java/android/graphics/Rect.java",
+      "sha256": "c3c7cf536f51f9dc5525476da1f6a8a6e64f49cffa9dad8cbd0ec35d1ec59fb0",
+      "bytes": 981
+    },
+    {
+      "path": "tools/native_extension_engine/java/android/os/Handler.java",
+      "sha256": "10860ecdfcd1032f91c5dc85d8279bdc72686df1d65860041c813e2efed2547c",
+      "bytes": 4522
+    },
+    {
+      "path": "tools/native_extension_engine/java/android/os/Looper.java",
+      "sha256": "79b879a347cd1fb6ae4050efe83d9dd920466647dfa9ddd0a95b66e817c0c0b1",
+      "bytes": 4547
+    },
+    {
+      "path": "tools/native_extension_engine/java/android/os/Message.java",
+      "sha256": "fe0a978ff74db923ab7b571d6764f26957fc4f9bfac3600c9f9e42ac2505c40e",
+      "bytes": 3181
+    },
+    {
+      "path": "tools/native_extension_engine/java/android/widget/EditText.java",
+      "sha256": "a91eed24b424fd7d1146e0ef5683437200e918c802fae49b0e9c3a2245fa5bae",
+      "bytes": 2060
+    },
+    {
+      "path": "tools/native_extension_engine/java/androidx/preference/MultiSelectListPreference.java",
+      "sha256": "ba787e97a83d473d2d45d4083c08a2685d720924eb09d02a3ac4507a0271cb21",
+      "bytes": 1718
+    },
+    {
+      "path": "tools/native_extension_engine/java/androidx/preference/Preference.java",
+      "sha256": "d57be12dcb585a69f867e74b2ed17eba6aae5035258f89cdad5015a654fd2547",
+      "bytes": 5005
+    },
+    {
+      "path": "tools/native_extension_engine/java/com/squareup/zstd/okio/OkioZstd.java",
+      "sha256": "a0f9e392d46bc8a9b0f9310bd5c7b4002e31583c86a81336ef88b51115a7b35e",
+      "bytes": 3104
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/AndroidCryptoProvider.java",
+      "sha256": "18e7458dbc11c53bde1e2f637ee35ebd9d7222ebccd880fca30c3309f7bfb32a",
+      "bytes": 846
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/BrowserChallengeException.java",
+      "sha256": "1f053aa87c087eb07b5f1096a9efa73f2332bc9de6039a976054778990a38980",
+      "bytes": 319
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/BrowserSession.java",
+      "sha256": "1f60de740bb196e45cffca323eb63080dc15cd4c66f5cf52119ef067d68266c6",
+      "bytes": 14091
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/EngineApplication.java",
+      "sha256": "5c357f991be0bd13534bf4419e441d6ca1734f92f893aca1f160a78d96887c54",
+      "bytes": 1203
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/EngineFiles.java",
+      "sha256": "e3ca19cd195ae05e2bf31f77bb02d10878113fb9fd457884bfe491fde2b56044",
+      "bytes": 1638
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/EnginePreferences.java",
+      "sha256": "dc974df615de92a11183fe61c3be4b5ec67b63ccc16f7ee7044fe63cabf01042",
+      "bytes": 4926
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/ExtensionHost.java",
+      "sha256": "e7ac04eb1207c5eb0be704667d02faa82812004f21bea1cbeee8e7d7cef12f67",
+      "bytes": 35554
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/ExtensionPackageRules.java",
+      "sha256": "e6d23463a6dc26372bd12228d8489ef3feaa3db54a6d2a9ba57b178fc09c9ae4",
+      "bytes": 1165
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/ExtensionRegistry.java",
+      "sha256": "5a0849fc50c1f4510cdec09143ad7b3669389339855e27078ee2eee5810452e3",
+      "bytes": 18009
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/ImageCodec.java",
+      "sha256": "c36f666e295bb4bb795e1c4351781b69873125d2b62a2e24ea1e34ce1d2ee6e1",
+      "bytes": 3142
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/SourceContext.java",
+      "sha256": "d012817b7730eee726fcb66c98f5dce41eae4676367fc7a0e8b4a567c67c6ee6",
+      "bytes": 4178
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/SourceFilterCodec.java",
+      "sha256": "82e5d083869fbb2026d1bda3c845319e3601176cf49411d330727a7589189b6e",
+      "bytes": 8845
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/SourceNotLoadedException.java",
+      "sha256": "9fa0541934754462d0ed001214620437d47210ab445a8eb4db07cbeda16bf0f6",
+      "bytes": 274
+    },
+    {
+      "path": "tools/native_extension_engine/java/dev/tachibooks/engine/SuspendBridge.java",
+      "sha256": "3fe30013e452cb03bcc47ed63ba4bc598c7fdb659319082499d347521ee4762f",
+      "bytes": 1284
+    },
+    {
+      "path": "tools/native_extension_engine/java/eu/kanade/tachiyomi/AppInfo.java",
+      "sha256": "43c22c0aed41b80392a6af86ef6abc47dfed1b812420a763425d6cd940fe5de1",
+      "bytes": 339
+    },
+    {
+      "path": "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/NetworkHelper.java",
+      "sha256": "84308c05b8c18e57834bd209edcfe57e05b7a0af4faae7ad51cb37ced835b2c5",
+      "bytes": 2785
+    },
+    {
+      "path": "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/SourceCookieJar.java",
+      "sha256": "4289b6f4a1e8b76335203db7283d44f34bdf523b4fafdfb9eab71db1bb84379f",
+      "bytes": 9203
+    },
+    {
+      "path": "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/SourceCookieStore.java",
+      "sha256": "d25f29de7c3f3e86f86aeaec3c109909c71372f1bf71304a2b1249d0649bbeea",
+      "bytes": 7861
+    },
+    {
+      "path": "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/interceptor/CFClearance.java",
+      "sha256": "b524576f00e2a0c404c0bce952617bf9eda6483ed5f603d8203901c714883792",
+      "bytes": 2128
+    },
+    {
+      "path": "tools/native_extension_engine/java/eu/kanade/tachiyomi/network/interceptor/CloudflareInterceptor.java",
+      "sha256": "95587a410c9b08a1343d0819dc5d06752fb9feb43bebb907cedbe3ac975b481a",
+      "bytes": 1045
+    },
+    {
+      "path": "tools/native_extension_engine/java/okhttp3/zstd/Zstd.java",
+      "sha256": "4b9ff59bc9ba89a273538674f44272ffc70356e5dfce87697de206590b9d2031",
+      "bytes": 615
+    },
+    {
+      "path": "tools/native_extension_engine/proof/BrowserCookieAtomicProof.java",
+      "sha256": "97f99d16297fe22ddb944cc89d174ff413816e505f2364d49949c390896e1aa9",
+      "bytes": 9914
+    },
+    {
+      "path": "tools/native_extension_engine/proof/BrowserSeedProof.java",
+      "sha256": "d812d764d16128bd804490f7eadb9adec6f6813b5a6b71db48beaee342607b02",
+      "bytes": 9031
+    },
+    {
+      "path": "tools/native_extension_engine/proof/BrowserSessionIsolationProof.java",
+      "sha256": "9745d2d3a2752acb131beaa5e0f83aa0feadaab14a493932a15ce286d1cb040e",
+      "bytes": 9252
+    },
+    {
+      "path": "tools/native_extension_engine/proof/BrowserSessionProof.java",
+      "sha256": "44fb4ff9377e134e79894de42b1a98510d004f761630a06774d23444da8be12e",
+      "bytes": 11370
+    },
+    {
+      "path": "tools/native_extension_engine/proof/BrowserSessionRecoveryProof.java",
+      "sha256": "919a94c378fb9c5297f79747f2185fe743dbdc2e4429bcb584b39acee6532c32",
+      "bytes": 5256
+    },
+    {
+      "path": "tools/native_extension_engine/proof/ChapterPageIsolationProof.java",
+      "sha256": "5cde43059b0b4cd17a8bee7167f3148bb0c5a4e4447a9d9174d6ecf46d050870",
+      "bytes": 14188
+    },
+    {
+      "path": "tools/native_extension_engine/proof/CoverImageProof.java",
+      "sha256": "c42efb9ec33454e40545bce6d57e6ffcda245456e3c45b14ff04c97bb9fd5176",
+      "bytes": 9620
+    },
+    {
+      "path": "tools/native_extension_engine/proof/ExtensionCacheRepairProof.java",
+      "sha256": "252d20e0dc6b25ef686ac28c7225f162991d5e41896897c17a65a761b92995a2",
+      "bytes": 8788
+    },
+    {
+      "path": "tools/native_extension_engine/proof/ExtensionVersionProof.java",
+      "sha256": "153f4c7fcef2dd86fee369f8bb5833d5422603fd3c4c989ebb74d14f278642dc",
+      "bytes": 1194
+    },
+    {
+      "path": "tools/native_extension_engine/proof/OriginalApkCoverProof.java",
+      "sha256": "6e1ce027bc1fb299889818b2747f114cdc1653c7e7227172079be0acddc45f9e",
+      "bytes": 3902
+    },
+    {
+      "path": "tools/native_extension_engine/proof/OriginalApkReadProof.java",
+      "sha256": "a0f7a35d8f5aa0defc31e8437d059c3f6f365b5ae0424fa2786b434e8dcbff82",
+      "bytes": 5955
+    },
+    {
+      "path": "tools/native_extension_engine/proof/OriginalCbhentaiContextProof.java",
+      "sha256": "330fa0a085ed9ee9acc47d72d0594e52c41c264d198b4fc64dab9f2661f82816",
+      "bytes": 4441
+    },
+    {
+      "path": "tools/native_extension_engine/proof/PersistentCookieProof.java",
+      "sha256": "36f6e77e47699e588031c65863479092304abc128833dc6e296d1a14bf431c1f",
+      "bytes": 9930
+    },
+    {
+      "path": "tools/native_extension_engine/proof/PortableCompatibilityProof.java",
+      "sha256": "f5761cfea393220d5730721d0f23419659649f18000219d9d9018d97c37ca865",
+      "bytes": 6079
+    },
+    {
+      "path": "tools/native_extension_engine/proof/PreferenceReloadProof.java",
+      "sha256": "ec1f6cf6355ffff704b8c98186973c5f4b2f45d087716420586d02e3ee179983",
+      "bytes": 5281
+    },
+    {
+      "path": "tools/native_extension_engine/proof/RequestedSourcesReadProof.java",
+      "sha256": "c2b81ea20c900198fd9195bfd2558366a6229ce97cc1c6564dc86c7553db831a",
+      "bytes": 8719
+    },
+    {
+      "path": "tools/native_extension_engine/proof/SourceContextAndGraphicsProof.java",
+      "sha256": "18c44da7cb5c03f70c1d6e7f8356aeb5133380d3026b8e412316c43b8e67e36b",
+      "bytes": 7628
+    },
+    {
+      "path": "tools/native_extension_engine/proof/SourceFilterProof.java",
+      "sha256": "d84afd80b3745d3d7504788969376e04692e179216a5176d9d7ba24c42ba5610",
+      "bytes": 10863
+    },
+    {
+      "path": "tools/native_extension_engine/proof/requested_source_fixtures.py",
+      "sha256": "054ff2b7a6de3f297226c9fa922559a9dd4efc351f40d4a8e0c0f4f961bd4911",
+      "bytes": 7889
+    },
+    {
+      "path": "tools/native_extension_engine/source-api/DexConstructorAudit.java",
+      "sha256": "6834f165d28ae8d4f142e9b0d3db383d72ffe01e163e5dd3df148788d80a7e1c",
+      "bytes": 2135
+    },
+    {
+      "path": "tools/native_extension_engine/source-api/SourceApiProof.java",
+      "sha256": "1cf633551a751d7e25b8772a6b34f5529628b0ff7711c2a910e7ead0e679665d",
+      "bytes": 5101
+    },
+    {
+      "path": "tools/native_extension_engine/source-api/build.py",
+      "sha256": "53c4ae1ca9eddad78690d94d2fccf1cc1bf3a993dff6b495975dbcbbda06ef4c",
+      "bytes": 6002
+    },
+    {
+      "path": "tools/native_extension_engine/source-api/upstream.json",
+      "sha256": "c6fd590123870f7b86d415341a49310711719f8ac66516b6a09addc0ad05f85d",
+      "bytes": 10870
+    },
+    {
+      "path": "tools/native_extension_engine/upstream.json",
+      "sha256": "62262af325fd446cc1670dd5bef653e5c9cd723d4a02183b6fd355d51e5be2a6",
+      "bytes": 4419
+    },
+    {
+      "path": "tools/package_jvm_frameworks.py",
+      "sha256": "2b1783670f9bc50f672f389a117d1dac456639e66dd291852c5c6ee8943dc182",
+      "bytes": 12777
+    },
+    {
+      "path": "tools/test_check_native_runtime_bundle.py",
+      "sha256": "8f4137845c5429c672e3c35e6926124c17573483c0bf3f3e8c940513c6694e85",
+      "bytes": 18428
+    },
+    {
+      "path": "tools/test_configure_firebase_ios.py",
+      "sha256": "72c784ee5f1955fb399419a121281fbbcec4fbb99defbedfd9e8f466cb1653e9",
+      "bytes": 6731
+    },
+    {
+      "path": "tools/test_firestore_rules.py",
+      "sha256": "64a87944539ddfbee8e5b2144a3e90f8e1e4b740293da5f7ed19f4e0d5883b5c",
+      "bytes": 14277
+    },
+    {
+      "path": "tools/test_ios_native_tabs.sh",
+      "sha256": "0e99e01b6e91c1f0101fc6ce72e818fd05c509c41cdbb12b8c0cbdc7c7e581fb",
+      "bytes": 6831
+    },
+    {
+      "path": "tools/test_native_array_decoder_resource.py",
+      "sha256": "d9eff1717d888eb689f7b751dd3ff1caf37e1e32d17874dcd336cc0efc8557b2",
+      "bytes": 2787
+    },
+    {
+      "path": "tools/test_native_browser_recovery.py",
+      "sha256": "3594f0931d5da4e860ef170269962ce99d3cd6ae38456cf91767cbe3ba716d96",
+      "bytes": 3732
+    },
+    {
+      "path": "tools/test_native_source_boundaries.py",
+      "sha256": "fa9f889527ac31dc94fc20e15a74107a85baed74621e14627b5ce7e7a5f764a6",
+      "bytes": 6507
+    },
+    {
+      "path": "tools/test_native_source_context.py",
+      "sha256": "046481a19eba8c6eb6534bc389a11e7499d497eb64970878de3ffb498cdbe16e",
+      "bytes": 5239
+    },
+    {
+      "path": "tools/test_original_extension_data.py",
+      "sha256": "106c3f55ca4134f92d4996613543e4cbfb1fdb790d8c1746ade947e05e6de48e",
+      "bytes": 7914
+    },
+    {
+      "path": "tools/test_package_jvm_frameworks.py",
+      "sha256": "946155e2dbe87e123ceb175b93142df97c65d0412bf38d877d647d60050f027d",
+      "bytes": 14617
+    },
+    {
+      "path": "tools/test_requested_sources.py",
+      "sha256": "721711ec5596e663baed5dab938c7d0e9fcf0b2ef7f1438e89ea9ff9e973ff01",
+      "bytes": 2693
+    },
+    {
+      "path": "tools/test_upstream_archive_members.py",
+      "sha256": "2a484458379ee2cc506bbe283746da521514cc9fca025420f7c8702d750bd072",
+      "bytes": 4688
+    }
+  ]
+}

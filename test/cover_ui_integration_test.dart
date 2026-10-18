@@ -40,11 +40,11 @@ void main() {
     );
     expect(
       librarySourceLabel(book.copyWith(sourceName: book.sourceId)),
-      'Nguồn Tachimanga',
+      'Nguồn chưa xác định · ${book.sourceId}',
     );
     expect(
       librarySourceLabel(book.copyWith(sourceName: '', engine: 'vbook')),
-      'Nguồn vBook',
+      'Nguồn chưa xác định · ${book.sourceId}',
     );
     expect(
       librarySourceLabel(book.copyWith(engine: 'local')),
@@ -98,7 +98,9 @@ void main() {
         final images = tester.widgetList<Image>(find.byType(Image)).toList();
         expect(images, hasLength(2));
         expect(
-          images.every((image) => identical(image.image, provider)),
+          images.every(
+            (image) => identical(_originalImage(image.image), provider),
+          ),
           isTrue,
         );
         expect(tester.takeException(), isNull);
@@ -110,7 +112,9 @@ void main() {
         expect(
           tester
               .widgetList<Image>(find.byType(Image))
-              .every((image) => identical(image.image, replacement)),
+              .every(
+                (image) => identical(_originalImage(image.image), replacement),
+              ),
           isTrue,
         );
         expect(book.toJson(), before);
@@ -158,7 +162,10 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(tester.widget<Image>(find.byType(Image)).image, same(provider));
+        expect(
+          _originalImage(tester.widget<Image>(find.byType(Image)).image),
+          same(provider),
+        );
         expect(tester.takeException(), isNull);
       }
       await tester.pumpWidget(
@@ -197,8 +204,14 @@ void main() {
       await tester.pumpAndSettle();
       final images = tester.widgetList<Image>(find.byType(Image)).toList();
       expect(images, hasLength(2));
-      expect(images[0].image, same(images[1].image));
+      expect(
+        _originalImage(images[0].image),
+        same(_originalImage(images[1].image)),
+      );
       expect(tester.takeException(), isNull);
     },
   );
 }
+
+ImageProvider<Object> _originalImage(ImageProvider<Object> value) =>
+    value is ResizeImage ? value.imageProvider : value;

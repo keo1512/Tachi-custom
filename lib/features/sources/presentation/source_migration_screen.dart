@@ -417,7 +417,7 @@ class _MigrationPreviewState extends ConsumerState<_MigrationPreview> {
                             entry.$2.title,
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
-                          Text(librarySourceLabel(entry.$2)),
+                          Text(resolvedLibrarySourceLabel(ref, entry.$2)),
                           Text('${entry.$2.chapters.length} chương'),
                         ],
                       ),

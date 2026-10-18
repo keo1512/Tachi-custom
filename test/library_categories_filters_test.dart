@@ -261,7 +261,7 @@ void main() {
     );
   });
 
-  test('scanlator matching uses provided chapter metadata and saved source exclusion retains exact IDs', () {
+  test('removed scanlator condition cannot hide books in legacy filters or presets', () {
     final book = LibraryBook(
       id: 'b',
       title: 'B',
@@ -275,13 +275,18 @@ void main() {
       excludeSource: true,
     );
     expect(filter.matches(book), isTrue);
-    expect(filter.copyWith(scanlator: 'Different').matches(book), isFalse);
-    expect(filter.matches(book.copyWith(chapters: const [])), isFalse);
+    expect(filter.copyWith(scanlator: 'Different').matches(book), isTrue);
+    expect(filter.matches(book.copyWith(chapters: const [])), isTrue);
+    expect(const LibraryFilter(scanlator: 'Old group').active, isFalse);
+    final legacy = LibraryFilter.fromJson({'scanlator': 'Old group'});
+    expect(legacy.active, isFalse);
+    expect(legacy.scanlator, '');
+    expect(legacy.toJson()['scanlator'], '');
     expect(LibraryFilter.fromJson(filter.toJson()).toJson(), filter.toJson());
   });
 
   testWidgets(
-    'filter sheet resets all active constraints and keeps scanner text editable',
+    'filter sheet removes scanlator controls and resets remaining conditions',
     (tester) async {
       LibraryFilter? result;
       await tester.pumpWidget(
@@ -301,28 +306,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final scrollable = find
-          .descendant(
-            of: find.byType(ListView).first,
-            matching: find.byType(Scrollable),
-          )
-          .first;
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('library-scanlator')),
-        250,
-        scrollable: scrollable,
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('library-scanlator')),
-        'New group',
-      );
-      await tester.pump();
-      expect(result!.scanlator, 'New group');
-      await tester.scrollUntilVisible(
-        find.text('Đặt lại bộ lọc'),
-        -250,
-        scrollable: scrollable,
-      );
+      expect(find.byKey(const ValueKey('library-scanlator')), findsNothing);
+      expect(find.text('Nhóm dịch'), findsNothing);
       await tester.tap(find.text('Đặt lại bộ lọc'));
       await tester.pump();
       expect(result!.active, isFalse);

@@ -683,6 +683,8 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
           sourceId: detail.sourceId,
           sourceName: sourceName.trim(),
           sourceRef: detail.ref,
+          sourceMemo: detail.sourceMemo,
+          nativeSourceContext: detail.nativeSourceContext,
           createdAt: DateTime.now(),
           status: detail.status,
           categories:
@@ -698,6 +700,9 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
                   uploadedAt: c.uploadedAt,
                   scanlator: c.scanlator,
                   number: c.number,
+                  sourceMemo: c.sourceMemo,
+                  nativeSourceContext: c.nativeSourceContext,
+                  sourceUrl: c.sourceUrl,
                 ),
               )
               .toList(),
@@ -718,6 +723,8 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     description: book.description,
     coverUrl: book.cover,
     sourceId: book.sourceId,
+    sourceMemo: book.sourceMemo,
+    nativeSourceContext: book.nativeSourceContext,
     knownChapterRefs: [for (final chapter in book.chapters) chapter.id],
     kind: book.kind == 'manga' ? ContentKind.manga : ContentKind.novel,
     engine: book.engine == 'vbook'
@@ -783,6 +790,8 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
               ref: chapter.id,
               title: chapter.title,
               index: chapter.index,
+              sourceMemo: chapter.sourceMemo,
+              nativeSourceContext: chapter.nativeSourceContext,
             ),
           );
       continueRequest();
@@ -804,6 +813,8 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
           ref: latest.chapters[read.index].id,
           title: latest.chapters[read.index].title,
           index: latest.chapters[read.index].index,
+          sourceMemo: latest.chapters[read.index].sourceMemo,
+          nativeSourceContext: latest.chapters[read.index].nativeSourceContext,
         ),
         continueRequest: continueRequest,
         onPartial: (partial) async {
@@ -1189,6 +1200,9 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
                   : discoveredAt,
               scanlator: chapter.scanlator,
               number: chapter.number,
+              sourceMemo: chapter.sourceMemo,
+              nativeSourceContext: chapter.nativeSourceContext,
+              sourceUrl: chapter.sourceUrl,
             ),
           )
           .toList(),

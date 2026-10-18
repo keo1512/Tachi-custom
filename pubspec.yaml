@@ -49,6 +49,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/source_catalogue/keiyoushi_names.json
     - assets/licenses/native_notices.json
   fonts:
     - family: NotoSerif

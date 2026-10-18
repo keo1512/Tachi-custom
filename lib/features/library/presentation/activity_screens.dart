@@ -558,7 +558,7 @@ class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
                                       ),
                                       const SizedBox(height: 3),
                                       Text(
-                                        '${discoveredDateLabel(entry.chapter.discoveredAt)} · ${librarySourceLabel(entry.book)}',
+                                        '${discoveredDateLabel(entry.chapter.discoveredAt)} · ${resolvedLibrarySourceLabel(ref, entry.book)}',
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(

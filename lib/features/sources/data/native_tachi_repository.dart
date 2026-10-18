@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/diagnostics/diagnostic_error_type.dart';
 import '../../../core/diagnostics/diagnostic_log.dart';
+import '../../../core/source_memo.dart' as metadata;
 
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -49,6 +50,7 @@ class NativeTachiRepository
     this.automaticallyVerifyChallenges = false,
     this.canVerifyChallenge,
     this.browserSessionRevision,
+    this.onBrowserSessionChanged,
     http.Client? client,
     Directory? storageDirectory,
     this.iconForPackage,
@@ -69,6 +71,7 @@ class NativeTachiRepository
   final bool automaticallyVerifyChallenges;
   final bool Function()? canVerifyChallenge;
   final Object? Function()? browserSessionRevision;
+  final void Function()? onBrowserSessionChanged;
   final _challengeFlights = <String, Future<bool>>{};
   final _challengeCooldown = <String, DateTime>{};
   String? _activeChallenge;
@@ -79,6 +82,7 @@ class NativeTachiRepository
   final bool Function()? canCacheCover;
   final int Function()? coverCacheEpoch;
   Future<SourceCoverCache>? _coverCache;
+  int _coverRequestEpoch = 0;
   final _pendingCovers = <String, Future<SourceImageData>>{};
   Future<SourceCoverCache> _coverStorage() => _coverCache ??= () async {
     final directory = await _storage();
@@ -137,7 +141,7 @@ class NativeTachiRepository
 
   bool _disposed = false;
   final Map<String, List<String>> _preferenceKeys = {};
-  final _verifiedBookRefs = <String, String>{};
+  final _verifiedBookRefs = <String, Map<String, dynamic>>{};
 
   Future<Directory> _storage() async => _directory ??= Directory(
     '${(await getApplicationSupportDirectory()).path}/TachiBooks/extension-runtime',
@@ -417,6 +421,8 @@ class NativeTachiRepository
     }
     // Logging out is a completed cookie mutation, never successful challenge
     // verification: leave the original source error and do not replay it.
+    _browserEpoch++;
+    onBrowserSessionChanged?.call();
     return !cleared;
   }
 
@@ -425,13 +431,13 @@ class NativeTachiRepository
 
   @override
   Future<void> clearSourceCache() async {
-    await (await _coverStorage()).clear();
+    await clearCoverCache();
     await _call('clearSourceCache');
   }
 
   @override
   Future<void> clearCookies() async {
-    await (await _coverStorage()).clear();
+    await clearCoverCache();
     await _call('clearCookies');
   }
 
@@ -668,6 +674,8 @@ class NativeTachiRepository
         coverUrl: _text(item['coverUrl']),
         sourceId: sourceId,
         status: catalogueStatus(item['status']),
+        sourceMemo: metadata.sourceMemo(item['memo']),
+        nativeSourceContext: true,
         kind: ContentKind.manga,
         engine: SourceEngine.tachimanga,
       );
@@ -753,9 +761,14 @@ class NativeTachiRepository
     _preferenceKeys.clear();
   }
 
-  Future<Map<String, dynamic>> _ref(CatalogueBook book) async {
+  Future<Map<String, dynamic>> _ref(
+    CatalogueBook book, {
+    bool restoreContext = false,
+  }) async {
     // Numeric companion IDs cannot identify a title in a new on-device runtime.
-    if (RegExp(r'^\d+$').hasMatch(book.ref)) {
+    if ((restoreContext || RegExp(r'^\d+$').hasMatch(book.ref)) &&
+        book.sourceMemo.isEmpty &&
+        !book.nativeSourceContext) {
       const unresolved = ApiException(
         'Truyện cũ dùng mã của server. Hãy mở lại đúng truyện từ nguồn đã cài.',
         code: 'RESTORED_TITLE_UNRESOLVED',
@@ -778,9 +791,7 @@ class NativeTachiRepository
           )
           .toString();
       final cached = _verifiedBookRefs[key];
-      if (cached != null) {
-        return {'sourceId': book.sourceId, 'ref': cached, 'title': book.title};
-      }
+      if (cached != null) return cached;
       final source = CatalogueSource(
         id: book.sourceId,
         name: '',
@@ -795,31 +806,67 @@ class NativeTachiRepository
           .where(
             (candidate) =>
                 normalized(candidate.title) == normalized(book.title) &&
-                !RegExp(r'^\d+$').hasMatch(candidate.ref),
+                (!RegExp(r'^\d+$').hasMatch(candidate.ref) ||
+                    candidate.sourceMemo.isNotEmpty ||
+                    candidate.nativeSourceContext),
           )
           .toList();
       if (candidates.length > 5) throw unresolved;
       final deadline = DateTime.now().add(const Duration(seconds: 90));
-      final matches = <String>{};
+      final matches = <String, CatalogueBook>{};
       for (final candidate in candidates) {
         if (DateTime.now().isAfter(deadline)) throw unresolved;
         // Do not skip failed candidates and then claim a unique match. Every
         // saved URL must be present; matching names alone are insufficient.
         final refs = (await chapters(candidate))
-            .map((chapter) => chapter.ref)
+            .expand(
+              (chapter) => [
+                chapter.ref,
+                if (chapter.sourceUrl.isNotEmpty) chapter.sourceUrl,
+                if (Uri.tryParse(chapter.sourceUrl) case final Uri url
+                    when url.hasAuthority &&
+                        url.userInfo.isEmpty &&
+                        !url.hasFragment)
+                  Uri(
+                    path: url.path,
+                    query: url.hasQuery ? url.query : null,
+                  ).toString(),
+              ],
+            )
+            .map(_chapterIdentityPath)
             .toSet();
-        if (refs.containsAll(known)) matches.add(candidate.ref);
+        if (known.map(_chapterIdentityPath).every(refs.contains)) {
+          matches[candidate.ref] = candidate;
+        }
       }
       if (matches.length != 1) throw unresolved;
       if (_verifiedBookRefs.length >= 64) _verifiedBookRefs.clear();
-      _verifiedBookRefs[key] = matches.single;
-      return {
+      final matched = matches.values.single;
+      final resolved = <String, dynamic>{
         'sourceId': book.sourceId,
-        'ref': matches.single,
+        'ref': matched.ref,
         'title': book.title,
+        if (matched.sourceMemo.isNotEmpty) 'memo': matched.sourceMemo,
       };
+      _verifiedBookRefs[key] = resolved;
+      return resolved;
     }
-    return {'sourceId': book.sourceId, 'ref': book.ref, 'title': book.title};
+    return {
+      'sourceId': book.sourceId,
+      'ref': book.ref,
+      'title': book.title,
+      if (book.sourceMemo.isNotEmpty)
+        'memo': metadata.sourceMemo(book.sourceMemo),
+    };
+  }
+
+  String _chapterIdentityPath(String ref) {
+    final uri = Uri.tryParse(ref);
+    if (uri == null || uri.userInfo.isNotEmpty || uri.hasFragment) return ref;
+    if (uri.hasScheme && !{'http', 'https'}.contains(uri.scheme)) return ref;
+    final path = uri.path.replaceFirst(RegExp(r'/+$'), '');
+    if (uri.hasAuthority) return uri.replace(path: path).toString();
+    return '${path.startsWith('/') ? '' : '/'}$path${uri.hasQuery ? '?${uri.query}' : ''}';
   }
 
   @override
@@ -855,6 +902,9 @@ class NativeTachiRepository
       number: catalogueChapterNumber(item['number']),
       uploadedAt: catalogueUploadDate(item['uploadedAt']),
       scanlator: _text(item['scanlator']),
+      sourceMemo: metadata.sourceMemo(item['memo']),
+      nativeSourceContext: true,
+      sourceUrl: _text(item['sourceUrl']),
     );
   }
 
@@ -863,18 +913,25 @@ class NativeTachiRepository
     CatalogueBook book,
     CatalogueChapter chapter,
   ) async {
-    if (RegExp(r'^\d+$').hasMatch(chapter.ref)) {
+    if (RegExp(r'^\d+$').hasMatch(chapter.ref) &&
+        chapter.sourceMemo.isEmpty &&
+        !chapter.nativeSourceContext) {
       throw const ApiException(
         'Chương cũ chưa có URL gốc. Hãy cập nhật mục lục nguồn.',
         code: 'CHAPTER_IDENTITY_CHANGED',
       );
     }
     final content = _map(
-      await _call('chapter', {
+      await _chapterCall('chapter', book, {
         // A chapter URL identifies its content without the old server's manga
         // ID. Do not reject restored books that already have real chapter URLs.
         'sourceId': book.sourceId,
         'bookRef': book.ref,
+        'bookTitle': book.title,
+        if (book.sourceMemo.isNotEmpty)
+          'bookMemo': metadata.sourceMemo(book.sourceMemo),
+        if (chapter.sourceMemo.isNotEmpty)
+          'chapterMemo': metadata.sourceMemo(chapter.sourceMemo),
         'ref': chapter.ref,
         'title': chapter.title,
       }),
@@ -921,10 +978,15 @@ class NativeTachiRepository
   @override
   Future<SourceImageData> fetchCover(CatalogueBook book) {
     final key = _coverKey(book);
-    return _pendingCovers.putIfAbsent(key, () async {
+    final requestEpoch = _coverRequestEpoch;
+    final epoch = coverCacheEpoch?.call();
+    final browserEpoch = _browserEpoch;
+    // Fresh requests after clearing cache or changing browser/privacy sessions
+    // must not inherit an earlier request's response or failure.
+    final flight = jsonEncode([key, requestEpoch, epoch, browserEpoch]);
+    return _pendingCovers.putIfAbsent(flight, () async {
       try {
         final allowed = canCacheCover?.call() ?? true;
-        final epoch = coverCacheEpoch?.call();
         final cache = await _coverStorage();
         if (_disposed) throw StateError('Engine đã đóng.');
         _validateCover(book);
@@ -942,6 +1004,8 @@ class NativeTachiRepository
         final image = await _enqueueImage(() => _fetchCover(book), cover: true);
         if (allowed &&
             (canCacheCover?.call() ?? true) &&
+            requestEpoch == _coverRequestEpoch &&
+            browserEpoch == _browserEpoch &&
             epoch == coverCacheEpoch?.call()) {
           await cache.write(key, {
             'base64': base64Encode(image.bytes),
@@ -950,7 +1014,7 @@ class NativeTachiRepository
         }
         return image;
       } finally {
-        _pendingCovers.remove(key);
+        _pendingCovers.remove(flight);
       }
     });
   }
@@ -958,17 +1022,29 @@ class NativeTachiRepository
   String _coverKey(CatalogueBook book) => sha256
       .convert(
         utf8.encode(
-          jsonEncode([book.engine.name, book.sourceId, book.coverUrl]),
+          // An expired backup URL can be shared by distinct books. Its fallback
+          // resolves each book's thumbnail, so that result must stay book-local.
+          jsonEncode([
+            book.engine.name,
+            book.sourceId,
+            book.ref,
+            book.coverUrl,
+          ]),
         ),
       )
       .toString();
 
   @override
-  Future<void> invalidateCover(CatalogueBook book) async =>
-      (await _coverStorage()).remove(_coverKey(book));
+  Future<void> invalidateCover(CatalogueBook book) async {
+    _coverRequestEpoch++;
+    await (await _coverStorage()).remove(_coverKey(book));
+  }
 
   @override
-  Future<void> clearCoverCache() async => (await _coverStorage()).clear();
+  Future<void> clearCoverCache() async {
+    _coverRequestEpoch++;
+    await (await _coverStorage()).clear();
+  }
 
   Future<SourceImageData> _fetchCover(CatalogueBook book) async {
     _validateCover(book);
@@ -982,6 +1058,27 @@ class NativeTachiRepository
         ),
       );
     } on ApiException catch (error) {
+      if (const {404, 410, 521}.contains(error.statusCode) &&
+          book.ref.isNotEmpty &&
+          book.title.isNotEmpty) {
+        // A backup can retain a retired CDN/proxy URL. Ask this exact source
+        // for its current thumbnail only after the saved URL has failed.
+        // Visible cover requests remain bounded by the image queue; no eager
+        // metadata crawl of the imported library is started.
+        final fresh = await detail(book);
+        if (fresh.coverUrl.isNotEmpty && fresh.coverUrl != book.coverUrl) {
+          _validateCover(fresh);
+          return _sourceImage(
+            _map(
+              await _call('cover', {
+                'sourceId': fresh.sourceId,
+                'url': fresh.coverUrl,
+              }),
+            ),
+          );
+        }
+        rethrow;
+      }
       // An imported library can contain public thumbnails before its extension
       // is installed. Only that case permits an ordinary public cover GET;
       // loaded-source/challenge errors always keep the extension client path.
@@ -1073,21 +1170,48 @@ class NativeTachiRepository
         !['http', 'https'].contains(imageUrl.scheme) ||
         imageUrl.userInfo.isNotEmpty ||
         chapter.ref.isEmpty ||
-        RegExp(r'^\d+$').hasMatch(chapter.ref)) {
+        RegExp(r'^\d+$').hasMatch(chapter.ref) &&
+            chapter.sourceMemo.isEmpty &&
+            !chapter.nativeSourceContext) {
       throw const ApiException('Vị trí hoặc URL trang truyện không hợp lệ.');
     }
     final image = _map(
-      await _call('image', {
+      await _chapterCall('image', book, {
         'sourceId': book.sourceId,
         'ref': book.ref,
         'title': book.title,
         'chapterRef': chapter.ref,
         'chapterTitle': chapter.title,
+        if (book.sourceMemo.isNotEmpty)
+          'bookMemo': metadata.sourceMemo(book.sourceMemo),
+        if (chapter.sourceMemo.isNotEmpty)
+          'chapterMemo': metadata.sourceMemo(chapter.sourceMemo),
         'index': page,
         'url': url,
       }),
     );
     return _sourceImage(image);
+  }
+
+  Future<dynamic> _chapterCall(
+    String method,
+    CatalogueBook book,
+    Map<String, dynamic> args,
+  ) async {
+    try {
+      return await _call(method, args);
+    } on ApiException catch (error) {
+      if (error.code != 'source_context_missing' ||
+          book.sourceMemo.isNotEmpty) {
+        rethrow;
+      }
+      final parent = await _ref(book, restoreContext: true);
+      return _call(method, {
+        ...args,
+        method == 'chapter' ? 'bookRef' : 'ref': parent['ref'],
+        if (parent['memo'] != null) 'bookMemo': parent['memo'],
+      });
+    }
   }
 
   SourceImageData _sourceImage(Map<String, dynamic> image) {

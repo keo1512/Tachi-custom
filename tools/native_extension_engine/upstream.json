@@ -31,6 +31,15 @@
     "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0.txt",
     "licenseSha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
   },
+  "cryptoProvider": {
+    "url": "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk15to18/1.86/bcprov-jdk15to18-1.86.jar",
+    "bytes": 7177698,
+    "sha256": "fc50334d4d87b4272e72fa95ca748ead05bdef02ef760a5b13f64ffee317cd81",
+    "version": "1.86",
+    "source": "https://github.com/bcgit/bc-java/tree/r1rv86",
+    "license": "Bouncy Castle License (MIT)",
+    "signedJarPreserved": true
+  },
   "files": [
     {
       "name": "licenses/openjdk-LICENSE.txt",

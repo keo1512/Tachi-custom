@@ -31,6 +31,58 @@ Uint8List text(int id, String value) => field(id, utf8.encode(value));
 
 void main() {
   test(
+    'protobuf preserves int64 and string source names before installation',
+    () async {
+      List<int> scalar(int id, BigInt value) {
+        final result = <int>[(id << 3)];
+        while (value > BigInt.from(127)) {
+          result.add((value & BigInt.from(127)).toInt() | 128);
+          value >>= 7;
+        }
+        return [...result, value.toInt()];
+      }
+
+      final extension = message([
+        text(1, 'Fixture'),
+        text(2, 'extension.fixture'),
+        field(3, message([text(1, 'fixture.apk')])),
+        field(
+          8,
+          message([
+            scalar(1, BigInt.parse('8222087175453285202')),
+            text(2, 'CuuTruyen'),
+            text(3, 'vi'),
+          ]),
+        ),
+        field(
+          8,
+          message([
+            text(1, '8070257113818912648'),
+            text(2, 'MiMiHentai'),
+            text(3, 'vi'),
+          ]),
+        ),
+      ]);
+      final store = message([field(101, field(1, extension))]);
+      final repo = ExtensionIndexRepository(
+        MockClient((_) async => http.Response.bytes(store, 200)),
+      );
+      final result = await repo.fetch(
+        'https://repo.test/index.pb',
+        SourceEngine.tachimanga,
+      );
+      expect(result.entries.single.sources.map((s) => s.id), [
+        '8222087175453285202',
+        '8070257113818912648',
+      ]);
+      expect(result.entries.single.sources.map((s) => s.name), [
+        'CuuTruyen',
+        'MiMiHentai',
+      ]);
+      expect(result.entries.single.installed, isFalse);
+    },
+  );
+  test(
     'Keiyoushi root and obsolete indexes normalize to actual protobuf store',
     () {
       for (final url in [

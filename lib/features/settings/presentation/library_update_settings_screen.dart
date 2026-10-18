@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/feedback.dart';
+import '../../../core/format/task_intervals.dart';
 import '../../library/application/library_update_policy.dart';
 import '../../library/application/library_update_scheduler.dart';
 import '../../library/presentation/library_categories_screen.dart';
@@ -27,7 +28,7 @@ class LibraryUpdateSettingsScreen extends ConsumerWidget {
       title: 'Cập nhật & tải tự động',
       children: [
         const SettingsNote(
-          'Kiểm tra theo chu kỳ khi app đang mở và trong cửa sổ chạy nền hữu hạn nếu iOS cấp phép. Giữ điều kiện Wi-Fi, đang sạc và danh mục đã chọn. Khi hết thời gian, dừng kiểm tra phần còn lại để thử lại sau; iOS không bảo đảm chạy khi app đã bị đóng hoặc buộc dừng.',
+          'App tự kiểm tra chương mới theo lịch kể cả khi không mở giao diện. iOS quyết định thời điểm đánh thức nên có thể chạy trễ hơn chu kỳ đã chọn. Nếu vuốt tắt hẳn app trong đa nhiệm, cần mở lại để tác vụ nền được tiếp tục.',
         ),
         Padding(
           padding: const EdgeInsets.all(16),
@@ -35,10 +36,10 @@ class LibraryUpdateSettingsScreen extends ConsumerWidget {
             initialValue: policy.hours,
             decoration: const InputDecoration(labelText: 'Chu kỳ cập nhật'),
             items: [
-              for (final hours in [0, 6, 12, 24, 48, 72])
+              for (final hours in LibraryUpdatePolicy.intervals)
                 DropdownMenuItem(
                   value: hours,
-                  child: Text(hours == 0 ? 'Tắt' : '$hours giờ'),
+                  child: Text(taskIntervalLabel(hours)),
                 ),
             ],
             onChanged: (v) {
@@ -49,25 +50,36 @@ class LibraryUpdateSettingsScreen extends ConsumerWidget {
         flag('Chỉ kiểm tra qua Wi-Fi', policy.wifiOnly, 'wifiOnly'),
         flag('Chỉ kiểm tra khi đang sạc', policy.chargingOnly, 'chargingOnly'),
         flag(
-          'Bỏ qua truyện hoàn thành / ngừng phát hành',
-          policy.skipCompleted,
-          'skipCompleted',
+          'Kiểm tra tất cả truyện trong thư viện',
+          policy.checkAll,
+          'checkAll',
         ),
-        flag(
-          'Bỏ qua truyện chưa bắt đầu đọc',
-          policy.skipUnstarted,
-          'skipUnstarted',
-        ),
-        flag(
-          'Bỏ qua truyện còn chương chưa đọc',
-          policy.skipUnread,
-          'skipUnread',
-        ),
-        flag(
-          'Bỏ qua truyện chưa tới ngày dự kiến',
-          policy.skipEarly,
-          'skipEarly',
-        ),
+        if (policy.checkAll)
+          const SettingsNote(
+            'Kiểm tra mọi truyện từ nguồn trực tuyến, kể cả truyện đã hoàn thành và các danh mục đang loại khỏi cập nhật. Thiết lập tự tải của từng danh mục vẫn được giữ.',
+          ),
+        if (!policy.checkAll) ...[
+          flag(
+            'Bỏ qua truyện hoàn thành / ngừng phát hành',
+            policy.skipCompleted,
+            'skipCompleted',
+          ),
+          flag(
+            'Bỏ qua truyện chưa bắt đầu đọc',
+            policy.skipUnstarted,
+            'skipUnstarted',
+          ),
+          flag(
+            'Bỏ qua truyện còn chương chưa đọc',
+            policy.skipUnread,
+            'skipUnread',
+          ),
+          flag(
+            'Bỏ qua truyện chưa tới ngày dự kiến',
+            policy.skipEarly,
+            'skipEarly',
+          ),
+        ],
         flag(
           'Tự tải chương mới trong danh mục cho phép',
           policy.downloadNew,

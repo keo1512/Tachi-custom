@@ -36,7 +36,7 @@ class NativeSourceBoundaryTests(unittest.TestCase):
         cls.classes = cls.root / "proof-classes"
         proof_root = Path(__file__).parent / "native_extension_engine/proof"
         proofs = [proof_root / name for name in (
-            "ChapterPageIsolationProof.java", "BrowserSessionIsolationProof.java", "CoverImageProof.java", "PersistentCookieProof.java", "ExtensionVersionProof.java", "PreferenceReloadProof.java", "ExtensionCacheRepairProof.java", "BrowserSeedProof.java", "BrowserCookieAtomicProof.java"
+            "ChapterPageIsolationProof.java", "BrowserSessionIsolationProof.java", "CoverImageProof.java", "PersistentCookieProof.java", "ExtensionVersionProof.java", "PreferenceReloadProof.java", "ExtensionCacheRepairProof.java", "BrowserSeedProof.java", "BrowserCookieAtomicProof.java", "SourceContextAndGraphicsProof.java"
         )]
         subprocess.run([
             cls.javac, "--release", "8", "-encoding", "UTF-8", "-cp",
@@ -56,6 +56,12 @@ class NativeSourceBoundaryTests(unittest.TestCase):
 
     def test_rotated_cdn_retry_keeps_source_page_identity_and_negative_guards(self):
         self.run_proof("ChapterPageIsolationProof", "rotated", "ROTATED_PAGE_RETRY_PROOF_OK")
+
+    def test_parent_memo_and_original_page_are_isolated_for_identical_short_chapter_ids(self):
+        self.run_proof("SourceContextAndGraphicsProof", "context", "SOURCE_CONTEXT_ISOLATION_OK")
+
+    def test_portable_bitmap_contracts_and_strip_pixel_copy(self):
+        self.run_proof("SourceContextAndGraphicsProof", "graphics", "PORTABLE_GRAPHICS_OK")
 
     def test_later_page_request_hook_cannot_break_chapter_opening(self):
         self.run_proof("ChapterPageIsolationProof", "headers", "PAGE_REQUEST_HOOK_ISOLATION_OK")
