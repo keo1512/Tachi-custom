@@ -99,7 +99,30 @@ if [[ "$tachi_select_only" == true ]]; then
   exit 0
 fi
 
-# simctl's bootstatus can otherwise wait indefinitely on an unhealthy runtime.
+# Generate Flutter's Xcode configuration and install Pods. The hosted XCTest
+# below builds the simulator app itself; a full Flutter build here would
+# compile the same native dependencies into a second products directory.
+printf '%s\n' '::group::Prepare Flutter simulator configuration and Pods'
+if [[ -n "${TACHI_PREFLIGHT_RECEIPT:-}" ]]; then
+  python3 tools/ios_build_preflight.py --verify --receipt "$TACHI_PREFLIGHT_RECEIPT"
+else
+  python3 tools/ios_build_preflight.py
+fi
+# Resolve Pods explicitly with unbuffered progress rather than waiting for
+# Flutter's quiet pod subprocess. The following config-only build reuses it.
+python3 tools/run_build_phase.py --name native-pods-install --timeout 600 \
+  --log "$tachi_root/artifacts/native-pods-install.log" \
+  --status "$tachi_root/artifacts/native-pods-install.status.json" \
+  -- pod install --project-directory=ios --verbose
+python3 tools/run_build_phase.py --name native-pods-configuration --timeout 240 \
+  --log "$tachi_root/artifacts/native-tabs-compile.log" \
+  --status "$tachi_root/artifacts/native-pods-configuration.status.json" \
+  -- flutter build ios --simulator --debug --no-pub --config-only
+# Xcode/Flutter migrations must be noticed before the long compile, too.
+python3 tools/ios_build_preflight.py --verify --receipt "${TACHI_PREFLIGHT_RECEIPT:-$tachi_root/artifacts/ios-preflight.json}"
+printf '%s\n' '::endgroup::'
+# Boot only after dependency resolution, so a cold simulator does not compete
+# with Flutter/CocoaPods setup for CPU and disk on the hosted runner.
 python3 - "$tachi_simulator" <<'PY'
 import json
 import subprocess
@@ -115,23 +138,6 @@ try:
 except subprocess.TimeoutExpired as error:
     raise SystemExit(f'Simulator boot exceeded its bounded timeout: {error.cmd}')
 PY
-
-# Generate Flutter's Xcode configuration and install Pods. The hosted XCTest
-# below builds the simulator app itself; a full Flutter build here would
-# compile the same native dependencies into a second products directory.
-printf '%s\n' '::group::Prepare Flutter simulator configuration and Pods'
-if [[ -n "${TACHI_PREFLIGHT_RECEIPT:-}" ]]; then
-  python3 tools/ios_build_preflight.py --verify --receipt "$TACHI_PREFLIGHT_RECEIPT"
-else
-  python3 tools/ios_build_preflight.py
-fi
-python3 tools/run_build_phase.py --name native-pods-configuration --timeout 360 \
-  --log "$tachi_root/artifacts/native-tabs-compile.log" \
-  --status "$tachi_root/artifacts/native-pods-configuration.status.json" \
-  -- flutter build ios --simulator --debug --no-pub --config-only
-# Xcode/Flutter migrations must be noticed before the long compile, too.
-python3 tools/ios_build_preflight.py --verify --receipt "${TACHI_PREFLIGHT_RECEIPT:-$tachi_root/artifacts/ios-preflight.json}"
-printf '%s\n' '::endgroup::'
 printf '%s\n' '::group::Compile simulator app and test bundle once'
 tachi_xcode_flags=(
   -workspace ios/Runner.xcworkspace

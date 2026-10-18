@@ -2,16 +2,30 @@
 import contextlib
 import io
 import json
+import re
 from pathlib import Path
 import sys
 import tempfile
 import unittest
 from unittest import mock
+import xml.etree.ElementTree as ET
 
 from check_ios_native_sources import commands, flutter_framework
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class CocoaPodsSetupTests(unittest.TestCase):
+    def test_cocoapods_project_has_no_dangling_generated_swift_package(self):
+        project = (ROOT / 'ios/Runner.xcodeproj/project.pbxproj').read_text(encoding='utf-8')
+        self.assertNotIn('FlutterGeneratedPluginSwiftPackage', project)
+        declared = set(re.findall(r'^\s*([A-F0-9]{24})\s*(?:/\*.*?\*/\s*)?=', project, re.M))
+        used = set(re.findall(r'\b[A-F0-9]{24}\b', project))
+        self.assertEqual(used - declared, set())
+        scheme = ET.parse(ROOT / 'ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme')
+        self.assertIsNotNone(scheme.find('TestAction/Testables/TestableReference'))
+        self.assertIsNone(scheme.find('BuildAction/PreActions'))
 
 
 class NativeBuildPlanTests(unittest.TestCase):

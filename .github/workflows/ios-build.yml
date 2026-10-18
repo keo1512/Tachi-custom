@@ -60,6 +60,7 @@ jobs:
                   raise SystemExit('Expected iOS 27 SDK: ' + sdk + ' is ' + version)
           print('Build input, required commands and iOS 27 SDKs checked.')
           PY
+          plutil -lint ios/Runner.xcodeproj/project.pbxproj ios/Runner/Info.plist
           if [[ "$TACHI_NATIVE_SMOKE" == 'true' ]]; then
             bash tools/test_ios_native_tabs.sh --select-only
           fi
