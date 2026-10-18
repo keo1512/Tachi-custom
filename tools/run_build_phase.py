@@ -41,6 +41,17 @@ def _stop(process: subprocess.Popen) -> None:
             os.killpg(process.pid, signal.SIGTERM)
         except ProcessLookupError:
             return
+        except PermissionError:
+            # Some hosted macOS runners deny group signalling. Preserve the
+            # phase result and fall back to the direct child we actually own.
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+            return
         # A shell can exit before its compiler children. Always stop the group.
         deadline = time.monotonic() + 2
         while time.monotonic() < deadline:
@@ -76,6 +87,7 @@ def run_phase(name: str, command: list[str], log: Path, *, timeout: float,
     output: queue.Queue[bytes | None] = queue.Queue()
     process = None
     reader = None
+    eof = False
     result = 127
     reason = "launch_failed"
     print(f"[{name}] Started. Full log: {log}", flush=True)
@@ -96,7 +108,6 @@ def run_phase(name: str, command: list[str], log: Path, *, timeout: float,
             reader = threading.Thread(target=read_output, daemon=True)
             reader.start()
             ended = None
-            eof = False
             while True:
                 now = time.monotonic()
                 try:
@@ -133,7 +144,9 @@ def run_phase(name: str, command: list[str], log: Path, *, timeout: float,
         except KeyboardInterrupt:
             result, reason = 130, "interrupted"
         finally:
-            if process is not None:
+            # A completed tool needs no signal. In particular, never signal a
+            # reaped process group after a normal compiler/analyzer exit.
+            if process is not None and (reason not in ("passed", "command_failed") or not eof):
                 _stop(process)
             if reader is not None:
                 reader.join(timeout=3)

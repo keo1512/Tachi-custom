@@ -9,7 +9,7 @@ import time
 import unittest
 from unittest import mock
 
-from run_build_phase import run_phase
+from run_build_phase import run_phase, _stop
 
 
 class BuildPhaseTests(unittest.TestCase):
@@ -50,6 +50,20 @@ class BuildPhaseTests(unittest.TestCase):
 
     def test_silent_success_does_not_require_compiler_output(self):
         self.assertEqual(self.run_code("import time; time.sleep(.1)"), 0)
+
+    def test_completed_success_and_failure_never_signal_reaped_group(self):
+        with mock.patch("run_build_phase._stop", side_effect=AssertionError("unexpected signal")):
+            self.assertEqual(self.run_code("print('done')"), 0)
+            self.assertEqual(self.run_code("import sys; sys.exit(65)"), 65)
+
+    def test_denied_group_signal_falls_back_to_owned_child(self):
+        process = mock.Mock(pid=123)
+        process.poll.return_value = None
+        with mock.patch("run_build_phase.os.name", "posix"), \
+                mock.patch("run_build_phase.os.killpg", side_effect=PermissionError, create=True):
+            _stop(process)
+        process.terminate.assert_called_once()
+        process.wait.assert_called_once_with(timeout=2)
 
     def test_missing_executable_fails_without_exposing_argument(self):
         code = run_phase("missing", [str(self.root / "not-a-command"), "SECRET_ARGUMENT"],
