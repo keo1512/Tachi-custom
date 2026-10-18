@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 from collections import deque
 from contextlib import contextmanager
+from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -35,43 +36,78 @@ def _handle_termination():
         signal.signal(signal.SIGTERM, previous)
 
 
-def _stop(process: subprocess.Popen) -> None:
+@dataclass(frozen=True)
+class _CleanupResult:
+    verified: bool
+    warnings: tuple[str, ...] = ()
+
+
+def _wait_child(process: subprocess.Popen, seconds: float, warnings: list[str]) -> bool:
+    try:
+        process.wait(timeout=seconds)
+        return True
+    except ProcessLookupError:
+        return True
+    except subprocess.TimeoutExpired:
+        return False
+    except OSError as error:
+        warnings.append(f"Waiting for owned child failed ({type(error).__name__}).")
+        return False
+
+
+def _stop_child(process: subprocess.Popen, warnings: list[str]) -> bool:
+    try:
+        running = process.poll() is None
+    except OSError as error:
+        warnings.append(f"Reading owned child state failed ({type(error).__name__}).")
+        running = True
+    if not running:
+        return _wait_child(process, 5, warnings)
+    try:
+        process.terminate()
+    except ProcessLookupError:
+        pass  # Exit between poll and signal is an ordinary cleanup race.
+    except OSError as error:
+        warnings.append(f"Terminating owned child failed ({type(error).__name__}).")
+    if _wait_child(process, 2, warnings):
+        return True
+    try:
+        process.kill()
+    except ProcessLookupError:
+        pass
+    except OSError as error:
+        warnings.append(f"Killing owned child failed ({type(error).__name__}).")
+    if _wait_child(process, 5, warnings):
+        return True
+    warnings.append("Owned child termination could not be verified within the cleanup limit.")
+    return False
+
+
+def _stop(process: subprocess.Popen) -> _CleanupResult:
+    warnings: list[str] = []
+    group_stopped = os.name != "posix"
     if os.name == "posix":
         try:
             os.killpg(process.pid, signal.SIGTERM)
         except ProcessLookupError:
-            return
-        except PermissionError:
-            # Some hosted macOS runners deny group signalling. Preserve the
-            # phase result and fall back to the direct child we actually own.
-            if process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=2)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=5)
-            return
-        # A shell can exit before its compiler children. Always stop the group.
-        deadline = time.monotonic() + 2
-        while time.monotonic() < deadline:
-            process.poll()  # Reap the leader before checking surviving children.
+            group_stopped = True
+        except OSError as error:
+            warnings.append(f"Terminating owned process group failed ({type(error).__name__}).")
+        else:
+            # Give the leader a bounded grace period, then stop descendants
+            # even if their shell exited first. Do not probe with signal 0:
+            # hosted macOS runners can reject that independent of TERM/KILL.
+            _wait_child(process, 2, warnings)
+        if not group_stopped:
             try:
-                os.killpg(process.pid, 0)
+                os.killpg(process.pid, signal.SIGKILL)
+                group_stopped = True
             except ProcessLookupError:
-                return
-            time.sleep(0.05)
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-    elif process.poll() is None:
-        process.kill()
-    try:
-        process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=5)
+                group_stopped = True
+            except OSError as error:
+                warnings.append(f"Killing owned process group failed ({type(error).__name__}).")
+    child_stopped = _stop_child(process, warnings)
+    return _CleanupResult(group_stopped and child_stopped, tuple(warnings))
 
 
 def run_phase(name: str, command: list[str], log: Path, *, timeout: float,
@@ -90,6 +126,7 @@ def run_phase(name: str, command: list[str], log: Path, *, timeout: float,
     eof = False
     result = 127
     reason = "launch_failed"
+    cleanup = _CleanupResult(True)
     print(f"[{name}] Started. Full log: {log}", flush=True)
 
     def read_output() -> None:
@@ -147,19 +184,40 @@ def run_phase(name: str, command: list[str], log: Path, *, timeout: float,
             # A completed tool needs no signal. In particular, never signal a
             # reaped process group after a normal compiler/analyzer exit.
             if process is not None and (reason not in ("passed", "command_failed") or not eof):
-                _stop(process)
+                try:
+                    cleanup = _stop(process)
+                except (OSError, subprocess.TimeoutExpired) as error:
+                    # Cleanup must never hide the command's primary failure or
+                    # prevent its diagnostic receipt from being written.
+                    cleanup = _CleanupResult(False, (
+                        f"Owned process cleanup failed ({type(error).__name__}).",))
             if reader is not None:
                 reader.join(timeout=3)
+                if reader.is_alive():
+                    cleanup = _CleanupResult(False, cleanup.warnings + (
+                        "Build output pipe remained open after the cleanup limit.",))
             if process is not None and (reader is None or not reader.is_alive()):
-                process.stdout.close()
+                try:
+                    process.stdout.close()
+                except OSError as error:
+                    cleanup = _CleanupResult(False, cleanup.warnings + (
+                        f"Closing build output failed ({type(error).__name__}).",))
             while True:
                 try:
                     block = output.get_nowait()
                 except queue.Empty:
                     break
-                if block:
+                if block is None:
+                    eof = True
+                elif block:
                     handle.write(block)
                     tail.append(block)
+
+            for warning in cleanup.warnings:
+                handle.write(("Cleanup warning: " + warning + "\n").encode())
+                print(f"[{name}] Cleanup warning: {warning}", file=sys.stderr, flush=True)
+            if result == 0 and not cleanup.verified:
+                result, reason = 125, "cleanup_failed"
 
     duration = round(time.monotonic() - started, 3)
     if status is not None:
@@ -169,6 +227,8 @@ def run_phase(name: str, command: list[str], log: Path, *, timeout: float,
             "phase": name, "result": reason, "exitCode": result,
             "elapsedSeconds": duration, "wallLimitSeconds": timeout,
             "idleLimitSeconds": idle_timeout, "log": str(log),
+            "cleanupVerified": cleanup.verified,
+            "cleanupWarnings": list(cleanup.warnings),
         }, indent=2) + "\n", encoding="utf-8")
         pending.replace(status)
     print(f"[{name}] {reason}; exit={result}; elapsed={duration}s.", flush=True)

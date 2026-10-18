@@ -69,11 +69,29 @@ class PreflightTests(unittest.TestCase):
             preflight.verify_receipt(self.root, self.receipt)
         self.assertNotIn("private fixture", self.receipt.read_text())
 
-    def test_generated_pod_lock_is_allowed_but_a_tracked_lock_is_checked(self):
+    def test_first_pod_lock_and_integrated_xcode_project_are_checked(self):
         self.valid_receipt()
         self.write("ios/Podfile.lock", "first CocoaPods resolution")
+        # A receipt made before first integration must never be reused for the
+        # generated project; full preflight now runs after dependency setup.
+        with self.assertRaises(ValueError):
+            preflight.verify_receipt(self.root, self.receipt)
+        self.write("ios/Runner.xcodeproj/project.pbxproj", "integrated Pods phases")
+        self.write("ios/Runner.xcworkspace/contents.xcworkspacedata", "Runner and Pods projects")
+        self.valid_receipt()
         preflight.verify_receipt(self.root, self.receipt)
-        subprocess.run(["git", "add", "ios/Podfile.lock"], cwd=self.root, check=True, capture_output=True)
+        for name in ("ios/Podfile.lock", "ios/Runner.xcodeproj/project.pbxproj",
+                     "ios/Runner.xcworkspace/contents.xcworkspacedata"):
+            with self.subTest(name=name):
+                self.valid_receipt()
+                self.write(name, "changed integration")
+                with self.assertRaises(ValueError):
+                    preflight.verify_receipt(self.root, self.receipt)
+
+    def test_even_an_ignored_untracked_pod_lock_is_bound_to_receipt(self):
+        with (self.root / ".gitignore").open("a", encoding="utf-8") as handle:
+            handle.write("ios/Podfile.lock\n")
+        self.write("ios/Podfile.lock", "first resolution")
         self.valid_receipt()
         self.write("ios/Podfile.lock", "different resolution")
         with self.assertRaises(ValueError):
@@ -87,15 +105,20 @@ class PreflightTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 preflight.verify_receipt(self.root, self.receipt)
 
-    def run_main(self, phase_code, digests=None):
+    def run_main(self, phase_code, digests=None, *, quick=False):
         version = json.dumps({"frameworkVersion": preflight.FLUTTER_VERSION,
                               "frameworkRevision": preflight.FLUTTER_REVISION})
+        arguments = ["preflight", "--receipt", str(self.receipt)]
+        if quick:
+            arguments.append("--quick")
         with mock.patch.object(preflight, "ROOT", self.root), \
-                mock.patch.object(sys, "argv", ["preflight", "--receipt", str(self.receipt)]), \
+                mock.patch.object(sys, "argv", arguments), \
                 mock.patch.object(sys, "platform", "darwin"), \
                 mock.patch.object(preflight, "source_digest", side_effect=digests or ["same", "same"]), \
                 mock.patch.object(preflight.subprocess, "check_output", return_value=version), \
-                mock.patch.object(preflight, "run_phase", return_value=phase_code) as phase:
+                mock.patch.object(preflight, "run_phase", **(
+                    {"side_effect": phase_code} if isinstance(phase_code, list)
+                    else {"return_value": phase_code})) as phase:
             result = preflight.main()
         return result, phase
 
@@ -111,6 +134,28 @@ class PreflightTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "changed during preflight"):
             self.run_main(0, ["before", "after"])
         self.assertFalse(self.receipt.exists())
+
+    def test_quick_checks_run_helpers_before_swift_and_never_issue_reusable_receipt(self):
+        self.valid_receipt()
+        code, phase = self.run_main(0, quick=True)
+        self.assertEqual(code, 0)
+        self.assertEqual([call.args[0] for call in phase.call_args_list], list(preflight.QUICK_CHECKS))
+        self.assertFalse(self.receipt.exists())
+
+    def test_failed_helper_checks_stop_before_swift_or_full_flutter_suite(self):
+        code, phase = self.run_main([0, 71])
+        self.assertEqual(code, 71)
+        self.assertEqual([call.args[0] for call in phase.call_args_list],
+                         ["locked-pub-get", "build-helper-tests"])
+        self.assertFalse(self.receipt.exists())
+
+    def test_full_checks_issue_receipt_only_after_helper_swift_and_flutter_checks(self):
+        code, phase = self.run_main(0)
+        self.assertEqual(code, 0)
+        self.assertEqual([call.args[0] for call in phase.call_args_list], list(preflight.CHECKS))
+        checks = json.loads(self.receipt.read_text())["checks"]
+        self.assertLess(checks.index("build-helper-tests"), checks.index("flutter-tests"))
+        self.assertEqual(checks, list(preflight.CHECKS))
 
 
 if __name__ == "__main__":

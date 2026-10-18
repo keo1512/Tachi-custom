@@ -99,28 +99,16 @@ if [[ "$tachi_select_only" == true ]]; then
   exit 0
 fi
 
-# Generate Flutter's Xcode configuration and install Pods. The hosted XCTest
-# below builds the simulator app itself; a full Flutter build here would
-# compile the same native dependencies into a second products directory.
-printf '%s\n' '::group::Prepare Flutter simulator configuration and Pods'
+# CI has already integrated dependencies before issuing its full receipt.
+# A standalone invocation prepares the same project before checking it.
+tachi_preflight_receipt="${TACHI_PREFLIGHT_RECEIPT:-$tachi_root/artifacts/ios-preflight.json}"
 if [[ -n "${TACHI_PREFLIGHT_RECEIPT:-}" ]]; then
-  python3 tools/ios_build_preflight.py --verify --receipt "$TACHI_PREFLIGHT_RECEIPT"
+  python3 tools/ios_build_preflight.py --verify --receipt "$tachi_preflight_receipt"
 else
-  python3 tools/ios_build_preflight.py
+  python3 tools/ios_build_preflight.py --quick --receipt "$tachi_preflight_receipt"
+  bash tools/prepare_ios_dependencies.sh
+  python3 tools/ios_build_preflight.py --receipt "$tachi_preflight_receipt"
 fi
-# Resolve Pods explicitly with unbuffered progress rather than waiting for
-# Flutter's quiet pod subprocess. The following config-only build reuses it.
-python3 tools/run_build_phase.py --name native-pods-install --timeout 600 \
-  --log "$tachi_root/artifacts/native-pods-install.log" \
-  --status "$tachi_root/artifacts/native-pods-install.status.json" \
-  -- pod install --project-directory=ios --verbose
-python3 tools/run_build_phase.py --name native-pods-configuration --timeout 240 \
-  --log "$tachi_root/artifacts/native-tabs-compile.log" \
-  --status "$tachi_root/artifacts/native-pods-configuration.status.json" \
-  -- flutter build ios --simulator --debug --no-pub --config-only
-# Xcode/Flutter migrations must be noticed before the long compile, too.
-python3 tools/ios_build_preflight.py --verify --receipt "${TACHI_PREFLIGHT_RECEIPT:-$tachi_root/artifacts/ios-preflight.json}"
-printf '%s\n' '::endgroup::'
 # Boot only after dependency resolution, so a cold simulator does not compete
 # with Flutter/CocoaPods setup for CPU and disk on the hosted runner.
 python3 - "$tachi_simulator" <<'PY'

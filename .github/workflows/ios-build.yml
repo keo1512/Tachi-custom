@@ -107,10 +107,10 @@ jobs:
           "$RUNNER_TEMP/tachibooks-flutter/bin/flutter" --version
           "$RUNNER_TEMP/tachibooks-flutter/bin/flutter" precache --ios
 
-      - name: Check source, Dart tests and Swift before expensive native compilation
+      - name: Check build helpers and Swift before engine and dependency setup
         shell: bash
-        timeout-minutes: 18
-        run: python3 tools/ios_build_preflight.py --receipt "$TACHI_PREFLIGHT_RECEIPT"
+        timeout-minutes: 12
+        run: python3 tools/ios_build_preflight.py --quick --receipt "$TACHI_PREFLIGHT_RECEIPT"
 
       - name: Prepare verified on-device extension engine
         shell: bash
@@ -131,10 +131,20 @@ jobs:
             --log artifacts/objc-source-checks.log --status artifacts/objc-source-checks.status.json \
             -- python3 tools/check_ios_native_sources.py --objc-only
 
+      - name: Prepare CocoaPods and Flutter configuration before source fingerprinting
+        shell: bash
+        timeout-minutes: 15
+        run: bash tools/prepare_ios_dependencies.sh
+
+      - name: Check integrated source, Dart tests and Swift before native compilation
+        shell: bash
+        timeout-minutes: 18
+        run: python3 tools/ios_build_preflight.py --receipt "$TACHI_PREFLIGHT_RECEIPT"
+
       - name: Test native UIKit tabs on an iOS 27 iPhone simulator
         if: ${{ inputs.native_smoke }}
         shell: bash
-        timeout-minutes: 40
+        timeout-minutes: 35
         run: bash tools/test_ios_native_tabs.sh
 
       - name: Compile and verify unsigned device IPA using checked source

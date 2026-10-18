@@ -46,6 +46,8 @@ tachi_preflight_receipt="${TACHI_PREFLIGHT_RECEIPT:-$tachi_root/artifacts/ios-pr
 if [[ -n "${TACHI_PREFLIGHT_RECEIPT:-}" ]]; then
   python3 tools/ios_build_preflight.py --verify --receipt "$tachi_preflight_receipt"
 else
+  python3 tools/ios_build_preflight.py --quick --receipt "$tachi_preflight_receipt"
+  bash tools/prepare_ios_dependencies.sh
   python3 tools/ios_build_preflight.py --receipt "$tachi_preflight_receipt"
 fi
 tachi_flags=(--release --no-codesign --no-pub)

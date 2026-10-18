@@ -2,6 +2,7 @@
 import contextlib
 import io
 import json
+import os
 import re
 from pathlib import Path
 import sys
@@ -26,6 +27,66 @@ class CocoaPodsSetupTests(unittest.TestCase):
         scheme = ET.parse(ROOT / 'ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme')
         self.assertIsNotNone(scheme.find('TestAction/Testables/TestableReference'))
         self.assertIsNone(scheme.find('BuildAction/PreActions'))
+
+    def test_workflow_integrates_dependencies_before_issuing_reusable_preflight_receipt(self):
+        workflow = (ROOT / '.github/workflows/ios-build.yml').read_text(encoding='utf-8')
+        steps = re.findall(r'^      - name: [^\n]+\n(.*?)(?=^      - name:|\Z)',
+                           workflow, re.M | re.S)
+        def index(command):
+            return next(i for i, step in enumerate(steps) if command in step)
+        quick = index('ios_build_preflight.py --quick')
+        engine = index('-- python3 tools/configure_ios_tachi_runtime.py')
+        objc = index('-- python3 tools/check_ios_native_sources.py --objc-only')
+        dependencies = index('run: bash tools/prepare_ios_dependencies.sh')
+        full = index('run: python3 tools/ios_build_preflight.py --receipt')
+        native = index('run: bash tools/test_ios_native_tabs.sh')
+        release = index('run: bash tools/build_ios.sh')
+        self.assertEqual([quick, engine, objc, dependencies, full, native, release],
+                         sorted([quick, engine, objc, dependencies, full, native, release]))
+        self.assertNotIn('if:', steps[dependencies], 'Device-only builds also need dependency integration')
+        self.assertNotIn('if:', steps[full])
+
+    def test_standalone_builds_prepare_dependencies_before_full_receipt(self):
+        for name in ('tools/test_ios_native_tabs.sh', 'tools/build_ios.sh'):
+            with self.subTest(script=name):
+                script = (ROOT / name).read_text(encoding='utf-8')
+                branch = script.split('if [[ -n "${TACHI_PREFLIGHT_RECEIPT:-}" ]]; then', 1)[1]
+                ci, standalone = branch.split('\nelse\n', 1)
+                standalone = standalone.split('\nfi\n', 1)[0]
+                self.assertIn('ios_build_preflight.py --verify', ci)
+                self.assertNotIn('prepare_ios_dependencies.sh', ci)
+                quick = standalone.index('ios_build_preflight.py --quick')
+                preparation = standalone.index('bash tools/prepare_ios_dependencies.sh')
+                full = standalone.index('ios_build_preflight.py --receipt')
+                self.assertLess(quick, preparation)
+                self.assertLess(preparation, full)
+
+    def test_dependency_preparation_is_bounded_and_checks_installed_lock(self):
+        script = (ROOT / 'tools/prepare_ios_dependencies.sh').read_text(encoding='utf-8')
+        self.assertIn('--name native-pods-install --timeout 600', script)
+        self.assertIn('--name native-pods-configuration --timeout 240', script)
+        self.assertIn('-- pod install --project-directory=ios --verbose', script)
+        self.assertIn('-- flutter build ios --simulator --debug --no-pub --config-only', script)
+        # Execute the actual postcondition against mismatched and matching
+        # fixture lockfiles; no CocoaPods/Xcode execution is claimed here.
+        code = script.split("python3 - <<'PY'\n", 1)[1].split('\nPY\n', 1)[0]
+        with tempfile.TemporaryDirectory(prefix='tachi-pods-lock-') as temporary:
+            root = Path(temporary)
+            (root / 'ios/Pods').mkdir(parents=True)
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                with self.assertRaisesRegex(SystemExit, 'setup is incomplete'):
+                    exec(compile(code, 'prepare_ios_dependencies.sh:postcondition', 'exec'), {})
+                (root / 'ios/Podfile.lock').write_text('resolved dependencies')
+                (root / 'ios/Pods/Manifest.lock').write_text('different dependencies')
+                with self.assertRaisesRegex(SystemExit, 'setup is incomplete'):
+                    exec(compile(code, 'prepare_ios_dependencies.sh:postcondition', 'exec'), {})
+                (root / 'ios/Pods/Manifest.lock').write_text('resolved dependencies')
+                with contextlib.redirect_stdout(io.StringIO()):
+                    exec(compile(code, 'prepare_ios_dependencies.sh:postcondition', 'exec'), {})
+            finally:
+                os.chdir(previous)
 
 
 class NativeBuildPlanTests(unittest.TestCase):

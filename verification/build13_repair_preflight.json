@@ -1,0 +1,93 @@
+{
+  "recordedAt": "2026-10-18T12:48:01.005971+00:00",
+  "failedRun": 39126149902,
+  "failedSource": "425334ff08a518151534eaa275b4e4853de761b2",
+  "failure": "Intentional 0.6s idle-timeout unit fixture exposed unhandled PermissionError on killpg(pid,0); not a native application compile failure",
+  "sourceChecks": [
+    {
+      "path": ".github/workflows/ios-build.yml",
+      "bytes": 8332,
+      "sha256": "43b5c40b6449123c62ad2852602e7d34a5b3c33f90934ad984573b5b1959d2ba"
+    },
+    {
+      "path": "tools/run_build_phase.py",
+      "bytes": 10050,
+      "sha256": "9fc05fe9c855a5f95bb08382d21ddd972fefd1c86ea7969b6139d0b1317d757c"
+    },
+    {
+      "path": "tools/test_run_build_phase.py",
+      "bytes": 10862,
+      "sha256": "f9bd34157e601f85da40eb65dbc75d54ffcec1d38ba830f19be69a1e535826aa"
+    },
+    {
+      "path": "tools/ios_build_preflight.py",
+      "bytes": 5658,
+      "sha256": "6738799a219219531ad22526b4443877b68e583529e5ef68221be5f6c59a57b8"
+    },
+    {
+      "path": "tools/test_ios_build_preflight.py",
+      "bytes": 7923,
+      "sha256": "e772e46262bc5bb7ed73e6aad33cc14b9bc259ed31685f11300e6537d57537d7"
+    },
+    {
+      "path": "tools/test_ios_build_pipeline.py",
+      "bytes": 11114,
+      "sha256": "b5d31b437d1e7cd218eaf24526ed4811d29b95b6df8240a7dd6a308fe331e557"
+    },
+    {
+      "path": "tools/prepare_ios_dependencies.sh",
+      "bytes": 2488,
+      "sha256": "be0afe12a5aaf5b705398c42608612e41a541fb1ea8e049dfe4a03f9240dbb93"
+    },
+    {
+      "path": "tools/test_ios_native_tabs.sh",
+      "bytes": 8308,
+      "sha256": "2a5525c5df001f2874729203c06d4d2d5657bdc2d05c3e8b674fce1b7788e70a"
+    },
+    {
+      "path": "tools/build_ios.sh",
+      "bytes": 7150,
+      "sha256": "3798a62f023c32f74747c145110c54dd594349c63a408a90ed1da73ce47f320d"
+    }
+  ],
+  "unitChecks": {
+    "path": "artifacts/build13-repair-final-tests.log",
+    "bytes": 16661,
+    "sha256": "94f2c94233ab3d44d5b0349109a6d8dcbed6504fb6443878ee9fe8618a7ae22d",
+    "total": 76,
+    "passed": 75,
+    "skipped": 1,
+    "failed": 0
+  },
+  "workflowSyntax": {
+    "path": "artifacts/ipa13-pipeline-ordering-syntax.json",
+    "bytes": 51,
+    "sha256": "49bf3798039009e9b2a252197ea523a6f7f654978fb559f273983c805ebd158a",
+    "yamlParsed": true,
+    "runStepsBashSyntaxChecked": 11
+  },
+  "failedJobLog": {
+    "path": "artifacts/build13-retry2-job.log",
+    "bytes": 44197,
+    "sha256": "4382ca6d498374688c6ee129a23857e5e21d24169807594082a00d7176ba3653"
+  },
+  "failedDiagnostics": {
+    "path": "artifacts/build13-retry2-diagnostics.zip",
+    "bytes": 39962,
+    "sha256": "10a618de4be133480f666ba0404f5fcfa8350e18e540a9123aad6f07bea228b0"
+  },
+  "fixes": [
+    "No signal0 probes; bounded group/direct-child cleanup guards, warnings and primary failure preserved",
+    "Helper regressions and Swift run before the expensive full Flutter suite",
+    "Full source receipt created after CocoaPods/Flutter integration; PBX/workspace/Podfile.lock remain bound",
+    "Installed Pods manifest must match lock; no receipt issued for quick checks"
+  ],
+  "independentReviews": [
+    "cleanup expected OS/race/wait paths",
+    "dependency integration, fingerprint and generated file interactions"
+  ],
+  "applicationSourceChangedThisRepair": false,
+  "nativeMacValidationOfThisRevision": false,
+  "newIpaBuilt": false,
+  "limitation": "Windows regressions and syntax/fixture checks do not prove a completed macOS/XCTest/Release build"
+}

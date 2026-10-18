@@ -17,24 +17,20 @@ FLUTTER_VERSION = "3.47.4"
 FLUTTER_REVISION = "9584c6713b324636289d067944a46fd6b49df14b"
 INPUT_ROOTS = {"lib", "test", "ios", "packages", "tools", "assets", ".github"}
 INPUT_FILES = {"pubspec.yaml", "pubspec.lock", "analysis_options.yaml", "codemagic.yaml"}
-CHECKS = ("locked-pub-get", "flutter-analyze", "flutter-tests", "build-helper-tests", "swift-source-checks")
+QUICK_CHECKS = ("locked-pub-get", "build-helper-tests", "swift-source-checks")
+CHECKS = QUICK_CHECKS + ("flutter-analyze", "flutter-tests")
 
 
 def source_digest(root: Path) -> str:
     names = set(subprocess.check_output(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
         cwd=root, timeout=30).decode("utf-8").split("\0"))
-    tracked = set(subprocess.check_output(
-        ["git", "ls-files", "--cached", "-z"], cwd=root, timeout=30).decode("utf-8").split("\0"))
-    # CocoaPods creates a lock on first resolution. Once committed, it becomes
-    # a checked input; a generated untracked lock is retained as CI evidence.
-    if "ios/Podfile.lock" not in tracked:
-        names.discard("ios/Podfile.lock")
-    # This ignored input is deliberately configured before the checks. Never
-    # publish its contents; a hash only binds the receipt to the same config.
-    firebase = "ios/Runner/GoogleService-Info.plist"
-    if (root / firebase).is_file():
-        names.add(firebase)
+    # Dependency integration is complete before the reusable receipt is made.
+    # Bind even an untracked/ignored first Pod resolution, plus private config,
+    # without publishing either file's contents.
+    for name in ("ios/Podfile.lock", "ios/Runner/GoogleService-Info.plist"):
+        if (root / name).is_file():
+            names.add(name)
     digest = hashlib.sha256()
     for name in sorted(names - {""}):
         if name.split("/")[0] not in INPUT_ROOTS and name not in INPUT_FILES:
@@ -60,7 +56,10 @@ def verify_receipt(root: Path, path: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--receipt", type=Path, default=ROOT / "artifacts/ios-preflight.json")
-    parser.add_argument("--verify", action="store_true")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--verify", action="store_true")
+    mode.add_argument("--quick", action="store_true",
+                      help="Check build helpers and Swift before dependency setup; never issue a reusable receipt")
     args = parser.parse_args()
     if args.verify:
         verify_receipt(ROOT, args.receipt)
@@ -77,19 +76,22 @@ def main() -> int:
             or version.get("frameworkRevision") != FLUTTER_REVISION):
         parser.error("Use the pinned official Flutter 3.47.4 revision")
     phases = [
-        (CHECKS[0], ["flutter", "pub", "get", "--enforce-lockfile"], 240),
-        (CHECKS[1], ["flutter", "analyze", "--no-pub"], 240),
-        (CHECKS[2], ["flutter", "test", "--no-pub"], 600),
-        (CHECKS[3], [sys.executable, "-B", "-m", "unittest",
+        ("locked-pub-get", ["flutter", "pub", "get", "--enforce-lockfile"], 240),
+        ("build-helper-tests", [sys.executable, "-B", "-m", "unittest",
                     "test_run_build_phase", "test_ios_build_preflight",
                     "test_ios_build_pipeline", "test_package_jvm_frameworks",
                     "test_check_native_runtime_bundle", "test_configure_firebase_ios"], 120),
-        (CHECKS[4], [sys.executable, "tools/check_ios_native_sources.py", "--swift-only"], 600),
+        ("swift-source-checks", [sys.executable, "tools/check_ios_native_sources.py", "--swift-only"], 600),
     ]
+    if not args.quick:
+        phases += [
+            ("flutter-analyze", ["flutter", "analyze", "--no-pub"], 240),
+            ("flutter-tests", ["flutter", "test", "--no-pub"], 600),
+        ]
     for name, command, limit in phases:
         # unittest imports the build helpers from tools, while Flutter and the
         # native checker run at the application root.
-        working = ROOT / "tools" if name == CHECKS[3] else ROOT
+        working = ROOT / "tools" if name == "build-helper-tests" else ROOT
         previous = Path.cwd()
         try:
             os.chdir(working)
@@ -101,6 +103,9 @@ def main() -> int:
             return result
     if source_digest(ROOT) != before:
         raise ValueError("Build inputs changed during preflight; checks must be rerun")
+    if args.quick:
+        print("Quick checks passed; no reusable receipt issued. Prepare Pods, then run full preflight.")
+        return 0
     args.receipt.parent.mkdir(parents=True, exist_ok=True)
     args.receipt.write_text(json.dumps({
         "schema": 1, "sourceSha256": before, "checks": list(CHECKS),
