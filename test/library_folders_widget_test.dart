@@ -41,6 +41,29 @@ void main() {
       expect(find.byKey(const ValueKey('library-book-a')), findsNothing);
       await tester.tap(find.byTooltip('Lọc thư viện'));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('library-filter-scope')),
+        100,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const ValueKey('library-filter-options')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Phạm vi và danh mục'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Danh mục'),
+        100,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const ValueKey('library-filter-options')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await tester.ensureVisible(find.text('Danh mục'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Danh mục'));

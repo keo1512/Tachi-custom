@@ -23,11 +23,15 @@ class SourceMigrationScreen extends ConsumerStatefulWidget {
     required this.source,
     this.alternatives = const [],
     this.selectionOnly = false,
+    this.session,
+    this.options = const SourceMigrationOptions(),
   });
   final String bookId;
   final CatalogueSource source;
   final List<CatalogueSource> alternatives;
   final bool selectionOnly;
+  final SourceMigrationSession? session;
+  final SourceMigrationOptions options;
   @override
   ConsumerState<SourceMigrationScreen> createState() => _SourceMigrationState();
 }
@@ -169,7 +173,7 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
           'Nguồn trả về truyện có danh tính khác với kết quả đã chọn.',
         );
       }
-      final chapters = await sources.chapters(item);
+      final chapters = await sources.chapters(detail);
       if (!mounted || request != generation) return;
       final service = ref.read(sourceMigrationProvider);
       checkLibraryRevision(repository.replacementRevision, revision);
@@ -177,6 +181,8 @@ class _SourceMigrationState extends ConsumerState<SourceMigrationScreen> {
         widget.bookId,
         detail,
         chapters,
+        session: widget.session,
+        options: widget.options,
         sourceName:
             selectedSources
                 .where(

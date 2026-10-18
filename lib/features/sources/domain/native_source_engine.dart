@@ -27,6 +27,12 @@ abstract interface class NativeSourceEngine {
   void dispose();
 }
 
+/// Optional, persisted package inventory. Reading an empty installation must
+/// not start a VM merely to enumerate its empty sources or extension list.
+abstract interface class NativeInstalledExtensionInventory {
+  Future<bool> hasInstalledExtensions();
+}
+
 /// Some APKs decode images or modify requests inside their own HTTP client.
 abstract interface class NativeImageEngine {
   Future<SourceImageData> fetchImage(

@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-18T15:05:31.944499+00:00",
+  "status": "host_verified_device_pending",
+  "baseCommit": "fecc2f14f3d077e8a3e74a1aabad32bf6ad27870",
+  "sourceUncommitted": true,
+  "userReportedDeviceSymptoms": [
+    "Immediate termination after confirming restore; library still empty on next launch.",
+    "Browse terminates a fresh installation with no extensions installed.",
+    "Browse with existing data can load but takes approximately ten seconds.",
+    "User could not locate a device crash report."
+  ],
+  "input": {
+    "name": "Tachimanga_backup_2026-10-18_21-20-26-971.tmb",
+    "bytes": 8712417,
+    "sha256": "c9b3f8856a8ac0ebefa9bd7f2b78683b2d2a3034f7c89a682758da5aaf752ea7",
+    "version": 511,
+    "type": 0,
+    "contentsChecksumValid": true,
+    "sqliteQuickCheck": "ok",
+    "libraryBooks": 748,
+    "libraryChapters": 22816,
+    "originalBytesAndModificationTimePreservedByIntegrationTest": true
+  },
+  "verifiedChanges": [
+    "Empty package inventory is enumerated from bounded local registry without starting a JVM.",
+    "An empty registry is captured for backup without source enumeration or Java startup.",
+    "Inventory check and native enumeration share the existing installation/removal lease.",
+    "Malformed, non-file and oversized registries are reported without modifying them.",
+    "A later installation after empty enumeration still reaches native loading; no permanent empty cache.",
+    "Restore validates individual entries, global size/count/duplicate identity limits, and yields for cancellation before mutation.",
+    "Backup v1 encoding and SHA256 fingerprints use per-book chunks and preserve frozen pre-change bytes.",
+    "Restore recovery, atomic commit, configuration guards and final library CAS remain enabled."
+  ],
+  "verification": {
+    "fullFlutter": {
+      "passed": 1275,
+      "skipped": 6,
+      "failed": 0,
+      "log": "artifacts/restore_fix_full_flutter.log",
+      "sha256": "03e535ac796597ef1b00a1cf84cd14f32bfc2fc81b8b2371e1ac7e41f018a116",
+      "actualIsarCore": "Isar Community 3.3.2 Windows native DLL",
+      "newPrivateBackupOptInEnabled": true
+    },
+    "analysis": {
+      "issues": 0,
+      "log": "artifacts/restore_fix_analyze.log",
+      "sha256": "a2b88ba2654fe817cdb5ad540c35ebb8447a86ddde3c28b7ef5dbd29a95fc61f"
+    },
+    "privateInputIntegration": {
+      "usesActualIsar": true,
+      "usesCoordinatedPreferences": true,
+      "usesBothNativeBackupAdapters": true,
+      "checksPreviewSourceAvailabilityCommitRecoveryAndReopen": true,
+      "javaExecutorInvocations": 0,
+      "javascriptExecutorInvocations": 0,
+      "fullMetadataFingerprintEqualsPreview": true
+    },
+    "largeRestoreRegression": {
+      "beforePatchLog": "artifacts/restore_large_before.log",
+      "failure": "Cancellation received only after 749 validations of a 748-book preview.",
+      "afterPatch": "Passes in full suite; cancellation observed before complete validation and no library/recovery mutation."
+    },
+    "codecContract": {
+      "fixtureBytes": 1397,
+      "preChangeEncodedSha256": "a0c1f5d76a4e0036f72846a76fe35b8264e8844d0919d74436f613b55a985946",
+      "preChangeFingerprint": "f35115f57c4bac6be6c5eeaae4ba27cfb977d2b4b6750dd637553d2ed1651692",
+      "unchangedAfterPatch": true
+    }
+  },
+  "referenceInputs": [
+    {
+      "name": "tinh nang phai co.md",
+      "bytes": 43832,
+      "sha256": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c",
+      "unchanged": true
+    },
+    {
+      "name": "# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md",
+      "bytes": 62663,
+      "sha256": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083",
+      "unchanged": true
+    },
+    {
+      "name": "TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md",
+      "bytes": 162280,
+      "sha256": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0",
+      "unchanged": true
+    },
+    {
+      "name": "Tachimanga iOS Mod IPA No Jailbreak Cheats 5.0 Hacked IPA by iOSGods.com.ipa",
+      "bytes": 128494339,
+      "sha256": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+      "unchanged": true
+    }
+  ],
+  "referenceComparison": {
+    "requiredFeatures": "Sections 13.3-13.4: validation, duplicate handling, missing-source warning, restore progress/result.",
+    "uiSpec": "Sections 14.4-14.5: file, validation, preview, progress, completion and missing-source warnings.",
+    "existingProductContract": "Library metadata restore remains available without installing the missing sources first.",
+    "mechanismSpec": "Section 3: registered sources belong to installed extensions; saved library identity survives absent extensions.",
+    "originalIpa": "Tachimanga 5.0 build511 hash verified; no original iOS runtime execution performed.",
+    "newSample": "Actual build511/type0 SQLite rows restored; no offline bytes fabricated."
+  },
+  "sourceFiles": [
+    {
+      "path": "lib/features/library/data/backup_compatibility/backup_reader.dart",
+      "sha256": "7ff5574d0b67643c884c3ca8038f3d6f247b7bea632b2daeacef943a0e5cb273"
+    },
+    {
+      "path": "lib/features/library/data/backup_service.dart",
+      "sha256": "678c1482136c3d90e2a21f49e92992c5f6648eddf4e3d5c317f60a566e19795c"
+    },
+    {
+      "path": "lib/features/library/data/backup_validation.dart",
+      "sha256": "77caf5e700e3e28ecc4249b0783dda1765b5f52e6623796f8160191d054da4b4"
+    },
+    {
+      "path": "lib/features/library/data/library_snapshot.dart",
+      "sha256": "25e60555d8d102974b3337681c76abe8b7ec374193fedf0503e639a36a3fa3df"
+    },
+    {
+      "path": "lib/features/sources/data/native_tachi_repository.dart",
+      "sha256": "7d47e59a3688154e849f2e5ed21232aed50cc65d6b0511fa9d5183f235c3f7a6"
+    },
+    {
+      "path": "lib/features/sources/data/on_device_source_repository.dart",
+      "sha256": "f6bc0af70572b218a6d4d0f65130130503eea91a793fc1457c18c2828a87bc30"
+    },
+    {
+      "path": "lib/features/sources/domain/native_source_engine.dart",
+      "sha256": "fad9d8cf3b54dbe5a919c9bc4838912e6bfd4d583ae3e5b01a35dd6c9a9a4646"
+    },
+    {
+      "path": "test/backup_restore_large_test.dart",
+      "sha256": "951da5c1417c921989b137b81e9e93564345105f9a27b2803e099b60c3211d28"
+    },
+    {
+      "path": "test/browse_empty_native_test.dart",
+      "sha256": "d4c16873c1da26f9fbd3f0276a567a1b4ffe524a5f03e3e4a883e1922e01dd81"
+    },
+    {
+      "path": "test/empty_native_inventory_restore_test.dart",
+      "sha256": "f25e52c9443a2d41c12b7df503efe636d24ce910776c40b0a881b1adc7d3c26d"
+    },
+    {
+      "path": "test/library_snapshot_encoding_test.dart",
+      "sha256": "b0e7b58c72222be27e4a525ec325a48b3f42f21d01964dd6bd2bb2e12e380354"
+    }
+  ],
+  "limits": {
+    "nativeCrashCauseConfirmed": false,
+    "nativeDeviceExecutionPerformed": false,
+    "newIpaBuilt": false,
+    "tenSecondDeviceLoadRetimed": false,
+    "installedExtensionFirstVmStartupVerifiedOnDevice": false,
+    "note": "Windows storage, source-call assertions and widget checks do not prove device JVM startup or eliminate every iPhone crash."
+  }
+}

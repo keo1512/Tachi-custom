@@ -78,9 +78,10 @@ class _PresetState extends ConsumerState<LibraryFilterPresetsBar> {
                 PopupMenuItem(value: name, child: Text(name)),
             ],
             child: const Padding(
-              padding: EdgeInsets.all(8),
+              padding: EdgeInsets.symmetric(vertical: 12),
               child: Text(
                 'Bộ lọc đã lưu',
+                style: TextStyle(fontSize: 16),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

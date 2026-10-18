@@ -262,15 +262,49 @@ void main() {
               .first,
         );
         expect(
-          content.position.maxScrollExtent,
-          0,
-          reason: 'All filter controls must be visible initially',
+          tester
+              .getSize(find.byKey(const ValueKey('library-filter-sheet')))
+              .height,
+          lessThan(932 * .65),
         );
-        expect(find.text('Hoàn thành').hitTestable(), findsWidgets);
+        await tester.scrollUntilVisible(
+          find.byTooltip('Lọc Hoàn thành'),
+          100,
+          scrollable: find
+              .descendant(
+                of: find.byKey(const ValueKey('library-filter-options')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.pumpAndSettle();
+        expect(find.byTooltip('Lọc Hoàn thành').hitTestable(), findsOneWidget);
         expect(find.text('Nhóm dịch'), findsNothing);
+        await tester.scrollUntilVisible(
+          find.text('Tác giả'),
+          100,
+          scrollable: find
+              .descendant(
+                of: find.byKey(const ValueKey('library-filter-options')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Tác giả'));
         await tester.pumpAndSettle();
         await tester.tap(find.widgetWithText(ListTile, 'Ann'));
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('library-sources-filter')),
+          -100,
+          scrollable: find
+              .descendant(
+                of: find.byKey(const ValueKey('library-filter-options')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
         await tester.pumpAndSettle();
         await tester.tap(find.text('Nguồn truyện').first);
         await tester.pumpAndSettle();
@@ -282,10 +316,12 @@ void main() {
           find.byKey(const ValueKey('library-filter-picker-apply')),
         );
         await tester.pumpAndSettle();
+        expect(content.position.maxScrollExtent, greaterThan(0));
+        await tester.ensureVisible(find.text('Loại trừ nguồn đã chọn'));
+        await tester.pumpAndSettle();
         expect(
-          content.position.maxScrollExtent,
-          0,
-          reason: 'Source exclusion must also fit after selecting sources',
+          find.text('Loại trừ nguồn đã chọn').hitTestable(),
+          findsOneWidget,
         );
         await tester.tap(find.byTooltip('Đóng bộ lọc'));
         await tester.pumpAndSettle();

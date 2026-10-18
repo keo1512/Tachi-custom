@@ -414,55 +414,54 @@ void main() {
     },
   );
 
-  test(
-    'a failed cover does not poison queued cover or chapter image requests',
-    () async {
-      final first = Completer<void>(), second = Completer<void>();
-      final firstStarted = Completer<void>(), secondStarted = Completer<void>();
-      final started = <String>[];
-      final repository = native((method, args) async {
-        final label = method == 'cover' ? args['url'] as String : method;
-        started.add(label);
-        if (label == '/first.jpg') {
-          firstStarted.complete();
-          await first.future;
-          throw const ApiException('Retry cover');
-        }
-        if (label == '/second.jpg') {
-          secondStarted.complete();
-          await second.future;
-        }
-        return {
-          'base64': base64Encode([255, 216, 255, 1]),
-          'mimeType': 'image/jpeg',
-        };
-      });
-      final failed = repository.fetchCover(_book('/first.jpg'));
-      final assertion = expectLater(failed, throwsA(isA<ApiException>()));
-      await firstStarted.future;
-      final cover = repository.fetchCover(_book('/second.jpg'));
-      await secondStarted.future;
-      final page = repository.fetchImage(
-        const CatalogueBook(
-          ref: '/series/one',
-          title: 'One',
-          sourceId: '9223372036854775806',
-          kind: ContentKind.manga,
-          engine: SourceEngine.tachimanga,
-        ),
-        const CatalogueChapter(ref: '/chapter/one', title: 'One', index: 0),
-        0,
-        'https://cdn.example/page.jpg',
-      );
-      final laterCover = repository.fetchCover(_book('/third.jpg'));
-      first.complete();
-      await assertion;
-      expect(started, ['/first.jpg', '/second.jpg']);
-      second.complete();
-      await cover;
-      await page;
-      await laterCover;
-      expect(started, ['/first.jpg', '/second.jpg', 'image', '/third.jpg']);
-    },
-  );
+  test('reader pages start while slow covers remain pending and cover failures do not poison the queue', () async {
+    final first = Completer<void>(), second = Completer<void>();
+    final firstStarted = Completer<void>(), secondStarted = Completer<void>();
+    final started = <String>[];
+    final repository = native((method, args) async {
+      final label = method == 'cover' ? args['url'] as String : method;
+      started.add(label);
+      if (label == '/first.jpg') {
+        firstStarted.complete();
+        await first.future;
+        throw const ApiException('Retry cover');
+      }
+      if (label == '/second.jpg') {
+        secondStarted.complete();
+        await second.future;
+      }
+      return {
+        'base64': base64Encode([255, 216, 255, 1]),
+        'mimeType': 'image/jpeg',
+      };
+    });
+    final failed = repository.fetchCover(_book('/first.jpg'));
+    final assertion = expectLater(failed, throwsA(isA<ApiException>()));
+    await firstStarted.future;
+    final cover = repository.fetchCover(_book('/second.jpg'));
+    await secondStarted.future;
+    final page = repository.fetchImage(
+      const CatalogueBook(
+        ref: '/series/one',
+        title: 'One',
+        sourceId: '9223372036854775806',
+        kind: ContentKind.manga,
+        engine: SourceEngine.tachimanga,
+      ),
+      const CatalogueChapter(ref: '/chapter/one', title: 'One', index: 0),
+      0,
+      'https://cdn.example/page.jpg',
+    );
+    final laterCover = repository.fetchCover(_book('/third.jpg'));
+    await page.timeout(const Duration(seconds: 1));
+    expect(started, ['/first.jpg', '/second.jpg', 'image']);
+    first.complete();
+    await assertion;
+    expect(started.take(3), ['/first.jpg', '/second.jpg', 'image']);
+    second.complete();
+    await cover;
+    await page;
+    await laterCover;
+    expect(started, ['/first.jpg', '/second.jpg', 'image', '/third.jpg']);
+  });
 }

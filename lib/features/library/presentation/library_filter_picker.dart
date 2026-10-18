@@ -151,6 +151,7 @@ class _FilterPickerState extends State<_FilterPicker> {
                           );
                         }
                         return ListTile(
+                          key: ValueKey('library-filter-option-${item.key}'),
                           title: Text(item.value),
                           selected: item.key == widget.selected,
                           trailing: item.key == widget.selected

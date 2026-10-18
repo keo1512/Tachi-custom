@@ -16,6 +16,42 @@ class BackupValidator {
   List<LibrarySnapshotEntry> validate(Uint8List bytes) =>
       validateSnapshot(bytes).entries;
 
+  /// Revalidate an externally converted/previewed model without allocating one
+  /// JSON object graph for the entire library. Keep global v1 limits and identity
+  /// checks, and yield between books before any native engine or storage commit.
+  Future<void> validateForRestore(
+    LibrarySnapshot snapshot, {
+    void Function()? check,
+  }) async {
+    check?.call();
+    if (snapshot.entries.length > 10000) {
+      throw const FormatException('Bản sao lưu có quá nhiều sách.');
+    }
+    final envelope = LibrarySnapshot(
+      const [],
+      configuration: snapshot.configuration,
+      extensions: snapshot.extensions,
+    ).encode();
+    validateSnapshot(envelope);
+    var size = envelope.length;
+    final entryEnvelopeSize = LibrarySnapshot(const []).encode().length;
+    final ids = <String>{};
+    for (final entry in snapshot.entries) {
+      check?.call();
+      if (!ids.add(entry.book.id)) {
+        throw const FormatException('ID sách trong sao lưu bị trùng.');
+      }
+      final bytes = LibrarySnapshot([entry]).encode();
+      size += bytes.length - entryEnvelopeSize + (ids.length > 1 ? 1 : 0);
+      if (size > LibrarySnapshot.maxBytes) {
+        throw const FormatException('Bản sao lưu vượt giới hạn 128 MB.');
+      }
+      validateSnapshot(bytes);
+      await Future<void>.delayed(Duration.zero);
+    }
+    check?.call();
+  }
+
   LibrarySnapshot validateSnapshot(Uint8List bytes) {
     if (bytes.isEmpty || bytes.length > LibrarySnapshot.maxBytes) {
       throw const FormatException(

@@ -51,15 +51,25 @@ public final class ExtensionHost {
         CachedChapter(String sourceId,String bookRef,String ref,List<? extends Page> pages){this.sourceId=sourceId;this.bookRef=bookRef;this.ref=ref;this.pages=pages;}
     }
     private ExtensionHost(){}
-    // Covers only read the loaded registry and use OkHttp's thread-safe client.
-    // Everything that can mutate registry/page/metadata state stays exclusive.
-    // A fair lock lets a waiting reader-page request run before newer covers.
+    // Keep source/page state exclusive, but do not hold that lock during cover
+    // HTTP. A separate lease still orders privacy/preferences/package mutations
+    // after in-flight covers, so those requests cannot restore an older session.
     private static final ReentrantReadWriteLock requests=new ReentrantReadWriteLock(true);
+    private static final ReentrantReadWriteLock coverSessions=new ReentrantReadWriteLock(true);
     public static String invoke(String requestJson){
-        Lock lock=requests.writeLock();
-        try{if(requestJson!=null&&requestJson.length()<=1024*1024&&"cover".equals(new JsonParser().parse(requestJson).getAsJsonObject().get("method").getAsString()))lock=requests.readLock();}catch(RuntimeException invalid){}
-        lock.lock();
-        try{return invokeLocked(requestJson);}finally{lock.unlock();}
+        String method="";
+        try{if(requestJson!=null&&requestJson.length()<=1024*1024)method=required(new JsonParser().parse(requestJson).getAsJsonObject(),"method");}catch(RuntimeException invalid){}
+        boolean cover="cover".equals(method);
+        Lock session=cover?coverSessions.readLock():changesCoverSession(method)?coverSessions.writeLock():null;
+        Lock lock=cover?null:requests.writeLock();
+        // Lock order is always session -> source state. Reader calls only take
+        // source state; covers release it before doing any network I/O.
+        if(session!=null)session.lock();
+        if(lock!=null)lock.lock();
+        try{return invokeLocked(requestJson);}finally{if(lock!=null)lock.unlock();if(session!=null)session.unlock();}
+    }
+    private static boolean changesCoverSession(String method){
+        return "initialize".equals(method)||"install".equals(method)||"uninstall".equals(method)||"setPreference".equals(method)||"browserSession".equals(method)||"clearCookies".equals(method)||"clearSourceCache".equals(method)||"resetUserAgents".equals(method);
     }
     private static String invokeLocked(String requestJson){
         JsonObject response=new JsonObject();
@@ -70,7 +80,7 @@ public final class ExtensionHost {
             JsonElement result;
             if("initialize".equals(method))result=initialize(required(args,"dataDirectory"));
             else{
-                if(registry==null)throw new IllegalStateException("Engine must be initialized first");
+                if(!"cover".equals(method)&&registry==null)throw new IllegalStateException("Engine must be initialized first");
                 switch(method){
                     case "sources":result=sources();break;
                     case "health":result=status();break;
@@ -295,6 +305,10 @@ public final class ExtensionHost {
         }
     }
     private static JsonObject cover(JsonObject args)throws Exception{
+        final Request request;final OkHttpClient client;
+        Lock state=requests.readLock();state.lock();
+        try{
+        if(registry==null)throw new IllegalStateException("Engine must be initialized first");
         CatalogueSource source=registry.source(required(args,"sourceId"));
         if(!(source instanceof HttpSource))throw new IllegalArgumentException("Source has no HTTP cover loader");
         HttpSource http=(HttpSource)source;String raw=required(args,"url");
@@ -312,8 +326,10 @@ public final class ExtensionHost {
         // chapter getImage/imageRequest overrides can transform page URLs and
         // must not be applied to a cover. The client retains its cookie jar and
         // source interceptors, including browser clearance when available.
-        Request request=new Request.Builder().url(url).headers(http.getHeaders()).build();
-        try(Response response=http.getClient().newBuilder().callTimeout(8,java.util.concurrent.TimeUnit.SECONDS).build().newCall(request).execute()){
+        request=new Request.Builder().url(url).headers(http.getHeaders()).build();
+        client=http.getClient().newBuilder().callTimeout(8,java.util.concurrent.TimeUnit.SECONDS).build();
+        }finally{state.unlock();}
+        try(Response response=client.newCall(request).execute()){
             if(!response.isSuccessful())throw new HttpStatusException(response.code());
             if(response.body()==null)throw new IOException("Cover HTTP response is empty");
             if(response.body().contentLength()>MAX_IMAGE_BYTES)throw new IOException("Cover size exceeds native response limit");

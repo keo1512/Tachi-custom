@@ -29,6 +29,48 @@ void main() {
     preferences = await SharedPreferences.getInstance();
   });
   testWidgets(
+    'manual migration passes refreshed detail memo and native context to chapter lookup',
+    (tester) async {
+      final repository = MemoryLibraryRepository();
+      await repository.save(
+        LibraryBook(
+          id: 'old',
+          title: 'Old title',
+          engine: 'vbook',
+          sourceId: 'old-source',
+        ),
+      );
+      final before = (await repository.snapshot()).fingerprint;
+      final sources = _MemoSources();
+      addTearDown(sources.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            preferencesProvider.overrideWithValue(preferences),
+            libraryRepositoryProvider.overrideWithValue(repository),
+            sourceRepositoryProvider.overrideWithValue(sources),
+          ],
+          child: const MaterialApp(
+            home: SourceMigrationScreen(
+              bookId: 'old',
+              source: _source,
+              selectionOnly: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ListTile, 'New title'));
+      await tester.pumpAndSettle();
+      expect(sources.chapterContext?.sourceMemo, {'token': 'fresh-detail'});
+      expect(sources.chapterContext?.nativeSourceContext, isTrue);
+      expect(find.text('Truyện ở nguồn mới'), findsOneWidget);
+      expect((await repository.snapshot()).fingerprint, before);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+  testWidgets(
     'committed journal failure refreshes library and explains reopening without claiming no change',
     (tester) async {
       final repository = MemoryLibraryRepository();
@@ -366,10 +408,12 @@ void main() {
       );
       await tester.tap(targetSelector);
       await tester.pumpAndSettle();
-      expect(find.text('Chọn nguồn đích'), findsNWidgets(2));
+      expect(find.text('Chọn nguồn đích'), findsOneWidget);
       await tester.tap(find.widgetWithText(CheckboxListTile, 'New source'));
       await tester.pump();
-      await tester.tap(find.text('Tìm trong các nguồn này'));
+      await tester.tap(
+        find.byKey(const ValueKey('migration-sources-continue')),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Nguồn đích: New source'), findsOneWidget);
       await tester.scrollUntilVisible(
@@ -582,4 +626,23 @@ class _Sources extends SourceRepository {
       number: 1,
     ),
   ];
+}
+
+class _MemoSources extends _Sources {
+  CatalogueBook? chapterContext;
+  @override
+  Future<CatalogueBook> detail(CatalogueBook book) async => const CatalogueBook(
+    ref: '/new',
+    title: 'New title',
+    sourceId: 'new-source',
+    kind: ContentKind.novel,
+    engine: SourceEngine.vbook,
+    sourceMemo: {'token': 'fresh-detail'},
+    nativeSourceContext: true,
+  );
+  @override
+  Future<List<CatalogueChapter>> chapters(CatalogueBook book) {
+    chapterContext = book;
+    return super.chapters(book);
+  }
 }

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/diagnostics/diagnostic_log.dart';
 import '../../library/presentation/library_view_model.dart';
+import '../../library/data/coordinated_preferences.dart';
 import '../../library/presentation/library_locations.dart';
 import '../../library/presentation/library_add_categories.dart';
 import '../../settings/settings_controller.dart';
@@ -38,7 +39,8 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
   bool retryMore = false;
   int request = 0, page = 1;
   SourceBrowseMode? mode;
-  String layout = 'comfortable';
+  String layout = 'compact';
+  bool searching = false;
   SourceFilterSet? selectedFilters;
 
   Future<void> chooseFilters() async {
@@ -64,6 +66,11 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
         .getString('sourceCatalogueLayoutV1');
     if (['list', 'compact', 'comfortable'].contains(saved)) layout = saved!;
     text.text = widget.initialQuery;
+    searching =
+        widget.initialQuery.isNotEmpty ||
+        !ref
+            .read(sourceRepositoryProvider)
+            .supportsCatalogueBrowsing(widget.source.engine);
     if (widget.initialQuery.isNotEmpty) {
       Future.microtask(search);
     } else if (ref
@@ -75,6 +82,13 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
   }
 
   Future<void> chooseLayout() async {
+    final preferences = ref.read(preferencesProvider);
+    final generation = preferences is CoordinatedPreferences
+        ? preferences.mutationGeneration
+        : 0;
+    bool isCurrent() =>
+        preferences is! CoordinatedPreferences ||
+        preferences.mutationGeneration == generation;
     final chosen = await showCupertinoModalPopup<String>(
       context: context,
       builder: (ctx) => CupertinoActionSheet(
@@ -98,10 +112,23 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
     );
     if (chosen == null || !mounted) return;
     await perform(context, () async {
-      await ref
-          .read(preferencesProvider)
-          .setString('sourceCatalogueLayoutV1', chosen);
-      if (mounted) setState(() => layout = chosen);
+      if (!isCurrent()) {
+        throw StateError('Thiết lập đã được khôi phục. Hãy chọn lại hiển thị.');
+      }
+      final saved = preferences is CoordinatedPreferences
+          ? await preferences.setStringIfCurrent(
+              'sourceCatalogueLayoutV1',
+              chosen,
+              isCurrent,
+            )
+          : await preferences.setString('sourceCatalogueLayoutV1', chosen);
+      if (!saved) {
+        // The legacy plugin updates its RAM cache even when the store rejects
+        // the write. Reload before another catalogue screen reads that cache.
+        await preferences.reload();
+        throw StateError('Không lưu được cách hiển thị truyện. Hãy thử lại.');
+      }
+      if (mounted && isCurrent()) setState(() => layout = chosen);
     });
   }
 
@@ -249,32 +276,67 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
     ),
   );
 
+  Widget browseButton(String label, SourceBrowseMode value, IconData icon) =>
+      OutlinedButton.icon(
+        key: ValueKey('source-browse-${value.name}'),
+        onPressed: () {
+          setState(() {
+            mode = value;
+            request++;
+            busy = false;
+            books = [];
+          });
+          search();
+        },
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: mode == value
+              ? Theme.of(context).colorScheme.onPrimaryContainer
+              : Theme.of(context).colorScheme.onSurface,
+          backgroundColor: mode == value
+              ? Theme.of(context).colorScheme.primaryContainer
+              : null,
+          minimumSize: const Size(0, 40),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(
-        widget.source.name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      centerTitle: false,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${widget.source.name} (${widget.source.lang.toUpperCase()})',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 18),
+          ),
+          if (widget.source.baseUrl.isNotEmpty)
+            Text(
+              widget.source.baseUrl,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
       ),
       actions: [
-        if (ref
-            .read(sourceRepositoryProvider)
-            .supportsSourceFilters(widget.source.engine))
-          IconButton(
-            tooltip: 'Bộ lọc của nguồn',
-            onPressed: busy ? null : chooseFilters,
-            icon: Icon(
-              CupertinoIcons.line_horizontal_3_decrease,
-              color: selectedFilters == null
-                  ? null
-                  : Theme.of(context).colorScheme.primary,
-            ),
-          ),
         IconButton(
-          tooltip: 'Hiển thị truyện',
-          onPressed: chooseLayout,
-          icon: const Icon(CupertinoIcons.rectangle_grid_2x2),
+          tooltip: searching ? 'Đóng tìm kiếm' : 'Tìm',
+          onPressed: () {
+            if (searching) FocusScope.of(context).unfocus();
+            setState(() => searching = !searching);
+          },
+          icon: Icon(
+            searching ? CupertinoIcons.xmark : CupertinoIcons.search,
+            size: 22,
+          ),
         ),
         if (ref.read(sourceRepositoryProvider).canOpenNativeWebsite(website))
           IconButton(
@@ -286,73 +348,87 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
             icon: const Icon(CupertinoIcons.globe, size: 22),
           ),
         IconButton(
-          tooltip: 'Tìm',
-          onPressed: busy
-              ? null
-              : () {
-                  mode = null;
-                  search();
-                },
-          icon: const Icon(CupertinoIcons.search, size: 22),
+          tooltip: 'Hiển thị truyện',
+          onPressed: chooseLayout,
+          icon: const Icon(CupertinoIcons.ellipsis_vertical, size: 22),
         ),
       ],
     ),
     body: Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 7, 12, 8),
-          child: CupertinoSearchTextField(
-            controller: text,
-            placeholder: 'Tìm truyện trong nguồn',
-            onSubmitted: (_) {
-              mode = null;
-              search();
-            },
-            onChanged: (value) {
-              if (value.isEmpty) {
-                setState(() {
-                  request++;
-                  books = [];
-                  busy = false;
-                  error = null;
-                  searched = false;
-                });
-              }
-            },
+        if (searching)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 7, 12, 8),
+            child: CupertinoSearchTextField(
+              controller: text,
+              autofocus: true,
+              placeholder: 'Tìm truyện trong nguồn',
+              onSubmitted: (_) {
+                mode = null;
+                search();
+              },
+              onChanged: (value) {
+                if (value.isEmpty) {
+                  setState(() {
+                    request++;
+                    books = [];
+                    busy = false;
+                    error = null;
+                    searched = false;
+                  });
+                }
+              },
+            ),
+          ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+          child: Row(
+            children: [
+              if (ref
+                  .read(sourceRepositoryProvider)
+                  .supportsCatalogueBrowsing(widget.source.engine)) ...[
+                browseButton(
+                  'Phổ biến',
+                  SourceBrowseMode.popular,
+                  CupertinoIcons.check_mark,
+                ),
+                if (widget.source.supportsLatest != false) ...[
+                  const SizedBox(width: 8),
+                  browseButton(
+                    'Mới nhất',
+                    SourceBrowseMode.latest,
+                    CupertinoIcons.sparkles,
+                  ),
+                ],
+                const SizedBox(width: 8),
+              ],
+              if (ref
+                  .read(sourceRepositoryProvider)
+                  .supportsSourceFilters(widget.source.engine))
+                Tooltip(
+                  message: 'Bộ lọc của nguồn',
+                  child: OutlinedButton.icon(
+                    onPressed: busy ? null : chooseFilters,
+                    icon: const Icon(
+                      CupertinoIcons.line_horizontal_3_decrease,
+                      size: 18,
+                    ),
+                    label: const Text('Bộ lọc'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 40),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      backgroundColor: selectedFilters != null && mode == null
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : null,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
-        if (ref
-            .read(sourceRepositoryProvider)
-            .supportsCatalogueBrowsing(widget.source.engine))
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: widget.source.supportsLatest == false
-                ? const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('Phổ biến'),
-                  )
-                : CupertinoSlidingSegmentedControl<String>(
-                    groupValue: mode?.name,
-                    children: const {
-                      'popular': Text('Phổ biến'),
-                      'latest': Text('Mới nhất'),
-                    },
-                    onValueChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        mode = value == 'popular'
-                            ? SourceBrowseMode.popular
-                            : value == 'latest'
-                            ? SourceBrowseMode.latest
-                            : null;
-                        request++;
-                        busy = false;
-                        books = [];
-                      });
-                      search();
-                    },
-                  ),
-          ),
         const Divider(height: 1),
         if (busy) const LinearProgressIndicator(minHeight: 2),
         if (error != null && books.isNotEmpty)
@@ -398,15 +474,9 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
                       )
               : LayoutBuilder(
                   builder: (context, constraints) {
-                    final columns = constraints.maxWidth >= 1000
-                        ? 6
-                        : constraints.maxWidth >= 700
-                        ? 4
-                        : constraints.maxWidth >= 500
-                        ? 3
-                        : layout == 'compact'
-                        ? 3
-                        : 2;
+                    final columns = layout == 'compact'
+                        ? (constraints.maxWidth / 80).floor().clamp(3, 10)
+                        : (constraints.maxWidth / 180).floor().clamp(2, 6);
                     final library = catalogueLibraryIndex(
                       ref.watch(libraryProvider).value ?? const [],
                     );
@@ -416,6 +486,7 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
                         coverImage: sourceCoverImage(ref, book),
                         book: book,
                         inLibrary: library.containsKey(book.identity),
+                        showLibraryLabel: true,
                         pending: adding.contains(book.identity),
                         list: list,
                         onOpen: () => open(book),
@@ -455,7 +526,9 @@ class _SearchState extends ConsumerState<SourceSearchScreen> {
                                         crossAxisCount: columns,
                                         crossAxisSpacing: 6,
                                         mainAxisSpacing: 6,
-                                        childAspectRatio: .67,
+                                        childAspectRatio: layout == 'compact'
+                                            ? .75
+                                            : .67,
                                       ),
                                   delegate: SliverChildBuilderDelegate((
                                     context,

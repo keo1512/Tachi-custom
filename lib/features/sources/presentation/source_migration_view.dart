@@ -70,22 +70,23 @@ class SourceMigrationView extends ConsumerWidget {
               bottom: MediaQuery.paddingOf(context).bottom + 16,
             ),
             children: [
-              const BrowseNote(
-                'Chọn truyện để tìm và đối chiếu kết quả ở nguồn mới.',
-              ),
-              const BrowseHeading('Truyện trong thư viện'),
+              if (originIdentity == null)
+                const BrowseNote(
+                  'Chọn truyện để tìm và đối chiếu kết quả ở nguồn mới.',
+                ),
+              if (originIdentity == null)
+                const BrowseHeading('Truyện trong thư viện'),
               if (online.isNotEmpty)
                 ListTile(
                   leading: const Icon(CupertinoIcons.square_stack),
                   title: const Text('Chuyển nguồn hàng loạt'),
-                  subtitle: const Text(
-                    'Chọn và kiểm tra kết quả cho từng truyện',
-                  ),
+                  subtitle: const Text('Tìm, đối chiếu và chuyển truyện'),
                   onTap: () => Navigator.of(context).push(
                     CupertinoPageRoute(
                       builder: (_) => BulkSourceMigrationScreen(
                         sources: sources,
                         initialSource: originIdentity ?? '',
+                        initialBookIds: online.map((b) => b.id).toSet(),
                       ),
                     ),
                   ),

@@ -370,6 +370,7 @@ class LibraryFilterSheet extends StatefulWidget {
     required this.onChanged,
     this.sources = const {},
     this.authors = const {},
+    this.categoryScope,
     this.presetsBuilder,
     this.libraryColumns,
     this.onColumnsChanged,
@@ -379,6 +380,7 @@ class LibraryFilterSheet extends StatefulWidget {
   final ValueChanged<LibraryFilter> onChanged;
   final Map<String, String> sources;
   final Map<String, String> authors;
+  final String? categoryScope;
   final Widget Function(LibraryFilter, ValueChanged<LibraryFilter>)?
   presetsBuilder;
   final int? libraryColumns;
@@ -390,6 +392,15 @@ class LibraryFilterSheet extends StatefulWidget {
 class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
   late LibraryFilter filter = widget.value;
   late int columns = widget.libraryColumns ?? 5;
+  @override
+  void didUpdateWidget(covariant LibraryFilterSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != oldWidget.value) filter = widget.value;
+    if (widget.libraryColumns != oldWidget.libraryColumns) {
+      columns = widget.libraryColumns ?? 5;
+    }
+  }
+
   void change(LibraryFilter value) {
     setState(() => filter = value);
     widget.onChanged(value);
@@ -417,13 +428,15 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
     padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
     child: Text(
       title,
-      style: Theme.of(context).textTheme.labelLarge
-          ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+        fontSize: 16,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     ),
   );
 
   Widget choice(String label, bool selected, VoidCallback onTap) => ListTile(
-    dense: true,
+    dense: false,
     title: Text(label),
     selected: selected,
     trailing: selected
@@ -437,7 +450,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
 
   Widget toggle(String label, bool value, ValueChanged<bool> onChanged) =>
       SwitchListTile.adaptive(
-        dense: true,
+        dense: false,
         visualDensity: VisualDensity.compact,
         title: Text(label),
         value: value,
@@ -455,7 +468,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
     LibraryTriState value,
     ValueChanged<LibraryTriState> onChanged,
   ) => ListTile(
-    dense: true,
+    dense: false,
     visualDensity: VisualDensity.compact,
     minTileHeight: 40,
     title: Text(label),
@@ -476,6 +489,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
             Text(
               triLabel(value),
               style: TextStyle(
+                fontSize: 16,
                 color: value == LibraryTriState.any
                     ? Theme.of(context).colorScheme.onSurfaceVariant
                     : Theme.of(context).colorScheme.primary,
@@ -495,7 +509,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
     Map<String, String> options,
     ValueChanged<String> onSelected,
   ) => ListTile(
-    dense: true,
+    dense: false,
     visualDensity: VisualDensity.compact,
     minTileHeight: 48,
     title: Text(title),
@@ -532,7 +546,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
     final selectedSources = filter.selectedSources;
     final activeCount = [
       filter.kind != 'all',
-      filter.category != 'Tất cả',
+      filter.category != 'Tất cả' && filter.category != widget.categoryScope,
       selectedSources.isNotEmpty,
       filter.author.isNotEmpty,
       filter.unread != LibraryTriState.any,
@@ -552,14 +566,17 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
               Expanded(
                 child: Text(
                   activeCount == 0
-                      ? 'Tất cả truyện'
-                      : '$activeCount điều kiện đang dùng',
-                  style: Theme.of(context).textTheme.bodySmall,
+                      ? '${widget.categoryScope == null ? '' : '${widget.categoryScope} · '}Tất cả truyện'
+                      : '$activeCount điều kiện${widget.categoryScope == null ? '' : ' · ${widget.categoryScope}'}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(fontSize: 16),
                 ),
               ),
               Flexible(
                 child: TextButton(
-                  onPressed: filter.active ? reset : null,
+                  onPressed: activeCount > 0 ? reset : null,
                   child: const Text(
                     'Đặt lại bộ lọc',
                     textAlign: TextAlign.center,
@@ -569,90 +586,15 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              for (final item in const {
-                'all': 'Tất cả',
-                'manga': 'Truyện tranh',
-                'novel': 'Truyện chữ & ebook',
-              }.entries)
-                ChoiceChip(
-                  label: Text(item.value),
-                  selected: filter.kind == item.key,
-                  onSelected: (_) => change(filter.copyWith(kind: item.key)),
-                ),
-            ],
-          ),
-        ),
-        picker('Danh mục', filter.category, {
-          for (final category in {
-            'Tất cả',
-            'Đang đọc',
-            'Yêu thích',
-            'Hoàn thành',
-            ...widget.collections,
-          })
-            category: category,
-        }, (value) => change(filter.copyWith(category: value))),
-        if (sources.isNotEmpty || selectedSources.isNotEmpty)
-          ListTile(
-            key: const ValueKey('library-sources-filter'),
-            dense: true,
-            visualDensity: VisualDensity.compact,
-            minTileHeight: 48,
-            title: const Text('Nguồn truyện'),
-            subtitle: Text(
-              selectedSources.isEmpty
-                  ? 'Tất cả nguồn'
-                  : selectedSources.length == 1
-                  ? widget.sources[selectedSources.single] ??
-                        selectedSources.single
-                  : '${selectedSources.length} nguồn đã chọn',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: const Icon(CupertinoIcons.chevron_right, size: 16),
-            onTap: () async {
-              final values = await showLibraryFilterMultiPicker(
-                context,
-                title: 'Nguồn truyện',
-                options: {
-                  for (final source in sources) source.key: source.value,
-                  for (final key in selectedSources)
-                    if (!widget.sources.containsKey(key))
-                      key: 'Nguồn đã lưu · $key',
-                },
-                selected: selectedSources,
-              );
-              if (values != null && mounted) {
-                change(filter.copyWith(sources: values));
-              }
-            },
-          ),
-        if (selectedSources.isNotEmpty || filter.excludeSource)
-          toggle(
-            'Loại trừ nguồn đã chọn',
-            filter.excludeSource,
-            (value) => change(filter.copyWith(excludeSource: value)),
-          ),
-        if (authors.isNotEmpty || filter.author.isNotEmpty)
-          picker('Tác giả', libraryAuthorKey(filter.author), {
-            '': 'Tất cả tác giả',
-            for (final author in authors) author.key: author.value,
-            if (filter.author.isNotEmpty &&
-                !widget.authors.containsKey(libraryAuthorKey(filter.author)))
-              libraryAuthorKey(filter.author): filter.author,
-          }, (value) => change(filter.copyWith(author: value))),
-        const Divider(height: 16),
-        section('Trạng thái'),
         triChoice(
           'Chương chưa đọc',
           filter.unread,
           (value) => change(filter.copyWith(unread: value)),
+        ),
+        triChoice(
+          'Hoàn thành',
+          filter.completed,
+          (value) => change(filter.copyWith(completed: value)),
         ),
         triChoice(
           'Chương đã tải',
@@ -669,16 +611,97 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
           filter.favorite,
           (value) => change(filter.copyWith(favorite: value)),
         ),
-        triChoice(
-          'Hoàn thành',
-          filter.completed,
-          (value) => change(filter.copyWith(completed: value)),
+        const Divider(height: 16),
+        if (sources.isNotEmpty || selectedSources.isNotEmpty)
+          ListTile(
+            key: const ValueKey('library-sources-filter'),
+            dense: false,
+            visualDensity: VisualDensity.compact,
+            minTileHeight: 48,
+            title: const Text('Nguồn truyện'),
+            subtitle: Text(
+              selectedSources.isEmpty
+                  ? 'Tất cả nguồn'
+                  : selectedSources.length == 1
+                  ? widget.sources[selectedSources.single] ??
+                        'Nguồn đã chọn không có trong danh mục'
+                  : '${selectedSources.length} nguồn đã chọn',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: const Icon(CupertinoIcons.chevron_right, size: 16),
+            onTap: () async {
+              final values = await showLibraryFilterMultiPicker(
+                context,
+                title: 'Nguồn truyện',
+                options: {
+                  for (final source in sources) source.key: source.value,
+                },
+                selected: selectedSources.intersection(
+                  widget.sources.keys.toSet(),
+                ),
+              );
+              if (values != null && mounted) {
+                change(filter.copyWith(sources: values));
+              }
+            },
+          ),
+        if (selectedSources.isNotEmpty || filter.excludeSource)
+          toggle(
+            'Loại trừ nguồn đã chọn',
+            filter.excludeSource,
+            (value) => change(filter.copyWith(excludeSource: value)),
+          ),
+        if (authors.isNotEmpty || filter.author.isNotEmpty)
+          picker('Tác giả', libraryAuthorKey(filter.author), {
+            '': 'Tất cả tác giả',
+            for (final author in authors) author.key: author.value,
+          }, (value) => change(filter.copyWith(author: value))),
+        const Divider(height: 16),
+        ExpansionTile(
+          key: const ValueKey('library-filter-scope'),
+          title: const Text('Phạm vi và danh mục'),
+          subtitle: Text(widget.categoryScope ?? filter.category),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  for (final item in const {
+                    'all': 'Tất cả',
+                    'manga': 'Truyện tranh',
+                    'novel': 'Truyện chữ & ebook',
+                  }.entries)
+                    ChoiceChip(
+                      label: Text(item.value),
+                      selected: filter.kind == item.key,
+                      onSelected: (_) =>
+                          change(filter.copyWith(kind: item.key)),
+                    ),
+                ],
+              ),
+            ),
+            picker('Danh mục', filter.category, {
+              for (final category in {
+                'Tất cả',
+                'Đang đọc',
+                'Yêu thích',
+                'Hoàn thành',
+                ...widget.collections,
+              })
+                category: category,
+            }, (value) => change(filter.copyWith(category: value))),
+          ],
         ),
       ],
     );
   }
 
   Widget sorting() => ListView(
+    key: const ValueKey('library-sort-options'),
     padding: const EdgeInsets.only(bottom: 16),
     children: [
       toggle(
@@ -752,6 +775,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
       ),
     ];
     return ListView(
+      key: const ValueKey('library-display-options'),
       padding: const EdgeInsets.only(bottom: 16),
       children: [
         section('Bố cục'),
@@ -777,7 +801,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
         if (filter.display != LibraryDisplay.list) ...[
           if (widget.onColumnsChanged != null) ...[
             ListTile(
-              dense: true,
+              dense: false,
               title: const Text('Số cột lưới'),
               trailing: Text('$columns'),
             ),
@@ -840,6 +864,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
+    final theme = Theme.of(context);
     final close = IconButton(
       tooltip: 'Đóng bộ lọc',
       visualDensity: VisualDensity.compact,
@@ -849,51 +874,74 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
       child: SizedBox(
-        height:
-            (media.size.height - media.padding.top - media.viewInsets.bottom) *
-            .94,
-        child: DefaultTabController(
-          length: 3,
-          child: Column(
-            children: [
-              SizedBox(
-                height: 12,
-                child: Center(
-                  child: Container(
-                    width: 28,
-                    height: 3,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      borderRadius: BorderRadius.circular(2),
+        key: const ValueKey('library-filter-sheet'),
+        height: (media.size.height - media.viewInsets.bottom) * .56,
+        child: SafeArea(
+          top: false,
+          child: ListTileTheme(
+            data: ListTileThemeData(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              titleTextStyle: theme.textTheme.bodyLarge?.copyWith(fontSize: 16),
+              subtitleTextStyle: theme.textTheme.bodyMedium?.copyWith(
+                fontSize: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            child: DefaultTabController(
+              length: 3,
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: 12,
+                    child: Center(
+                      child: Container(
+                        width: 28,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              if (widget.presetsBuilder != null)
-                Row(
-                  children: [
-                    Expanded(child: widget.presetsBuilder!(filter, change)),
-                    close,
-                  ],
-                ),
-              Row(
-                children: [
-                  const Expanded(
-                    child: TabBar(
-                      tabs: [
-                        Tab(text: 'Lọc', height: 40),
-                        Tab(text: 'Sắp xếp', height: 40),
-                        Tab(text: 'Hiển thị', height: 40),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        if (widget.presetsBuilder != null)
+                          Expanded(
+                            child: widget.presetsBuilder!(filter, change),
+                          )
+                        else
+                          const Spacer(),
+                        close,
                       ],
                     ),
                   ),
-                  if (widget.presetsBuilder == null) close,
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: TabBar(
+                          labelPadding: EdgeInsets.symmetric(horizontal: 4),
+                          labelStyle: TextStyle(fontSize: 16),
+                          unselectedLabelStyle: TextStyle(fontSize: 16),
+                          tabs: [
+                            Tab(text: 'Bộ lọc', height: 44),
+                            Tab(text: 'Sắp xếp', height: 44),
+                            Tab(text: 'Hiển thị', height: 44),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [filters(), sorting(), display()],
+                    ),
+                  ),
                 ],
               ),
-              Expanded(
-                child: TabBarView(children: [filters(), sorting(), display()]),
-              ),
-            ],
+            ),
           ),
         ),
       ),

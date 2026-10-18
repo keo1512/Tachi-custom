@@ -722,6 +722,31 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      // Adjacent chapters now wait for a visible decode. pumpAndSettle only
+      // drains Flutter's frame queue; ImageCodec completion uses real async work.
+      await tester.runAsync(() async {
+        final images = tester.widgetList<Image>(find.byType(Image)).toList();
+        expect(images, isNotEmpty);
+        for (final image in images) {
+          final decoded = Completer<void>();
+          final stream = image.image.resolve(ImageConfiguration.empty);
+          late ImageStreamListener listener;
+          listener = ImageStreamListener(
+            (_, _) {
+              stream.removeListener(listener);
+              decoded.complete();
+            },
+            onError: (Object error, StackTrace? stack) {
+              stream.removeListener(listener);
+              decoded.completeError(error, stack);
+            },
+          );
+          stream.addListener(listener);
+          await decoded.future;
+        }
+      });
+      await tester.pumpAndSettle();
+      expect(source.chapterRequests, ['/chapter', '/chapter-two']);
       await tester.tap(find.byTooltip('Chương tiếp theo'));
       await tester.pumpAndSettle();
       // The continuous reader already tried prefetching this chapter. The

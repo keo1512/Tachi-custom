@@ -158,7 +158,7 @@ void main() {
         // pixel equality with the original Tachimanga app or native device behavior.
         await tester.tap(find.byTooltip('Lọc thư viện'));
         await tester.pumpAndSettle();
-        expect(find.text('Lọc'), findsOneWidget);
+        expect(find.text('Bộ lọc'), findsOneWidget);
         expect(find.text('Sắp xếp'), findsOneWidget);
         expect(find.text('Hiển thị'), findsOneWidget);
         expect(
@@ -184,14 +184,27 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Sắp xếp'));
         await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.text('Tên').hitTestable(),
+          75,
+          scrollable: find
+              .descendant(
+                of: find.byKey(const ValueKey('library-sort-options')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Tên'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Hiển thị'));
         await tester.pumpAndSettle();
-        final displayScrollable = find.descendant(
-          of: find.byType(LibraryFilterSheet),
-          matching: find.byType(Scrollable),
-        ).last;
+        final displayScrollable = find
+            .descendant(
+              of: find.byType(LibraryFilterSheet),
+              matching: find.byType(Scrollable),
+            )
+            .last;
         await tester.scrollUntilVisible(
           find.text('Lưới nhỏ').hitTestable(),
           75,

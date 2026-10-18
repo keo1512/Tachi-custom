@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../domain/catalogue.dart';
+import 'browse_widgets.dart';
 
 Future<List<CatalogueSource>?> chooseMigrationSources(
   BuildContext context, {
@@ -49,14 +50,119 @@ Future<List<CatalogueSource>?> selectMigrationSources(
   required List<CatalogueSource> candidates,
   required Set<String> selected,
   String title = 'Nguồn tìm kiếm',
-}) => showDialog<List<CatalogueSource>>(
-  context: context,
-  builder: (_) => _MigrationSourcesDialog(
-    candidates: candidates,
-    selected: selected,
-    title: title,
-  ),
-);
+  bool ordered = false,
+}) => ordered
+    ? Navigator.of(context).push<List<CatalogueSource>>(
+        CupertinoPageRoute(
+          builder: (_) => _OrderedMigrationSources(
+            candidates: candidates,
+            selected: selected,
+            title: title,
+          ),
+        ),
+      )
+    : showDialog<List<CatalogueSource>>(
+        context: context,
+        builder: (_) => _MigrationSourcesDialog(
+          candidates: candidates,
+          selected: selected,
+          title: title,
+        ),
+      );
+
+class _OrderedMigrationSources extends StatefulWidget {
+  const _OrderedMigrationSources({
+    required this.candidates,
+    required this.selected,
+    required this.title,
+  });
+  final List<CatalogueSource> candidates;
+  final Set<String> selected;
+  final String title;
+  @override
+  State<_OrderedMigrationSources> createState() =>
+      _OrderedMigrationSourcesState();
+}
+
+class _OrderedMigrationSourcesState extends State<_OrderedMigrationSources> {
+  late final chosen = {...widget.selected};
+  late final List<CatalogueSource> sources = [
+    for (final id in widget.selected)
+      ...widget.candidates.where((s) => s.identity == id),
+    ...widget.candidates.where((s) => !widget.selected.contains(s.identity)),
+  ];
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(widget.title)),
+    body: Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Text(
+            'Chọn ít hơn 5 nguồn để tìm nhanh hơn. Kéo tay nắm để đổi thứ tự ưu tiên.',
+          ),
+        ),
+        Expanded(
+          child: ReorderableListView.builder(
+            buildDefaultDragHandles: false,
+            itemCount: sources.length,
+            onReorderItem: (from, to) => setState(() {
+              sources.insert(to, sources.removeAt(from));
+            }),
+            itemBuilder: (context, index) {
+              final source = sources[index];
+              return CheckboxListTile(
+                key: ValueKey('migration-ordered-${source.identity}'),
+                controlAffinity: ListTileControlAffinity.leading,
+                title: Text(source.name),
+                subtitle: Text(sourceLanguage(source.lang)),
+                value: chosen.contains(source.identity),
+                secondary: ReorderableDragStartListener(
+                  index: index,
+                  child: const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Icon(Icons.drag_handle),
+                  ),
+                ),
+                onChanged:
+                    chosen.length >= 50 && !chosen.contains(source.identity)
+                    ? null
+                    : (value) => setState(() {
+                        if (value == true) {
+                          chosen.add(source.identity);
+                        } else {
+                          chosen.remove(source.identity);
+                        }
+                      }),
+              );
+            },
+          ),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                key: const ValueKey('migration-sources-continue'),
+                onPressed: chosen.isEmpty
+                    ? null
+                    : () => Navigator.pop(
+                        context,
+                        sources
+                            .where((s) => chosen.contains(s.identity))
+                            .toList(),
+                      ),
+                child: Text('Tiếp tục · ${chosen.length} nguồn'),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 class _MigrationSourcesDialog extends StatefulWidget {
   const _MigrationSourcesDialog({

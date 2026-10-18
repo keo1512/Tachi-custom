@@ -49,6 +49,7 @@ class ContinuousMangaReader extends StatefulWidget {
     required this.onProgress,
     required this.onPageActions,
     this.onStale,
+    this.onVisibleImageReady,
   });
   final LibraryBook book;
   final int initialChapter;
@@ -70,6 +71,7 @@ class ContinuousMangaReader extends StatefulWidget {
   final ValueChanged<ContinuousMangaLocation> onProgress;
   final void Function(int chapter, int page) onPageActions;
   final VoidCallback? onStale;
+  final void Function(int chapter, int page)? onVisibleImageReady;
 
   @override
   State<ContinuousMangaReader> createState() => ContinuousMangaReaderState();
@@ -104,6 +106,14 @@ class ContinuousMangaReaderState extends State<ContinuousMangaReader> {
   @visibleForTesting
   int get retainedImages =>
       _chapters.fold(0, (n, c) => n + c.images.retainedImages);
+
+  bool get visibleImageReady {
+    final active = location;
+    return active != null &&
+        _chapters.any(
+          (c) => c.index == active.chapter && c.decoded.contains(active.page),
+        );
+  }
 
   @override
   void initState() {
@@ -334,8 +344,18 @@ class ContinuousMangaReaderState extends State<ContinuousMangaReader> {
         widget.onLocation(next);
       }
       _focus(visible, page);
-      if (page >= visible.keys.length - 4) _prefetch(visible.index, 1);
-      if (page <= 1) _prefetch(visible.index, -1);
+      if (visible.decoded.contains(page)) {
+        widget.onVisibleImageReady?.call(visible.index, page);
+      }
+      // Opening at page zero used to enqueue the previous chapter (and the
+      // next one for short chapters) before the visible image had arrived.
+      // Those extension calls share page state with image requests. Start
+      // adjacent metadata only after this visible page renders successfully.
+      // A blank failed page must not start more background source requests.
+      if (visible.decoded.contains(page)) {
+        if (page >= visible.keys.length - 4) _prefetch(visible.index, 1);
+        if (page <= 1) _prefetch(visible.index, -1);
+      }
     }
   }
 

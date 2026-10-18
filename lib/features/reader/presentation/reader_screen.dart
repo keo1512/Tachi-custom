@@ -108,6 +108,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
   final decodedImages = <int>{};
   final failedImages = <int>{};
   final memoryImageBytes = <String, Uint8List>{};
+  final downloadAheadChapters = <String>{};
   NativeMangaImageWindow? nativeImages;
   int current = 0, page = 0, generation = 0, requestedChapter = 0;
   double? requestedPosition;
@@ -232,6 +233,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     if (state == AppLifecycleState.resumed) {
       startReadingTime();
       applyOptions(options);
+      maybeDownloadAhead(generation);
     } else {
       autoScroll.pause();
       awake = false;
@@ -311,6 +313,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
     String? chapterId,
   }) async {
     final request = ++generation;
+    downloadAheadChapters.clear();
     continuousKey = GlobalKey();
     nativeImages?.dispose();
     nativeImages = null;
@@ -387,21 +390,7 @@ class _ReaderState extends ConsumerState<ReaderScreen>
       startReadingTime();
       restoreLocation(request);
       await persist();
-      if (mounted && request == generation) {
-        unawaited(
-          ref
-              .read(libraryUpdateSchedulerProvider)
-              .downloadAhead(
-                latest,
-                openingChapterId,
-                expectedRevision: revision,
-              )
-              .catchError((Object error) {
-                debugPrint('Download ahead: $error');
-                return 0;
-              }),
-        );
-      }
+      maybeDownloadAhead(request);
     } catch (e) {
       if (mounted && request == generation) {
         DiagnosticLogs.error('source', e);
@@ -412,6 +401,68 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         });
       }
     }
+  }
+
+  void maybeDownloadAhead(int request) {
+    final item = book, data = content, revision = loadedRevision;
+    if (!mounted ||
+        closing ||
+        request != generation ||
+        incognitoSession ||
+        lifecycle != AppLifecycleState.resumed ||
+        loading ||
+        error != null ||
+        item == null ||
+        data == null ||
+        revision == null ||
+        revision != repository.replacementRevision) {
+      return;
+    }
+    // A successful visible decode is the gate, including an initially restored
+    // page. Automatic downloads must not race that first source image request.
+    if (data.kind == 'manga' &&
+        !(continuous
+            ? continuousKey.currentState?.visibleImageReady == true
+            : decodedImages.contains(page))) {
+      return;
+    }
+    final chapterId = item.chapters[current].id;
+    if (!downloadAheadChapters.add(chapterId)) return;
+    var cancelled = false;
+    bool isCancelled() {
+      final invalid =
+          !mounted ||
+          closing ||
+          request != generation ||
+          lifecycle != AppLifecycleState.resumed ||
+          revision != repository.replacementRevision ||
+          book?.chapters[current].id != chapterId;
+      cancelled |= invalid;
+      return invalid;
+    }
+
+    unawaited(
+      ref
+          .read(libraryUpdateSchedulerProvider)
+          .downloadAhead(
+            item,
+            chapterId,
+            expectedRevision: revision,
+            isCancelled: isCancelled,
+          )
+          .catchError((Object error) {
+            debugPrint('Download ahead: $error');
+            return 0;
+          })
+          .then((_) {
+            if (cancelled && mounted && request == generation) {
+              downloadAheadChapters.remove(chapterId);
+              // The user may already have resumed while a device-condition
+              // lookup was settling. Recheck the visible image before retry.
+              maybeDownloadAhead(request);
+            }
+          }),
+    );
   }
 
   void configurePagedImages(
@@ -1039,6 +1090,9 @@ class _ReaderState extends ConsumerState<ReaderScreen>
         );
       },
       onLocation: continuousLocation,
+      onVisibleImageReady: (chapter, p) {
+        if (chapter == current && p == page) maybeDownloadAhead(request);
+      },
       onProgress: (location) {
         if (incognitoSession ||
             request != generation ||
@@ -1463,8 +1517,9 @@ class _ReaderState extends ConsumerState<ReaderScreen>
       // A single-page chapter has no page-change callback. Completion is only
       // recorded after successful decoding/layout, with the same resume fraction.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && request == generation && mangaChapterCompleted) {
-          unawaited(persist());
+        if (mounted && request == generation) {
+          if (mangaChapterCompleted) unawaited(persist());
+          if (index == page) maybeDownloadAhead(request);
         }
       });
     }

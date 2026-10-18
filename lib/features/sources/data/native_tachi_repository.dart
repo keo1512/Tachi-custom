@@ -42,7 +42,8 @@ class NativeTachiRepository
         NativeExtensionFileEngine,
         NativeSourceFilterEngine,
         NativeExtensionBackupEngine,
-        NativeExtensionBackupTransaction {
+        NativeExtensionBackupTransaction,
+        NativeInstalledExtensionInventory {
   NativeTachiRepository({
     NativeTachiExecutor? executor,
     NativeTachiBrowser? browser,
@@ -96,8 +97,9 @@ class NativeTachiRepository
   bool _loadingImage = false;
   int _loadingCovers = 0;
 
-  // Keep at most one request on JNI. A library grid can enqueue hundreds of
-  // covers; a chapter opened afterwards must not wait behind all of them.
+  // Chapter pages stay serial, but can run beside the two bounded cover
+  // downloads. The native host snapshots a cover's client/headers separately
+  // from its page-state lock, so a slow thumbnail cannot hold up the reader.
   Future<SourceImageData> _enqueueImage(
     Future<SourceImageData> Function() load, {
     required bool cover,
@@ -118,7 +120,6 @@ class NativeTachiRepository
   void _pumpImages() {
     if (_loadingImage) return;
     if (_pageRequests.isNotEmpty) {
-      if (_loadingCovers > 0) return;
       _loadingImage = true;
       unawaited(
         _pageRequests.removeAt(0)().whenComplete(() {
@@ -146,6 +147,24 @@ class NativeTachiRepository
   Future<Directory> _storage() async => _directory ??= Directory(
     '${(await getApplicationSupportDirectory()).path}/TachiBooks/extension-runtime',
   );
+
+  @override
+  Future<bool> hasInstalledExtensions() async {
+    if (_disposed) throw StateError('Engine đã đóng.');
+    final registry = File('${(await _storage()).path}/registry.json');
+    final type = await FileSystemEntity.type(registry.path, followLinks: false);
+    if (type == FileSystemEntityType.notFound) return false;
+    if (type != FileSystemEntityType.file) {
+      throw const FormatException('Chỉ mục extension không phải tệp hợp lệ.');
+    }
+    final document = _map(
+      jsonDecode(utf8.decode(await _backupFile(registry, 2 * 1024 * 1024))),
+    );
+    if (document['version'] != 1 || document['packages'] is! Map) {
+      throw const FormatException('Chỉ mục extension Tachiyomi không hợp lệ.');
+    }
+    return (document['packages'] as Map).isNotEmpty;
+  }
 
   @override
   Future<T> exclusiveExtensionBackup<T>(Future<T> Function() action) async {
@@ -1377,6 +1396,7 @@ class NativeTachiRepository
     if (document['version'] != 1 || document['packages'] is! Map) {
       throw const FormatException('Chỉ mục extension Tachiyomi không hợp lệ.');
     }
+    if ((document['packages'] as Map).isEmpty) return ExtensionBackup(const []);
     final sources = {
       for (final source in await listSources()) source.id: source,
     };

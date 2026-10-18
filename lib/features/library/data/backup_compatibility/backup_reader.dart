@@ -40,6 +40,6 @@ Future<ConvertedBackup> readCompatibleBackup(
     }
   }
   // External adapters must obey the same validation as native backup files.
-  BackupValidator(repository).validate(converted.snapshot.encode());
+  await BackupValidator(repository).validateForRestore(converted.snapshot);
   return converted;
 }

@@ -18,10 +18,10 @@ final _content = ReaderContent(
 
 Future<void> _drain(WidgetTester tester) async {
   // Image descriptors run on the engine outside the widget fake clock.
-  await tester.runAsync(() async {
-    await Future<void>.delayed(const Duration(milliseconds: 30));
-  });
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 6; i++) {
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
     await tester.pump(const Duration(milliseconds: 100));
   }
 }
@@ -33,6 +33,7 @@ Future<void> _mount(
   Future<ReaderContent> Function(int) load, {
   bool Function()? current,
   Future<SourceImageData> Function(int, int)? image,
+  int initialChapter = 0,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(430, 932);
@@ -52,7 +53,7 @@ Future<void> _mount(
         body: ContinuousMangaReader(
           key: key,
           book: book,
-          initialChapter: 0,
+          initialChapter: initialChapter,
           initialContent: _content,
           initialFraction: 0,
           options: const ReaderOptions(),
@@ -75,6 +76,40 @@ Future<void> _mount(
 }
 
 void main() {
+  testWidgets(
+    'opening a chapter gives its visible image priority over adjacent chapter prefetch',
+    (tester) async {
+      final key = GlobalKey<ContinuousMangaReaderState>();
+      final scroll = ScrollController(),
+          firstImage = Completer<SourceImageData>();
+      final chapters = <int>[];
+      await _mount(
+        tester,
+        key,
+        scroll,
+        (index) async {
+          chapters.add(index);
+          return _content;
+        },
+        initialChapter: 3,
+        image: (chapter, page) async {
+          if (chapter == 3 && page == 0) return firstImage.future;
+          return SourceImageData(bytes: _bytes, mimeType: 'image/png');
+        },
+      );
+      expect(chapters, isEmpty);
+      firstImage.complete(
+        SourceImageData(bytes: _bytes, mimeType: 'image/png'),
+      );
+      await _drain(tester);
+      expect(chapters, containsAll([2, 4]));
+      expect(key.currentState!.location!.chapter, 3);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      scroll.dispose();
+    },
+  );
+
   testWidgets(
     'next chapter failure keeps current pages and retries only after user action',
     (tester) async {

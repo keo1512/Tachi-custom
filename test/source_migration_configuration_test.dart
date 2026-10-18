@@ -123,6 +123,36 @@ LibraryFolders _folders(CoordinatedPreferences prefs) =>
     );
 
 void main() {
+  for (final replace in [false, true]) {
+    test(
+      'disabled category transfer ${replace ? 'replaces' : 'keeps'} old membership without assigning target folders',
+      () async {
+        final fixture = await _open();
+        final preview = await fixture.migration.preview(
+          'old',
+          _target,
+          _chapters,
+          options: const SourceMigrationOptions(
+            chapters: false,
+            categories: false,
+          ),
+        );
+        final saved = (await fixture.migration.commitBatch(
+          [preview],
+          replaceOld: replace,
+          expectedRevision: fixture.repo.replacementRevision,
+        )).single;
+        expect(saved.categories, ['Mặc định']);
+        expect(saved.chapters.single.read, isFalse);
+        expect(saved.bookmarks, isEmpty);
+        final folders = _folders(fixture.prefs);
+        expect(folders.names.containsKey(saved.id), isFalse);
+        expect(folders.names.containsKey('old'), !replace);
+        expect(folders.categoryNames['Shelf']!.containsKey(saved.id), isFalse);
+        expect(folders.categoryNames['Shelf']!.containsKey('old'), !replace);
+      },
+    );
+  }
   TestWidgetsFlutterBinding.ensureInitialized();
   for (final replace in [false, true]) {
     test(

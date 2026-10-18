@@ -547,6 +547,16 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         : 0;
     const mode = LibraryGrouping.collection;
     var groupKey = selectedGroup;
+    LibraryFilter forSheet(LibraryFilter value, String? key) =>
+        value.category == 'Tất cả'
+        ? value.copyWith(
+            category: key?.startsWith('value:') == true
+                ? key!.substring(6)
+                : 'Tất cả',
+          )
+        : value;
+    var draft = forSheet(filter, groupKey);
+    var changeSequence = 0;
     final collections =
         ref
             .read(libraryCategoriesProvider)
@@ -560,62 +570,127 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       useSafeArea: true,
       showDragHandle: false,
       constraints: const BoxConstraints(maxWidth: 600),
-      builder: (_) => Consumer(
-        builder: (_, sheetRef, _) => LibraryFilterSheet(
-          value: filter,
-          libraryColumns: ref.read(settingsProvider).libraryColumns,
-          onColumnsChanged: (columns) => perform(context, () async {
-            if (preferences is CoordinatedPreferences &&
-                preferences.mutationGeneration != generation) {
-              throw StateError(
-                'Thiết lập đã được khôi phục. Hãy mở lại bộ lọc.',
-              );
-            }
-            await ref
-                .read(settingsProvider.notifier)
-                .update(libraryColumns: columns);
-          }),
-          presetsBuilder: (filter, onApply) =>
-              LibraryFilterPresetsBar(filter: filter, onApply: onApply),
-          collections: collections,
-          authors: {
-            for (final book in books) ...libraryAuthorNames(book.author),
-          },
-          sources: {
-            for (final book in books)
-              if (book.engine != 'local')
-                '${book.engine}:${book.sourceId}': resolvedLibrarySourceLabel(
-                  sheetRef,
-                  book,
-                ),
-          },
-          onChanged: (value) async {
-            if (mounted) {
-              var next = value;
-              if (value.category != 'Tất cả' &&
-                  collections.contains(value.category)) {
-                groupKey = 'value:${value.category}';
-                next = value.copyWith(category: 'Tất cả');
-              }
-              final targetGroup = groupKey;
-              final saved = await perform(context, () async {
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (_, updateSheet) => Consumer(
+          builder: (_, sheetRef, _) {
+            // Options describe the category, never the already filtered/search
+            // results. Otherwise selecting one source hides the alternatives.
+            final scopedIds =
+                libraryCategoryGroups(
+                      books,
+                      sheetRef.watch(libraryCategoriesProvider),
+                    )
+                    .where((group) => group.key == groupKey)
+                    .expand((group) => group.bookIds)
+                    .toSet();
+            final scopedBooks = groupKey == null
+                ? books
+                : books.where((book) => scopedIds.contains(book.id));
+            return LibraryFilterSheet(
+              value: draft,
+              categoryScope: groupKey?.startsWith('value:') == true
+                  ? groupKey!.substring(6)
+                  : null,
+              libraryColumns: ref.read(settingsProvider).libraryColumns,
+              onColumnsChanged: (columns) => perform(context, () async {
+                if (preferences is CoordinatedPreferences &&
+                    preferences.mutationGeneration != generation) {
+                  throw StateError(
+                    'Thiết lập đã được khôi phục. Hãy mở lại bộ lọc.',
+                  );
+                }
                 await ref
-                    .read(libraryFilterProvider.notifier)
-                    .save(
-                      next,
-                      grouping: mode,
-                      groupKey: targetGroup,
-                      expectedGeneration: generation,
+                    .read(settingsProvider.notifier)
+                    .update(libraryColumns: columns);
+              }),
+              presetsBuilder: (filter, onApply) =>
+                  LibraryFilterPresetsBar(filter: filter, onApply: onApply),
+              collections: collections,
+              authors: {
+                for (final book in scopedBooks)
+                  ...libraryAuthorNames(book.author),
+              },
+              sources: {
+                for (final book in scopedBooks)
+                  if (book.engine != 'local')
+                    '${book.engine}:${book.sourceId}':
+                        resolvedLibrarySourceLabel(sheetRef, book),
+              },
+              onChanged: (value) async {
+                if (mounted) {
+                  var next = value;
+                  final previousGroup = groupKey;
+                  if (value.category != 'Tất cả' &&
+                      collections.contains(value.category)) {
+                    groupKey = 'value:${value.category}';
+                    next = value.copyWith(category: 'Tất cả');
+                  }
+                  if (groupKey != previousGroup) {
+                    final members = books.where(
+                      (book) =>
+                          book.categories.contains(groupKey!.substring(6)),
                     );
-                return true;
-              });
-              if (mounted && saved == true) {
-                setState(() {
-                  if (selectedGroup != targetGroup) selectedFolder = null;
-                  selectedGroup = targetGroup;
-                });
-              }
-            }
+                    final availableSources = {
+                      for (final book in members)
+                        if (book.engine != 'local')
+                          '${book.engine}:${book.sourceId}',
+                    };
+                    final availableAuthors = {
+                      for (final book in members)
+                        ...libraryAuthorNames(book.author).keys,
+                    };
+                    next = next.copyWith(
+                      sources: next.selectedSources.intersection(
+                        availableSources,
+                      ),
+                      author:
+                          availableAuthors.contains(
+                            libraryAuthorKey(next.author),
+                          )
+                          ? next.author
+                          : '',
+                    );
+                  }
+                  final targetGroup = groupKey;
+                  final sequence = ++changeSequence;
+                  updateSheet(() {
+                    draft = forSheet(next, targetGroup);
+                  });
+                  final saved = await perform(context, () async {
+                    await ref
+                        .read(libraryFilterProvider.notifier)
+                        .save(
+                          next,
+                          grouping: mode,
+                          groupKey: targetGroup,
+                          expectedGeneration: generation,
+                        );
+                    return true;
+                  });
+                  // A slow earlier write must not move the category back after a
+                  // newer picker result was applied. Persistence stays serialized.
+                  if (mounted && saved == true && sequence == changeSequence) {
+                    setState(() {
+                      if (selectedGroup != targetGroup) selectedFolder = null;
+                      selectedGroup = targetGroup;
+                    });
+                  }
+                  if (saved != true &&
+                      sheetContext.mounted &&
+                      sequence == changeSequence) {
+                    updateSheet(() {
+                      draft = forSheet(
+                        ref
+                            .read(libraryFilterProvider)
+                            .forGroup(mode, selectedGroup),
+                        selectedGroup,
+                      );
+                      groupKey = selectedGroup;
+                    });
+                  }
+                }
+              },
+            );
           },
         ),
       ),

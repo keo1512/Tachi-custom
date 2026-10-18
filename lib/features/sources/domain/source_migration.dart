@@ -26,6 +26,31 @@ class SourceMigrationRecoveryRequired extends StateError {
       );
 }
 
+class SourceMigrationOptions {
+  const SourceMigrationOptions({this.chapters = true, this.categories = true});
+  final bool chapters, categories;
+}
+
+/// One recovery image is shared by a matching run. Sessions become stale after
+/// a restore, including a restore that writes the same bytes.
+class SourceMigrationSession {
+  SourceMigrationSession._(
+    this.owner,
+    this.before,
+    this.generation,
+    this.revision,
+  ) : fingerprint = before.fingerprint,
+      books = Map.unmodifiable({
+        for (final e in before.entries) e.book.id: e.book,
+      });
+  final SourceMigration owner;
+  final LibrarySnapshot before;
+  final String fingerprint;
+  final Map<String, LibraryBook> books;
+  final int? generation;
+  final int revision;
+}
+
 /// A reviewed, immutable proposal. No cache is copied between source identities.
 class SourceMigrationPreview {
   SourceMigrationPreview._({
@@ -36,13 +61,16 @@ class SourceMigrationPreview {
     required this.unmatchedBookmarks,
     this.configurationGeneration,
     this.libraryRevision,
+    this.options = const SourceMigrationOptions(),
+    String? fingerprint,
   }) : matches = Map.unmodifiable(matches),
-       beforeFingerprint = before.fingerprint;
+       beforeFingerprint = fingerprint ?? before.fingerprint;
   final LibrarySnapshot before;
   final String beforeFingerprint;
   final LibraryBook original, replacement;
   // Fingerprints alone cannot detect a restore that writes identical bytes.
   final int? configurationGeneration, libraryRevision;
+  final SourceMigrationOptions options;
 
   /// Original chapter index -> replacement chapter index.
   final Map<int, int> matches;
@@ -52,6 +80,55 @@ class SourceMigrationPreview {
   int get unmatchedChapters => original.chapters.length - matches.length;
   int get mappedReadChapters =>
       replacement.chapters.where((c) => c.read == true).length;
+
+  SourceMigrationPreview withOptions(SourceMigrationOptions value) {
+    // Recreate from the original chapter mapping rather than a previously
+    // cleared replacement, so changing options never loses a staged proposal.
+    final reverse = {for (final e in matches.entries) e.value: e.key};
+    final marks = <String>[];
+    var unmatched = 0;
+    if (value.chapters) {
+      for (final mark in original.bookmarks) {
+        final index = matches[int.tryParse(mark.split(':').first)];
+        if (index == null) {
+          unmatched++;
+        } else if (!marks.contains('$index:0.0000')) {
+          marks.add('$index:0.0000');
+        }
+      }
+    }
+    final current = value.chapters
+        ? (matches[original.currentChapter] ?? 0)
+        : 0;
+    return SourceMigrationPreview._(
+      before: before,
+      original: original,
+      replacement: replacement.copyWith(
+        categories: value.categories ? original.categories : const ['Mặc định'],
+        readingState: value.chapters ? original.readingState : '',
+        currentChapter: current,
+        progress: current / replacement.chapters.length,
+        lastRead: value.chapters ? original.lastRead : null,
+        clearLastRead: !value.chapters,
+        bookmarks: marks,
+        chapters: [
+          for (final (index, c) in replacement.chapters.indexed)
+            c.copyWith(
+              read:
+                  value.chapters &&
+                  reverse[index] != null &&
+                  chapterIsRead(original, reverse[index]!),
+            ),
+        ],
+      ),
+      matches: matches,
+      unmatchedBookmarks: unmatched,
+      configurationGeneration: configurationGeneration,
+      libraryRevision: libraryRevision,
+      options: value,
+      fingerprint: beforeFingerprint,
+    );
+  }
 
   /// Bulk review retains one hydrated backup image, not one copy per title.
   SourceMigrationPreview sharingSnapshot(SourceMigrationPreview other) {
@@ -70,6 +147,8 @@ class SourceMigrationPreview {
       unmatchedBookmarks: unmatchedBookmarks,
       configurationGeneration: configurationGeneration,
       libraryRevision: libraryRevision,
+      options: options,
+      fingerprint: other.beforeFingerprint,
     );
   }
 }
@@ -84,15 +163,44 @@ class SourceMigration {
   final AppConfigurationStore? configuration;
   final void Function()? onConfigurationChanged;
 
+  Future<SourceMigrationSession> beginSession({void Function()? check}) async {
+    check?.call();
+    final revision = repository.replacementRevision;
+    final captured = await _capture();
+    checkLibraryRevision(repository.replacementRevision, revision);
+    await BackupValidator(repository)
+        .validateForRestore(captured.image, check: check);
+    check?.call();
+    checkLibraryRevision(repository.replacementRevision, revision);
+    final session = SourceMigrationSession._(
+      this,
+      captured.image,
+      captured.generation,
+      revision,
+    );
+    checkSession(session);
+    return session;
+  }
+
+  void checkSession(SourceMigrationSession session) {
+    if (!identical(session.owner, this)) {
+      throw StateError('Phiên chuyển nguồn không thuộc thư viện này.');
+    }
+    checkLibraryRevision(repository.replacementRevision, session.revision);
+    if (configuration != null &&
+        configuration!.preferences.mutationGeneration != session.generation) {
+      throw StateError('Thiết lập đã khôi phục. Hãy bắt đầu chuyển nguồn lại.');
+    }
+  }
+
   Future<({LibrarySnapshot image, int? generation, int? revision})>
   _capture() async {
     final store = configuration;
     if (store == null) {
-      return (
-        image: await repository.snapshot(),
-        generation: null,
-        revision: null,
-      );
+      final revision = repository.replacementRevision;
+      final image = await repository.snapshot();
+      checkLibraryRevision(repository.replacementRevision, revision);
+      return (image: image, generation: null, revision: revision);
     }
     return store.exclusive(() async {
       final revision = repository.replacementRevision;
@@ -113,13 +221,21 @@ class SourceMigration {
     CatalogueBook target,
     List<CatalogueChapter> incoming, {
     String sourceName = '',
+    SourceMigrationSession? session,
+    SourceMigrationOptions options = const SourceMigrationOptions(),
   }) async {
-    final captured = await _capture();
+    if (session != null) checkSession(session);
+    final captured = session == null
+        ? await _capture()
+        : (
+            image: session.before,
+            generation: session.generation,
+            revision: session.revision,
+          );
     final before = captured.image;
-    final old = before.entries
-        .where((e) => e.book.id == originalId)
-        .firstOrNull
-        ?.book;
+    final old =
+        session?.books[originalId] ??
+        before.entries.where((e) => e.book.id == originalId).firstOrNull?.book;
     if (old == null || old.engine == 'local') {
       throw StateError('Truyện nguồn cũ không còn trong thư viện.');
     }
@@ -162,7 +278,7 @@ class SourceMigration {
     final matches = matchMigrationChapters(old.chapters, chapters);
     final marks = <String>[];
     var unmatchedBookmarks = 0;
-    for (final mark in old.bookmarks) {
+    for (final mark in options.chapters ? old.bookmarks : const <String>[]) {
       final parts = mark.split(':');
       final oldIndex = parts.length == 2 ? int.tryParse(parts.first) : null;
       final index = matches[oldIndex];
@@ -176,7 +292,7 @@ class SourceMigration {
       }
     }
     final reverse = {for (final e in matches.entries) e.value: e.key};
-    final current = matches[old.currentChapter] ?? 0;
+    final current = options.chapters ? (matches[old.currentChapter] ?? 0) : 0;
     final replacement = LibraryBook(
       id: id,
       title: target.title,
@@ -196,9 +312,9 @@ class SourceMigration {
       sourceMemo: target.sourceMemo,
       nativeSourceContext: target.nativeSourceContext,
       status: target.status,
-      readingState: old.readingState,
+      readingState: options.chapters ? old.readingState : '',
       rating: old.rating,
-      categories: old.categories,
+      categories: options.categories ? old.categories : const ['Mặc định'],
       favorite: old.favorite,
       notes: old.notes,
       externalBackupMetadata: old.externalBackupMetadata,
@@ -207,14 +323,17 @@ class SourceMigration {
       chapterListPreferences: old.chapterListPreferences,
       createdAt: old.createdAt,
       lastUpdated: DateTime.now(),
-      lastRead: old.lastRead,
+      lastRead: options.chapters ? old.lastRead : null,
       currentChapter: current,
       progress: current / chapters.length,
       bookmarks: marks,
       chapters: [
         for (final (index, c) in chapters.indexed)
           c.copyWith(
-            read: reverse[index] != null && chapterIsRead(old, reverse[index]!),
+            read:
+                options.chapters &&
+                reverse[index] != null &&
+                chapterIsRead(old, reverse[index]!),
           ),
       ],
     );
@@ -226,10 +345,21 @@ class SourceMigration {
       unmatchedBookmarks: unmatchedBookmarks,
       configurationGeneration: captured.generation,
       libraryRevision: captured.revision,
+      options: options,
+      fingerprint: session?.fingerprint,
     );
     // Reuse full backup validation, including IDs, numbers, media and indices.
-    BackupValidator(repository)
-        .validateSnapshot(_snapshot(candidate, false).encode());
+    if (session == null) {
+      BackupValidator(repository)
+          .validateSnapshot(_snapshot(candidate, false).encode());
+    } else {
+      // The original snapshot was validated once when opening the session.
+      // Validate each new book without hydrating/encoding the entire library.
+      BackupValidator(repository).validateSnapshot(
+        LibrarySnapshot([LibrarySnapshotEntry(replacement, const {})]).encode(),
+      );
+      checkSession(session);
+    }
     return candidate;
   }
 
@@ -240,7 +370,7 @@ class SourceMigration {
   }) async {
     checkLibraryRevision(repository.replacementRevision, expectedRevision);
     final incoming = _snapshot(preview, replaceOld);
-    BackupValidator(repository).validateSnapshot(incoming.encode());
+    await BackupValidator(repository).validateForRestore(incoming);
     // Repository performs atomic fingerprint CAS and saves the hydrated recovery
     // image before writing. Edits/downloads since preview reject the entire commit.
     await _publish(incoming, preview, expectedRevision);
@@ -282,12 +412,20 @@ class SourceMigration {
         for (final preview in previews)
           LibrarySnapshotEntry(preview.replacement, const {}),
       ],
-      configuration: _migrateConfiguration(before.configuration, {
-        for (final preview in previews)
-          preview.original.id: preview.replacement.id,
-      }, replaceOld: replaceOld),
+      configuration: _migrateConfiguration(
+        before.configuration,
+        {
+          for (final preview in previews)
+            preview.original.id: preview.replacement.id,
+        },
+        replaceOld: replaceOld,
+        skipCategories: {
+          for (final p in previews)
+            if (!p.options.categories) p.original.id,
+        },
+      ),
     );
-    BackupValidator(repository).validateSnapshot(incoming.encode());
+    await BackupValidator(repository).validateForRestore(incoming);
     await _publish(incoming, previews.first, expectedRevision);
     return [for (final preview in previews) preview.replacement];
   }
@@ -389,15 +527,21 @@ class SourceMigration {
             if (!replaceOld || entry.book.id != preview.original.id) entry,
           LibrarySnapshotEntry(preview.replacement, const {}),
         ],
-        configuration: _migrateConfiguration(preview.before.configuration, {
-          preview.original.id: preview.replacement.id,
-        }, replaceOld: replaceOld),
+        configuration: _migrateConfiguration(
+          preview.before.configuration,
+          {preview.original.id: preview.replacement.id},
+          replaceOld: replaceOld,
+          skipCategories: {
+            if (!preview.options.categories) preview.original.id,
+          },
+        ),
       );
 
   BackupConfiguration? _migrateConfiguration(
     BackupConfiguration? before,
     Map<String, String> identities, {
     required bool replaceOld,
+    Set<String> skipCategories = const {},
   }) {
     if (before == null) return null;
     final values = {...before.values};
@@ -426,10 +570,28 @@ class SourceMigration {
     }
     if (values.containsKey(LibraryFolders.preferenceKey) ||
         values.containsKey(LibraryFolders.categoryPreferenceKey)) {
-      final folders = LibraryFolders.decodeWithCategories(
-        values[LibraryFolders.preferenceKey] as String?,
-        values[LibraryFolders.categoryPreferenceKey] as String?,
-      ).migrateBookIds(identities, replaceOld: replaceOld);
+      final transferred =
+          LibraryFolders.decodeWithCategories(
+            values[LibraryFolders.preferenceKey] as String?,
+            values[LibraryFolders.categoryPreferenceKey] as String?,
+          ).migrateBookIds({
+            for (final e in identities.entries)
+              if (!skipCategories.contains(e.key)) e.key: e.value,
+          }, replaceOld: replaceOld);
+      final folders = LibraryFolders(
+        {
+          for (final e in transferred.names.entries)
+            if (!replaceOld || !skipCategories.contains(e.key)) e.key: e.value,
+        },
+        {
+          for (final scope in transferred.categoryNames.entries)
+            scope.key: {
+              for (final e in scope.value.entries)
+                if (!replaceOld || !skipCategories.contains(e.key))
+                  e.key: e.value,
+            },
+        },
+      );
       if (values.containsKey(LibraryFolders.preferenceKey)) {
         values[LibraryFolders.preferenceKey] = folders.encode();
       }

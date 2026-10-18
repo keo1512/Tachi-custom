@@ -229,12 +229,42 @@ class OnDeviceSourceRepository extends SourceRepository
       runtimes[engine]?.health() ?? super.health(engine);
 
   @override
-  Future<List<CatalogueSource>> listSources(SourceEngine engine) =>
-      runtimes[engine]?.listSources() ?? super.listSources(engine);
+  Future<List<CatalogueSource>> listSources(SourceEngine engine) {
+    final runtime = runtimes[engine];
+    return runtime == null
+        ? super.listSources(engine)
+        : _inventory(runtime, <CatalogueSource>[], runtime.listSources);
+  }
 
   @override
-  Future<List<CatalogueExtension>> extensions(SourceEngine engine) =>
-      runtimes[engine]?.extensions() ?? super.extensions(engine);
+  Future<List<CatalogueExtension>> extensions(SourceEngine engine) {
+    final runtime = runtimes[engine];
+    return runtime == null
+        ? super.extensions(engine)
+        : _inventory(runtime, <CatalogueExtension>[], runtime.extensions);
+  }
+
+  Future<T> _inventory<T>(
+    NativeSourceEngine runtime,
+    T empty,
+    Future<T> Function() load,
+  ) {
+    Future<T> read() async {
+      if (runtime is NativeInstalledExtensionInventory &&
+          !await (runtime as NativeInstalledExtensionInventory)
+              .hasInstalledExtensions()) {
+        return empty;
+      }
+      return load();
+    }
+
+    // Keep the on-disk check and enumeration together with installation/removal.
+    // Existing engines without this optional capability keep their contract.
+    return runtime is NativeExtensionBackupTransaction
+        ? (runtime as NativeExtensionBackupTransaction)
+              .exclusiveExtensionBackup(read)
+        : read();
+  }
 
   @override
   Future<void> installExtension(SourceEngine engine, String packageUrl) =>

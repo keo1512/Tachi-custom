@@ -131,7 +131,8 @@ class BackupService {
 
     progress(BackupRestoreStage.validating);
     cancellation?.check();
-    _validate(preview.snapshot.encode());
+    await BackupValidator(repository)
+        .validateForRestore(preview.snapshot, check: cancellation?.check);
     cancellation?.check();
     var restored = false;
     final count = await _exclusive(() async {
@@ -153,9 +154,8 @@ class BackupService {
       progress(BackupRestoreStage.preparing, total: additions.length);
       for (var index = 0; index < additions.length; index++) {
         cancellation?.check();
-        // Validate each title/content before writing, and yield so large imports
-        // can render progress and accept cancellation without partial writes.
-        _validate(LibrarySnapshot([additions[index]]).encode());
+        // Every entry was validated above. Preparation remains cancellable and
+        // keeps the progress UI responsive until the single atomic commit.
         progress(
           BackupRestoreStage.preparing,
           done: index + 1,
@@ -169,7 +169,7 @@ class BackupService {
         configuration: preview.snapshot.configuration,
         extensions: preview.snapshot.extensions,
       );
-      combined.encode();
+      combined.checkEncodedSize();
       cancellation?.check();
       progress(
         BackupRestoreStage.committing,

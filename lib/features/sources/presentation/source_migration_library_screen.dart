@@ -8,6 +8,7 @@ import '../../library/presentation/library_view_model.dart';
 import '../domain/catalogue.dart';
 import 'browse_widgets.dart';
 import 'source_migration_view.dart';
+import 'source_bulk_migration_screen.dart';
 
 /// Entry point shared by More and Browse; loading installed sources does not
 /// migrate or rewrite any restored book identity.
@@ -162,6 +163,48 @@ class _MigrationLibraryState
                                   builder: (_) => Scaffold(
                                     appBar: AppBar(
                                       title: Text(label(identity)),
+                                      actions: [
+                                        PopupMenuButton<bool>(
+                                          tooltip: 'Chuyển nguồn các truyện',
+                                          onSelected: (all) =>
+                                              Navigator.of(context).push(
+                                                CupertinoPageRoute(
+                                                  builder: (_) =>
+                                                      BulkSourceMigrationScreen(
+                                                        sources: sources.values
+                                                            .expand(
+                                                              (items) => items,
+                                                            )
+                                                            .toList(),
+                                                        initialSource: identity,
+                                                        initialBookIds: all
+                                                            ? online
+                                                                  .where(
+                                                                    (book) =>
+                                                                        '${book.engine}:${book.sourceId}' ==
+                                                                        identity,
+                                                                  )
+                                                                  .map(
+                                                                    (book) =>
+                                                                        book.id,
+                                                                  )
+                                                                  .toSet()
+                                                            : const {},
+                                                      ),
+                                                ),
+                                              ),
+                                          itemBuilder: (_) => const [
+                                            PopupMenuItem(
+                                              value: true,
+                                              child: Text('Chuyển tất cả'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: false,
+                                              child: Text('Chọn truyện'),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                     body: SourceMigrationView(
                                       sources: sources.values

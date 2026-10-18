@@ -1,0 +1,84 @@
+{
+  "schema": "tachibooks.bulk-migration-followup.v1",
+  "date": "2026-10-19",
+  "scope": "Ordered target selection, settings, automatic matching, side-by-side review, manual correction/skip and existing atomic batch publication",
+  "checks": {
+    "targeted_suites": 7,
+    "passed": 82,
+    "failed": 0,
+    "skipped": 0,
+    "isar_library": "C:/Users/Nosgnoh/AppData/Local/Pub/Cache/hosted/pub.dev/isar_community_flutter_libs-3.3.2/windows/libisar.dll",
+    "test_log": "artifacts/bulk_migration_final_tests.log",
+    "final_widget_log": "artifacts/bulk_migration_widget_tests.log",
+    "analyze_log": "artifacts/bulk_migration_analyze.log",
+    "screenshot": "artifacts/bulk-migration-review-430.png"
+  },
+  "contracts": [
+    "One snapshot and fingerprint per automatic run; no per-title hydrated library snapshots",
+    "Exact source engine and String source ID validation",
+    "Unique exact normalized title/alternative title only; at most 3 search pages per query; ambiguity stays manual",
+    "Ordered first match or most chapters; equal counts retain target priority",
+    "Cancellation discards late results and prevents queued book/source work",
+    "No library writes until explicit final confirmation",
+    "Existing fingerprint CAS, replacement revision, configuration generation, recovery and atomic batch publication retained",
+    "Chapter/category transfer defaults preserve previous behavior; unchecked categories do not copy folders",
+    "No external tracker integration"
+  ],
+  "reference_sections": [
+    "tinh nang phai co.md 10.2-10.3",
+    "TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md 11.3-11.5",
+    "User screenshots IMG_6172.PNG through IMG_6177.PNG"
+  ],
+  "limitations": [
+    "Windows Flutter tests and real Windows Isar do not prove native iPhone operation",
+    "Tests use controlled source repositories; real extension/website migration not performed",
+    "Native extension RPCs may finish after cancellation, but late results are ignored",
+    "No IPA, CI dispatch, commit or push in this subtask"
+  ],
+  "sources": {
+    "lib/features/sources/domain/source_migration.dart": "c87809c9da0e720b44f16ffc8496ec05e8d4294b4eabb9cbd3e2b25e48a38f5a",
+    "lib/features/sources/application/bulk_migration_matcher.dart": "25a783231b5a814b1fc691faa4b8ac04bc13a65cf9112e57d7aba5ee7d7d8922",
+    "lib/features/sources/presentation/migration_source_selection.dart": "76bd1ed5c97dee0174c8e2379a1b5f217e634b3a45e35ad19901ed7e361cc18c",
+    "lib/features/sources/presentation/bulk_migration_settings.dart": "bf0658e66e88a9e18e95010e73be2488c659daf40f74b5ba6aadabaab7928818",
+    "lib/features/sources/presentation/bulk_migration_review.dart": "3adf7dbc8f573d4400a380ef8b55ec0d46d34015eff26909c22c3f1e06e1472d",
+    "lib/features/sources/presentation/source_bulk_migration_screen.dart": "0ee01c9063dab5298a9d8eb6254654b3a102cfdfd8bd64f22f237e8c47a6cb23",
+    "lib/features/sources/presentation/source_migration_screen.dart": "c856b65cfdbe1283ff1698fc24dbf9407298ee4fde1d303121e7a894b5d4520b",
+    "lib/features/sources/presentation/source_migration_view.dart": "2b76a3ec87a70d1c6b636acec7a84123a37bcc4ade4ff09d4e65d2e0a42e90cc",
+    "lib/features/sources/presentation/source_migration_library_screen.dart": "3888759f7d4d0fd9b396d0172052f04c99b6e9b24b02dae1dec1812d5ec1f345",
+    "test/bulk_migration_matcher_test.dart": "0cd06fbc31fa0727d672b37344c37f2018c9f0c8337d41dac1b9bf5accdbd093",
+    "test/bulk_migration_widget_test.dart": "fc4cf65828d8953fd4ad65abfeda50b5d22e6edc427e14ecc679d6344725fda9",
+    "test/source_migration_configuration_test.dart": "973a325b4ca1e6ba580b1a6ce6333d40550ddd3f08c7329ddad501093cf75ac6",
+    "test/source_migration_widget_test.dart": "bd12e594ee3c6b44d5b9ece56c54e76a591a6234fe31f0cdb922c3f1ebe7db1a",
+    "test/source_browse_widget_test.dart": "2345d759b02c7861ae86904f7df02233be4c94bc530bdc109f25b49977474f82"
+  },
+  "reference_inputs": {
+    "C:/Users/Nosgnoh/Downloads/tinh nang phai co.md": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c",
+    "C:/Users/Nosgnoh/Downloads/# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083",
+    "C:/Users/Nosgnoh/Downloads/TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0",
+    "C:/Users/Nosgnoh/Downloads/Tachimanga iOS Mod IPA No Jailbreak Cheats 5.0 Hacked IPA by iOSGods.com.ipa": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+    "D:/LocalSend/IMG_6172.PNG": "90c81799c319fb83653f6df49a44fef156128f5429d4c2f611540ccd42bf671e",
+    "D:/LocalSend/IMG_6173.PNG": "430da28950b75dbb618d89da0794c565298e4059907fc8c7a7857b1eea7bfaec",
+    "D:/LocalSend/IMG_6174.PNG": "79731db8e286c7071787a8250f36edd2534eb5de322d1eabae018c129f54fc0b",
+    "D:/LocalSend/IMG_6175.PNG": "0eb1d378112aa34023cd9803abd9291d0dd6374fde2d6ee1490c68a438faae8a",
+    "D:/LocalSend/IMG_6176.PNG": "e76b9fc06ab6c6209cf43188ef14d2f1b9b5bc9df58659396f1f40e4411fadfd",
+    "D:/LocalSend/IMG_6177.PNG": "06e47ccc7e2d64572bae14d565f8805f973c51b1956d5baa6303be557965dd85"
+  },
+  "integration_followup": {
+    "session": "Capture activeSession locally, check run and session validity after await, then publish state.session; pass the local session to matcher",
+    "manual_context": "Use refreshed detail, including sourceMemo/nativeSourceContext, for manual chapter-list lookup",
+    "regression_before": "artifacts/migration_detail_context_before.log",
+    "regression_after": "artifacts/bulk_migration_final_tests.log",
+    "before_result": "New regression failed on empty memo before fix",
+    "after_result": "82 targeted tests passed with real Isar DLL"
+  },
+  "browse_integration_followup": {
+    "reason": "Old assertion required removed duplicate instruction header; current source list uses batch action and move-all/select menu",
+    "preserved": "Online-only membership, missing-source feedback, progress/bookmarks/offline cache assertions retained",
+    "test_log": "artifacts/migration_browse_integration_tests.log",
+    "suites": 3,
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "production_changes": "none"
+  }
+}

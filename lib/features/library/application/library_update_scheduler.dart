@@ -184,14 +184,17 @@ class LibraryUpdateScheduler {
     LibraryBook selection,
     String chapterId, {
     required int expectedRevision,
+    bool Function()? isCancelled,
   }) async {
+    bool current() => ref.mounted && isCancelled?.call() != true;
+    if (!current()) return 0;
     final policy = ref.read(libraryUpdatePolicyProvider);
     if (policy.downloadAhead == 0 || selection.engine == 'local') return 0;
     final repo = ref.read(libraryRepositoryProvider);
     checkLibraryRevision(repo.replacementRevision, expectedRevision);
     if (policy.wifiOnly || policy.chargingOnly) {
       final conditions = await ref.read(updateDeviceConditionsProvider)();
-      if (!ref.mounted ||
+      if (!current() ||
           conditions == null ||
           (policy.wifiOnly && conditions['wifi'] != true) ||
           (policy.chargingOnly && conditions['charging'] != true)) {
@@ -199,7 +202,7 @@ class LibraryUpdateScheduler {
       }
     }
     final latest = await repo.find(selection.id);
-    if (!ref.mounted) return 0;
+    if (!current()) return 0;
     checkLibraryRevision(repo.replacementRevision, expectedRevision);
     if (latest == null ||
         bookSourceIdentity(latest) != bookSourceIdentity(selection)) {
@@ -221,8 +224,9 @@ class LibraryUpdateScheduler {
         .toList();
     if (ids.isEmpty) return 0;
     final queue = ref.read(downloadQueueProvider.notifier);
+    if (!current()) return 0;
     await queue.enqueue(latest.id, ids, expectedRevision: expectedRevision);
-    if (ref.mounted) await queue.start();
+    if (current()) await queue.start();
     return ids.length;
   }
 }

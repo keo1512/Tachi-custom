@@ -7,8 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 import 'package:tachi_books/core/theme/app_theme.dart';
 import 'package:tachi_books/features/library/data/library_repository.dart';
+import 'package:tachi_books/features/library/data/backup_configuration.dart';
+import 'package:tachi_books/features/library/data/coordinated_preferences.dart';
 import 'package:tachi_books/features/library/domain/library_book.dart';
 import 'package:tachi_books/features/library/presentation/library_view_model.dart';
 import 'package:tachi_books/features/settings/settings_controller.dart';
@@ -48,6 +51,143 @@ CatalogueExtension _package(String id, String version) => CatalogueExtension(
 );
 
 void main() {
+  testWidgets(
+    'failed source layout persistence does not publish or retain a RAM-only choice',
+    (tester) async {
+      SharedPreferencesStorePlatform.instance = _FailingLayoutStore();
+      final repo = _Repository();
+      final fixture = await _mount(
+        tester,
+        repo,
+        const SourceSearchScreen(source: _source),
+      );
+      await tester.tap(find.byTooltip('Hiển thị truyện'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Danh sách'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<SourceResultTile>(find.byType(SourceResultTile)).list,
+        isFalse,
+      );
+      expect(fixture.prefs.getString('sourceCatalogueLayoutV1'), isNull);
+      await _dispose(tester, fixture, repo);
+    },
+  );
+
+  testWidgets(
+    'source layout popup opened before restore cannot overwrite restored choice',
+    (tester) async {
+      final raw = await SharedPreferences.getInstance();
+      final prefs = await CoordinatedPreferences.open(
+        raw,
+        MemoryLibraryRepository(),
+      );
+      final repo = _Repository();
+      final fixture = await _mount(
+        tester,
+        repo,
+        const SourceSearchScreen(source: _source),
+        preferences: prefs,
+      );
+      await tester.tap(find.byTooltip('Hiển thị truyện'));
+      await tester.pumpAndSettle();
+      final before = BackupConfiguration.capture(prefs);
+      final image = await fixture.library.snapshot();
+      final restored = BackupConfiguration.fromJson({
+        'version': 1,
+        'preferences': {...before.values, 'sourceCatalogueLayoutV1': 'list'},
+      });
+      await prefs.exclusive(
+        () => prefs.restoreLocked(
+          incoming: restored,
+          expectedFingerprint: before.fingerprint,
+          oldLibraryFingerprint: image.fingerprint,
+          newLibraryFingerprint: image.fingerprint,
+          commit: (publish) => publish(),
+        ),
+      );
+      await tester.tap(find.text('Lưới lớn'));
+      await tester.pumpAndSettle();
+      expect(prefs.getString('sourceCatalogueLayoutV1'), 'list');
+      expect(
+        tester.widget<SourceResultTile>(find.byType(SourceResultTile)).list,
+        isFalse,
+      );
+      await _dispose(tester, fixture, repo);
+    },
+  );
+
+  testWidgets(
+    'source reference header and five-column shelf keep identity badges',
+    (tester) async {
+      final repo = _Repository()
+        ..catalogueBooks = [
+          _book,
+          for (var i = 1; i < 12; i++)
+            CatalogueBook(
+              ref: '/title-$i',
+              title: 'Truyện $i',
+              sourceId: _source.id,
+              kind: _source.kind,
+              engine: _source.engine,
+            ),
+        ];
+      final fixture = await _mount(
+        tester,
+        repo,
+        const SourceSearchScreen(source: _source),
+      );
+      expect(find.text('Source A (VI)'), findsOneWidget);
+      expect(find.text(_source.baseUrl), findsOneWidget);
+      expect(find.byType(CupertinoSearchTextField), findsNothing);
+      expect(find.text('Trong thư viện'), findsOneWidget);
+      final tiles = find.byType(SourceResultTile);
+      final firstRowY = tester.getTopLeft(tiles.at(0)).dy;
+      for (var i = 1; i < 5; i++) {
+        expect(tester.getTopLeft(tiles.at(i)).dy, firstRowY);
+      }
+      expect(tester.getTopLeft(tiles.at(5)).dy, greaterThan(firstRowY));
+      expect(tester.getSize(tiles.first).width, lessThan(85));
+      await tester.tap(find.byTooltip('Tìm'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(CupertinoSearchTextField), 'Tên mới');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(repo.searched, ['Tên mới']);
+      await tester.tap(find.text('Mới nhất'));
+      await tester.pumpAndSettle();
+      expect(repo.browsed.last, SourceBrowseMode.latest);
+      await _dispose(tester, fixture, repo);
+    },
+  );
+
+  for (final size in const [Size(320, 568), Size(430, 932)]) {
+    testWidgets('source controls remain reachable at $size and large text', (
+      tester,
+    ) async {
+      final repo = _Repository();
+      final fixture = await _mount(
+        tester,
+        repo,
+        const SourceSearchScreen(source: _source),
+        size: size,
+        scale: 1.5,
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text(_source.baseUrl), findsOneWidget);
+      final toolbar = find.byType(SingleChildScrollView).first;
+      await tester.drag(toolbar, const Offset(-500, 0));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Bộ lọc của nguồn').hitTestable(), findsOneWidget);
+      await tester.tap(find.byTooltip('Hiển thị truyện'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lưới nhỏ gọn'), findsOneWidget);
+      await tester.tap(find.text('Hủy'));
+      await tester.pumpAndSettle();
+      await _dispose(tester, fixture, repo);
+    });
+  }
+
   testWidgets(
     'nonempty final source page stops pagination from the actual flag',
     (tester) async {
@@ -320,11 +460,14 @@ Future<_Fixture> _mount(
   Widget screen, {
   List<CatalogueExtension> packages = const [],
   Future<Uint8List?> Function()? picker,
+  Size size = const Size(430, 932),
+  double scale = 1,
+  SharedPreferences? preferences,
 }) async {
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = const Size(430, 932);
+  tester.view.physicalSize = size;
   addTearDown(tester.view.reset);
-  final prefs = await SharedPreferences.getInstance(),
+  final prefs = preferences ?? await SharedPreferences.getInstance(),
       library = MemoryLibraryRepository();
   await library.save(
     LibraryBook(
@@ -359,6 +502,11 @@ Future<_Fixture> _mount(
       child: MaterialApp.router(
         theme: appTheme(Brightness.dark),
         routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
+        ),
       ),
     ),
   );
@@ -393,9 +541,20 @@ class _Catalogue extends ExtensionCatalogueController {
         ];
 }
 
+class _FailingLayoutStore extends InMemorySharedPreferencesStore {
+  _FailingLayoutStore() : super.withData({});
+  @override
+  Future<bool> setValue(String type, String key, Object value) async {
+    if (key == 'flutter.sourceCatalogueLayoutV1') return false;
+    return super.setValue(type, key, value);
+  }
+}
+
 class _Repository extends SourceRepository {
   _Repository() : super(tachimangaUrl: '', vbookUrl: '');
   final browsed = <SourceBrowseMode>[];
+  final searched = <String>[];
+  List<CatalogueBook> catalogueBooks = [_book];
   final installs = <String>[], removed = <String>[];
   final versions = {'a': '1', 'b': '1'};
   Completer<List<CatalogueBook>>? slowSearch;
@@ -410,6 +569,8 @@ class _Repository extends SourceRepository {
   bool requiresExternalConnection(SourceEngine engine) => false;
   @override
   bool supportsCatalogueBrowsing(SourceEngine engine) => true;
+  @override
+  bool supportsSourceFilters(SourceEngine engine) => true;
   @override
   bool supportsExtensionRemoval(SourceEngine engine) => true;
   @override
@@ -438,7 +599,9 @@ class _Repository extends SourceRepository {
     int page = 1,
   }) async {
     browsed.add(mode);
-    return finalPage ? CataloguePage([_book], hasNextPage: false) : [_book];
+    return finalPage
+        ? CataloguePage(catalogueBooks, hasNextPage: false)
+        : catalogueBooks;
   }
 
   @override
@@ -446,7 +609,11 @@ class _Repository extends SourceRepository {
     CatalogueSource source,
     String query, {
     int page = 1,
-  }) async => source.id == 'slow' ? slowSearch!.future : [_book];
+  }) async {
+    searched.add(query);
+    return source.id == 'slow' ? slowSearch!.future : [_book];
+  }
+
   @override
   Future<CatalogueBook> detail(CatalogueBook book) async {
     detailLoads++;

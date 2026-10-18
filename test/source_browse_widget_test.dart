@@ -389,10 +389,10 @@ void main() {
         find.byKey(const ValueKey('migration-origin-vbook:old')),
       );
       await tester.pumpAndSettle();
-      expect(
-        find.text('Chọn truyện để tìm và đối chiếu kết quả ở nguồn mới.'),
-        findsOneWidget,
-      );
+      // The source title already identifies this list. Its former instruction
+      // header was removed to keep books reachable on short/large-text screens.
+      expect(find.text('Chuyển nguồn hàng loạt'), findsOneWidget);
+      expect(find.byTooltip('Chuyển nguồn các truyện'), findsOneWidget);
       expect(find.byKey(const ValueKey('migration-book-online')), findsOneWidget);
       expect(find.text('Local book'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('migration-book-online')));

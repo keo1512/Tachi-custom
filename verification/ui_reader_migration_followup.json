@@ -1,0 +1,191 @@
+{
+  "schema": "tachibooks.ui-reader-migration-followup.v1",
+  "recorded_at_utc": "2026-10-18T22:57:59.245673+00:00",
+  "git_head": "fecc2f14f3d077e8a3e74a1aabad32bf6ad27870",
+  "working_tree_changes_not_packaged_in_ipa13": true,
+  "scope": [
+    "library filter category scope and persisted selection",
+    "compact readable filter sheet",
+    "source catalogue layout",
+    "first visible reader image priority",
+    "ordered bulk source migration"
+  ],
+  "checks": {
+    "ui_followup_full_flutter.log": {
+      "log": "artifacts/ui_followup_full_flutter.log",
+      "sha256": "700fd39eba24caba1001651b0499243bddb3f6a3b8d9b1323a802aa38c4c1c5f",
+      "passed": 1320,
+      "skipped": 6,
+      "failed": 0
+    },
+    "source_reference_targeted.log": {
+      "log": "artifacts/source_reference_targeted.log",
+      "sha256": "d326a1529bf6854a5a6e098c80e2899b18f07796d65755f8189098beaf80a987",
+      "passed": 43,
+      "skipped": 0,
+      "failed": 0
+    },
+    "filter_scope_targeted.log": {
+      "log": "artifacts/filter_scope_targeted.log",
+      "sha256": "ddddc276b92f4ba54a22438b485042155b810e48e4c642f5c8f02d822864bee6",
+      "passed": 47,
+      "skipped": 0,
+      "failed": 0
+    },
+    "bulk_migration_final_tests.log": {
+      "log": "artifacts/bulk_migration_final_tests.log",
+      "sha256": "72f76e8683ac84b98d658425efec769f2468aba843549eb87f78f31a59229692",
+      "passed": 82,
+      "skipped": 0,
+      "failed": 0
+    },
+    "reader_latency_targeted.log": {
+      "log": "artifacts/reader_latency_targeted.log",
+      "sha256": "21b9f01bbb5c022132ea5edc81cda4fced9e7474a43738db261082168acfb308",
+      "passed": 99,
+      "skipped": 0,
+      "failed": 0
+    }
+  },
+  "subtask_evidence": {
+    "verification/bulk_migration_followup.json": "7c27183cf38e65a1108b5dd8993737658b5ba9e8196b651a14ffa55f5ad35347",
+    "verification/reader_latency_priority_verification.json": "39ec9265822d86893ad168636b635b4aa3de666e1a2d6274cab0ad38cef411e3"
+  },
+  "analyze": {
+    "path": "artifacts/ui_followup_analyze.log",
+    "sha256": "97707f6abba5a65e22fd08fd10b4b6b9889d3035d49d2900738499e27572b613",
+    "no_issues": true
+  },
+  "source_sha256": {
+    "lib/core/widgets/book_cover.dart": "e9c3b3694814278310e2e797d91594ee819f995669600ca06b9c94f3e1d5e5e6",
+    "lib/features/library/application/library_update_scheduler.dart": "6cbc9e9a604990679ca5a80e29293b1dff63c276e67496d922a16de811d48241",
+    "lib/features/library/data/backup_compatibility/backup_reader.dart": "7ff5574d0b67643c884c3ca8038f3d6f247b7bea632b2daeacef943a0e5cb273",
+    "lib/features/library/data/backup_service.dart": "678c1482136c3d90e2a21f49e92992c5f6648eddf4e3d5c317f60a566e19795c",
+    "lib/features/library/data/backup_validation.dart": "77caf5e700e3e28ecc4249b0783dda1765b5f52e6623796f8160191d054da4b4",
+    "lib/features/library/data/library_snapshot.dart": "25e60555d8d102974b3337681c76abe8b7ec374193fedf0503e639a36a3fa3df",
+    "lib/features/library/presentation/library_filter_picker.dart": "1a45a9f9f34f17dd984367adae71104e8eea6b6147d614f23138ee9cf3946936",
+    "lib/features/library/presentation/library_filter_presets_bar.dart": "b2c2e0b0a89f797541d009fb5a292524397e4c03a686e8e9b173d58122c8cf92",
+    "lib/features/library/presentation/library_filter_sheet.dart": "4c1a956bf3b417795e92cbba40be5b9ced294c8e24cfc61abe5f8041ae7f82ad",
+    "lib/features/library/presentation/library_screen.dart": "6a0599f3941e790fc611b77c05e5b6582207dbe47e4bf618b412262658c208e9",
+    "lib/features/reader/presentation/continuous_manga_reader.dart": "867f32d3f31a1d262607debe2badd00cb003b1d85dea7797adece2151a3b94c6",
+    "lib/features/reader/presentation/reader_screen.dart": "65647ca1b346339c0905074a1f5720391a1b7419a0f5d0f5660d9a063f9ba1e2",
+    "lib/features/sources/application/bulk_migration_matcher.dart": "25a783231b5a814b1fc691faa4b8ac04bc13a65cf9112e57d7aba5ee7d7d8922",
+    "lib/features/sources/data/native_tachi_repository.dart": "d12d5a76c2b066e5e274d6fc4c04570ead02e04de56c71d3c014ada9f9a5126c",
+    "lib/features/sources/data/on_device_source_repository.dart": "f6bc0af70572b218a6d4d0f65130130503eea91a793fc1457c18c2828a87bc30",
+    "lib/features/sources/domain/native_source_engine.dart": "fad9d8cf3b54dbe5a919c9bc4838912e6bfd4d583ae3e5b01a35dd6c9a9a4646",
+    "lib/features/sources/domain/source_migration.dart": "c87809c9da0e720b44f16ffc8496ec05e8d4294b4eabb9cbd3e2b25e48a38f5a",
+    "lib/features/sources/presentation/bulk_migration_review.dart": "3adf7dbc8f573d4400a380ef8b55ec0d46d34015eff26909c22c3f1e06e1472d",
+    "lib/features/sources/presentation/bulk_migration_settings.dart": "bf0658e66e88a9e18e95010e73be2488c659daf40f74b5ba6aadabaab7928818",
+    "lib/features/sources/presentation/migration_source_selection.dart": "76bd1ed5c97dee0174c8e2379a1b5f217e634b3a45e35ad19901ed7e361cc18c",
+    "lib/features/sources/presentation/source_bulk_migration_screen.dart": "0ee01c9063dab5298a9d8eb6254654b3a102cfdfd8bd64f22f237e8c47a6cb23",
+    "lib/features/sources/presentation/source_migration_library_screen.dart": "3888759f7d4d0fd9b396d0172052f04c99b6e9b24b02dae1dec1812d5ec1f345",
+    "lib/features/sources/presentation/source_migration_screen.dart": "c856b65cfdbe1283ff1698fc24dbf9407298ee4fde1d303121e7a894b5d4520b",
+    "lib/features/sources/presentation/source_migration_view.dart": "2b76a3ec87a70d1c6b636acec7a84123a37bcc4ade4ff09d4e65d2e0a42e90cc",
+    "lib/features/sources/presentation/source_result_tile.dart": "79359ecd56fbea21aa992e92b1399e796e5e9cefe5b51bc0902ebea332adf8c5",
+    "lib/features/sources/presentation/source_search_screen.dart": "e89083531c3a5f04bd5d5174cd7c5f75afd79023d704bec8705b716aceda28f5",
+    "test/adaptive_navigation_test.dart": "0f5e47e429f43cae4c2a4707b32e3d53aadb2913ea91b151ffc2a633e751156d",
+    "test/backup_restore_large_test.dart": "951da5c1417c921989b137b81e9e93564345105f9a27b2803e099b60c3211d28",
+    "test/browse_empty_native_test.dart": "d4c16873c1da26f9fbd3f0276a567a1b4ffe524a5f03e3e4a883e1922e01dd81",
+    "test/bulk_migration_matcher_test.dart": "0cd06fbc31fa0727d672b37344c37f2018c9f0c8337d41dac1b9bf5accdbd093",
+    "test/bulk_migration_widget_test.dart": "fc4cf65828d8953fd4ad65abfeda50b5d22e6edc427e14ecc679d6344725fda9",
+    "test/continuous_reader_test.dart": "de2e97958f5948775fa0f6f1ecb2f29906f9ee705a593d7d091bcb4024b7d06d",
+    "test/empty_native_inventory_restore_test.dart": "f25e52c9443a2d41c12b7df503efe636d24ce910776c40b0a881b1adc7d3c26d",
+    "test/library_author_sources_filter_test.dart": "a6233d54cfc8254194922fca28267b0a28a523cfac032e355efcd281dd10f965",
+    "test/library_filter_category_scope_test.dart": "2d0d3ca68fdd17f55f07d501ae77bf672a3d713f637990c66616720e6d7c58dc",
+    "test/library_filter_layout_test.dart": "a4a58b3736321494d843939318dd01d5973ec7c469c0b00140f10f4bdd0ee8b0",
+    "test/library_folders_widget_test.dart": "e026766b61829708b282abb99d3af041ab853d55075cea5e182ba5d10a956c6b",
+    "test/library_snapshot_encoding_test.dart": "b0e7b58c72222be27e4a525ec325a48b3f42f21d01964dd6bd2bb2e12e380354",
+    "test/native_cover_repository_test.dart": "c4743ed893ad6eb8613aecc7ffabf3f8866debc2714a8828b701fefc07dedce3",
+    "test/native_image_pipeline_test.dart": "249ad1933c2e5c97729db0b7c2968ade37a9845f9bd0d511f5af66665f0d08d8",
+    "test/reader_download_ahead_priority_test.dart": "512b128556fc6e297532809b2166e0e63cf0128889a71b44da04b089624a1e79",
+    "test/source_browse_widget_test.dart": "2345d759b02c7861ae86904f7df02233be4c94bc530bdc109f25b49977474f82",
+    "test/source_catalogue_widget_test.dart": "cf17876a48ba7df9a8ff89f09093a82b5ba408cf5221d5a202189bc22743a05d",
+    "test/source_migration_configuration_test.dart": "973a325b4ca1e6ba580b1a6ce6333d40550ddd3f08c7329ddad501093cf75ac6",
+    "test/source_migration_widget_test.dart": "bd12e594ee3c6b44d5b9ece56c54e76a591a6234fe31f0cdb922c3f1ebe7db1a",
+    "tools/native_extension_engine/java/dev/tachibooks/engine/ExtensionHost.java": "87c644b07ca6700d56d3643ea975de1cd930bdb2b3616588b75815c113490537",
+    "tools/native_extension_engine/proof/CoverImageProof.java": "7be42172792c829e63693844aab2fdcbbf9a86f19f4c47e82d60ba7780af7397"
+  },
+  "reference_inputs": {
+    "C:/Users/Nosgnoh/Downloads/tinh nang phai co.md": {
+      "sha256": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c",
+      "matches_pinned_input": true
+    },
+    "C:/Users/Nosgnoh/Downloads/# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md": {
+      "sha256": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083",
+      "matches_pinned_input": true
+    },
+    "C:/Users/Nosgnoh/Downloads/TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md": {
+      "sha256": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0",
+      "matches_pinned_input": true
+    },
+    "C:/Users/Nosgnoh/Downloads/Tachimanga iOS Mod IPA No Jailbreak Cheats 5.0 Hacked IPA by iOSGods.com.ipa": {
+      "sha256": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+      "matches_pinned_input": true
+    }
+  },
+  "real_backup_regression": {
+    "path": "C:/Users/Nosgnoh/Downloads/Tachimanga_backup_2026-10-18_21-20-26-971.tmb",
+    "sha256": "c9b3f8856a8ac0ebefa9bd7f2b78683b2d2a3034f7c89a682758da5aaf752ea7",
+    "expected_books": 748,
+    "expected_chapters": 22816,
+    "opt_in_enabled_in_full_run": true
+  },
+  "user_reference_images_sha256": {
+    "D:/LocalSend/IMG_6170.PNG": "4ddc4c416704c93e63ba145ecff810029560e5c2d47e7d3cb67afeff62f9fdfb",
+    "D:/LocalSend/IMG_6171.PNG": "e7fe73b4b0555fc3c286d7e6016ac031b4b944b91b200809388beee3fb61a4f8",
+    "D:/LocalSend/IMG_6172.PNG": "90c81799c319fb83653f6df49a44fef156128f5429d4c2f611540ccd42bf671e",
+    "D:/LocalSend/IMG_6173.PNG": "430da28950b75dbb618d89da0794c565298e4059907fc8c7a7857b1eea7bfaec",
+    "D:/LocalSend/IMG_6174.PNG": "79731db8e286c7071787a8250f36edd2534eb5de322d1eabae018c129f54fc0b",
+    "D:/LocalSend/IMG_6175.PNG": "0eb1d378112aa34023cd9803abd9291d0dd6374fde2d6ee1490c68a438faae8a",
+    "D:/LocalSend/IMG_6176.PNG": "e76b9fc06ab6c6209cf43188ef14d2f1b9b5bc9df58659396f1f40e4411fadfd",
+    "D:/LocalSend/IMG_6177.PNG": "06e47ccc7e2d64572bae14d565f8805f973c51b1956d5baa6303be557965dd85",
+    "D:/LocalSend/IMG_6178.PNG": "370947a3ad4fda4b93e318d911155e5c66a07cd5e2a83238264a0ed3a3a23a44",
+    "D:/LocalSend/IMG_6180.PNG": "02a9f8c140f64d9d5b549bd54e1ac1fdbe18310562ba89bd73c3a34db2947ebc",
+    "D:/LocalSend/IMG_6181.PNG": "23fb2fcf68665c4df13904414e595e8eb568ee9ccd2fd5e58bdf57fe5363fc88",
+    "D:/LocalSend/IMG_6182.PNG": "5aafa081d6afc954e858055c44b76998d207d2439caefcb62819e222965f171f",
+    "C:/Users/Nosgnoh/Downloads/1792339133259_194168850798072869_336301541804525886_17201b9d36da5677f168eca62989d977.jpg": "d4844dca2035b4f345d2bcd888f33ca696684a70e72e610a178da38319cf7c0e"
+  },
+  "ipa_static_markers": {
+    "get:migration_strategy_first_alternative": true,
+    "get:migration_strategy_most_chapters": true,
+    "get:migration_settings": true,
+    "get:bulk_migration": true,
+    "library_manga_filter.dart": true,
+    "library_source_filter_dialog.dart": true
+  },
+  "reference_mapping": {
+    "filter": [
+      "features 1.4 and 1.7",
+      "UI/UX 3.4",
+      "IMG_6178 and IMG_6180-6182"
+    ],
+    "migration": [
+      "features 10.2-10.3",
+      "UI/UX 11.3-11.5",
+      "IMG_6172-6177"
+    ],
+    "reader": [
+      "mechanism note native Java/Kotlin/OkHttp, not WebView-only",
+      "original HttpSource/Page evidence",
+      "extension native Page/cookie/header identity retained"
+    ],
+    "catalogue": [
+      "UI/UX 5.5-5.6",
+      "user source catalogue JPEG"
+    ]
+  },
+  "rendered_windows_previews": {
+    "artifacts/filter_preview_100.png": "175a1f8c7393018f877ebe493dd7ae1505e5e50b63f213f17fbdcd4fde2582ab",
+    "artifacts/filter_preview_150.png": "5024f4885e8059d38245f0ed076077316e5018f324b785fbe3ed64290b48432a",
+    "artifacts/source_preview_100.png": "071bfa6b6a9403c9a0181dc83cef576891dcec993b377164f5a1c989e8ce3e49",
+    "artifacts/source_preview_150.png": "a842e560bb72991169701ef58fefd1c44291fff42e23e99f3afce3f87f69e4a8",
+    "artifacts/bulk-migration-review-430.png": "c613ac535f9a952c0173906b988e00c2d6f90fda54e5cf2c5e49bd373752bade"
+  },
+  "limits": [
+    "Source 1 to source 2 Apply/reopen/restart passed before this patch; exact reported iPhone revert remains unreplicated.",
+    "Windows Flutter renders substitute Windows fonts for iOS fonts and use synthetic book data.",
+    "Host Java8/controlled network tests do not measure real TruyenQQ/iPhone/CDN latency.",
+    "No new IPA, CI dispatch, commit or push; iPhone acceptance of backup/Browse fixes also remains pending.",
+    "Automatic bulk matching accepts unique exact normalized title/alias only; ambiguity remains for manual review."
+  ]
+}

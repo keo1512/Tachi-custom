@@ -4,7 +4,9 @@ import com.google.gson.*;
 import com.sun.net.httpserver.HttpServer;
 import eu.kanade.tachiyomi.source.CatalogueSource;
 import eu.kanade.tachiyomi.source.model.Page;
+import eu.kanade.tachiyomi.source.model.SChapter;
 import eu.kanade.tachiyomi.source.online.HttpSource;
+import eu.kanade.tachiyomi.network.SourceCookieJar;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
@@ -13,6 +15,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.*;
 import okhttp3.*;
+import kotlin.coroutines.Continuation;
 
 /** Loopback-only proof for cover headers/client/cookies, bounds and page-hook isolation. */
 public final class CoverImageProof {
@@ -26,14 +29,17 @@ public final class CoverImageProof {
     private static final class Source extends HttpSource {
         final String base;
         final AtomicInteger intercepted=new AtomicInteger();
-        final CookieJar cookies=new CookieJar(){
-            public void saveFromResponse(HttpUrl url,List<Cookie> cookies){}
-            public List<Cookie> loadForRequest(HttpUrl url){return Collections.singletonList(new Cookie.Builder().name("cover_cookie").value("fixture").hostOnlyDomain("127.0.0.1").path("/").build());}
-        };
-        final OkHttpClient client=new OkHttpClient.Builder().cookieJar(cookies).addInterceptor(chain->{
+        final AtomicInteger imageHooks=new AtomicInteger();
+        final SourceCookieJar cookies;
+        private OkHttpClient newClient(){return new OkHttpClient.Builder().cookieJar(cookies).addInterceptor(chain->{
             intercepted.incrementAndGet();return chain.proceed(chain.request().newBuilder().header("X-Source-Client","fixture").build());
-        }).build();
-        Source(String base){this.base=base;}
+        }).build();}
+        final OkHttpClient client;
+        Source(String base,Path cookieFile){
+            this.base=base;this.cookies=new SourceCookieJar(cookieFile);
+            cookies.saveFromResponse(HttpUrl.get(base),Collections.singletonList(new Cookie.Builder().name("cover_cookie").value("fixture").hostOnlyDomain("127.0.0.1").path("/").build()));
+            this.client=newClient();
+        }
         public long getId(){return Long.parseLong(ID);}
         public String getName(){return "Cover fixture";}
         public String getLang(){return "vi";}
@@ -41,7 +47,10 @@ public final class CoverImageProof {
         public String getBaseUrl(){return base;}
         public OkHttpClient getClient(){return client;}
         protected Headers.Builder headersBuilder(){return new Headers.Builder().add("Referer",base+"/").add("Origin",base).add("User-Agent","Cover-Fixture-UA");}
-        protected Request imageRequest(Page page){throw new AssertionError("A cover must not invoke chapter image hooks");}
+        public Object getPageList(SChapter chapter,Continuation<? super List<? extends Page>> completion){
+            return Collections.singletonList(new Page(0,"/page",base+"/page.png",null));
+        }
+        protected Request imageRequest(Page page){imageHooks.incrementAndGet();return super.imageRequest(page);}
     }
     @SuppressWarnings("unchecked")
     public static void main(String[] argv)throws Exception{
@@ -64,6 +73,7 @@ public final class CoverImageProof {
                 parallelStarted.countDown();
                 try{if(!releaseParallel.await(8,TimeUnit.SECONDS))throw new IOException("Parallel cover deadline");}
                 catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw new IOException(interrupted);}
+                exchange.getResponseHeaders().add("Set-Cookie","late_cookie=refreshed; Path=/");
             }
             if(path.equals("/status")){exchange.sendResponseHeaders(403,-1);exchange.close();return;}
             exchange.getResponseHeaders().add("Content-Type","image/png");
@@ -77,7 +87,8 @@ public final class CoverImageProof {
         });
         server.start();
         try{
-            Source source=new Source(base);
+            Path cookieFile=Paths.get(argv[0]).resolve("cover-cookies.json");
+            Source source=new Source(base,cookieFile);
             Field registryField=ExtensionHost.class.getDeclaredField("registry");registryField.setAccessible(true);
             Object registry=registryField.get(null);Field sourcesField=ExtensionRegistry.class.getDeclaredField("sources");sourcesField.setAccessible(true);
             ((Map<String,CatalogueSource>)sourcesField.get(registry)).put(ID,source);
@@ -87,6 +98,7 @@ public final class CoverImageProof {
                 require("image/png".equals(image.get("mimeType").getAsString()),"Cover MIME retained");
             }
             require(source.intercepted.get()==4&&requests.get()==4,"Every cover uses original source client");
+            require(source.imageHooks.get()==0,"Covers never invoke chapter image hooks");
             for(String url:new String[]{"file:///cover.png","data:image/png;base64,AA==",base+"/cover.png#fragment","http://user:password@127.0.0.1/cover.png",base+"/co\nver.png","\\cover.png"}){
                 JsonObject response=cover(url);require(!response.get("ok").getAsBoolean(),"Invalid URL refused");require("invalid_request".equals(response.getAsJsonObject("error").get("code").getAsString()),"Invalid URL is bounded request error");
             }
@@ -102,13 +114,29 @@ public final class CoverImageProof {
             Future<JsonObject> first=rpcWorkers.submit(()->cover("/parallel?one"));
             Future<JsonObject> second=rpcWorkers.submit(()->cover("/parallel?two"));
             require(parallelStarted.await(5,TimeUnit.SECONDS),"Two covers reach the server concurrently");
-            Future<JsonObject> exclusive=rpcWorkers.submit(()->rpc("health",new JsonObject()));
+            Future<JsonObject> chapter=rpcWorkers.submit(()->rpc("chapter",args("sourceId",ID,"ref","/chapter/1","title","Fixture chapter")));
+            JsonObject opened=chapter.get(2,TimeUnit.SECONDS);
+            require(opened.get("ok").getAsBoolean(),"Chapter opens without waiting for slow covers");
+            JsonObject imageArgs=args("sourceId",ID,"chapterRef","/chapter/1","url",base+"/page.png");imageArgs.addProperty("index",0);
+            Future<JsonObject> image=rpcWorkers.submit(()->rpc("image",imageArgs));
+            JsonObject firstPage=image.get(2,TimeUnit.SECONDS);
+            require(firstPage.get("ok").getAsBoolean(),"First page downloads while both covers remain blocked");
+            require(Arrays.equals(PNG,Base64.getDecoder().decode(firstPage.getAsJsonObject("result").get("base64").getAsString())),"Reader keeps exact original source page bytes");
+            require(source.imageHooks.get()==1,"First page uses original source image hook");
+            require(!first.isDone()&&!second.isDone(),"Reader did not cancel or release unrelated cover downloads");
+            JsonObject wrong=imageArgs.deepCopy();wrong.addProperty("url",base+"/unrelated.png");
+            require(!rpc("image",wrong).get("ok").getAsBoolean(),"Reader priority preserves source page identity checks");
+            CountDownLatch cleanupStarted=new CountDownLatch(1);
+            Future<JsonObject> exclusive=rpcWorkers.submit(()->{cleanupStarted.countDown();return rpc("clearCookies",new JsonObject());});
+            require(cleanupStarted.await(2,TimeUnit.SECONDS),"Cookie cleanup reached the host");
             Thread.sleep(50);
-            require(!exclusive.isDone(),"Non-cover operations wait for existing read leases");
+            require(!exclusive.isDone(),"Cookie cleanup still waits for cover session leases");
             releaseParallel.countDown();
             require(first.get(5,TimeUnit.SECONDS).get("ok").getAsBoolean(),"First concurrent cover succeeds");
             require(second.get(5,TimeUnit.SECONDS).get("ok").getAsBoolean(),"Second concurrent cover succeeds");
             require(exclusive.get(5,TimeUnit.SECONDS).get("ok").getAsBoolean(),"Exclusive worker resumes after both covers");
+            require(source.cookies.loadForRequest(HttpUrl.get(base)).isEmpty(),"Late cover Set-Cookie cannot resurrect cleared live cookies");
+            require(new SourceCookieJar(cookieFile).loadForRequest(HttpUrl.get(base)).isEmpty(),"Late cover cookies remain cleared after loading the private store again");
             System.out.println("JAVA8_COVER_IMAGE_PROOF_OK assertions="+assertions+" loopback-only headers client cookies relative-urls bounds page-hook-isolation");
         }finally{releaseParallel.countDown();server.stop(0);serverWorkers.shutdownNow();rpcWorkers.shutdownNow();}
         System.exit(0);

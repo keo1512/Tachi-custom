@@ -1,0 +1,124 @@
+{
+  "scope": "Reader first-image priority on current source; host fixtures are not device or live website validation",
+  "reported_source": "TruyenQQ; 9-10 seconds after leaving and reopening any chapter",
+  "verified_causes": [
+    "Dart queued a reader image behind both already-running cover requests.",
+    "Java held its source-state read lock during the entire cover HTTP response, blocking chapter/image writers for up to the 8-second cover timeout.",
+    "Opening a continuous chapter at page zero immediately prefetched previous-chapter metadata and, for short chapters, next-chapter metadata before the visible image settled."
+  ],
+  "changes": [
+    "One serial reader-image request may execute alongside two bounded covers; new covers do not precede queued pages.",
+    "A cover captures its validated request and original source client/headers under a short source-state lock and performs HTTP outside that lock.",
+    "A separate session lease preserves ordering for initialize, install, uninstall, preferences changes, browser apply, cookie/cache clear and user-agent reset.",
+    "Adjacent continuous chapter prefetch waits for the current visible image to render successfully before starting.",
+    "Automatic downloadAhead starts only after the visible image decodes successfully in continuous and paged manga, once per chapter/generation; text readers keep their automatic flow.",
+    "Reader downloadAhead checks generation, library revision, lifecycle, current chapter, closing and fixed session privacy. A backwards-compatible optional scheduler cancellation callback rechecks after async conditions/repository lookup and before enqueue/start. Paused readers may retry after resuming with a rendered page."
+  ],
+  "preserved_contracts": [
+    "Original HttpSource.getImage(Page), source-owned page URL/token/memo, identity guards, cookie jar, headers, interceptors and image limits.",
+    "Cover privacy/browser/cache epochs and singleflight; cancelled/stale reader generation checks and bounded image/chapter retention.",
+    "No direct public HTTP fallback for installed source pages; no schema or public runtime protocol change."
+  ],
+  "verification": {
+    "dart_before": {
+      "log": "artifacts/reader_cover_priority_before.log",
+      "observed": "The page timed out while two cover fixtures remained pending."
+    },
+    "java_before": {
+      "log": "artifacts/reader_cover_host_before.log",
+      "observed": "Real Java8 -Xint host chapter RPC timed out at the 2-second deadline while loopback cover responses remained blocked."
+    },
+    "prefetch_before": {
+      "log": "artifacts/reader_prefetch_before.log",
+      "observed": "Opening chapter3 fetched adjacent chapters [4,2] before its blocked first image completed."
+    },
+    "download_ahead_before": {
+      "log": "artifacts/reader_download_ahead_before.log",
+      "observed": "Baseline ReaderScreen started the next-chapter DownloadQueue executor while its first image was still pending."
+    },
+    "flutter_targeted": {
+      "log": "artifacts/reader_latency_targeted.log",
+      "passed": 99,
+      "failed": 0,
+      "files": [
+        "test/native_cover_repository_test.dart",
+        "test/native_tachi_repository_test.dart",
+        "test/continuous_reader_test.dart",
+        "test/reader_download_ahead_priority_test.dart",
+        "test/reader_progress_test.dart",
+        "test/library_automatic_update_test.dart"
+      ]
+    },
+    "download_ahead_cases": {
+      "passed": 21,
+      "coverage": [
+        "Both continuous and paged modes, policy enabled, no automatic download before visible decode, once-only start after success.",
+        "No start after first-image failure, dispose, replacement revision, changed reader generation or incognito.",
+        "Pause defers launch; resume with a decoded page enables it.",
+        "Device-condition lookup completes after dispose/restore/pause: no enqueue/executor; resume retries cancelled preparation.",
+        "Text reader retains automatic downloadAhead without an image requirement."
+      ]
+    },
+    "java_boundaries": {
+      "log": "artifacts/reader_latency_java_boundaries.log",
+      "passed": 13,
+      "skipped": 2,
+      "failed": 0,
+      "runtime": "Java8 -Xint, host freshly compiled with javac --release8",
+      "skip_reason": "Two optional original Komga APK cases have no supplied fixture environment variable."
+    },
+    "final_cover_proof": {
+      "log": "artifacts/reader_cover_host_after.log",
+      "assertions": 54,
+      "passed": true,
+      "checks": [
+        "Both cover requests stay blocked while chapter and first original-source page each complete before their 2-second deadline.",
+        "Exact image bytes, source client/header/cookie use, page-hook isolation and URL identity guard remain valid.",
+        "clearCookies waits for both cover response leases; late Set-Cookie cannot resurrect live or reopened private cookie storage."
+      ]
+    },
+    "analyze": {
+      "log": "artifacts/reader_latency_analyze.log",
+      "issues": 0
+    },
+    "native_dependency_sha256": "b77d955a79745d300b7522e224327d6bcc5a108399231dce7fe708150c2ee2bb",
+    "native_image_pipeline_followup": {
+      "log": "artifacts/reader_native_pipeline_followup.log",
+      "sha256": "23d86483c538e82376d8a7ca9053536462743d65eaaf2920dfa437627930cd6d",
+      "passed": 18,
+      "skipped": 0,
+      "failed": 0,
+      "note": "Browser replay identity tests await a real visible ImageStream decode before asserting adjacent chapter prefetch."
+    }
+  },
+  "reference_comparison": {
+    "requirements": "tinh nang phai co.md source cookie and page retrieval requirements (lines236-238).",
+    "mechanism": "Mechanism document sections7.1-7.7: Page.getTrueImageUrl, original HttpSource.getImage/Page, offline-first, source headers and bounded near-page prefetch. Section7.7 explicitly describes proposed tuning, not a measured original prefetch algorithm.",
+    "ui": "UI spec section7.1/7.2 and user screenshotIMG_6167 continuous chapter transition, preserving location and metadata.",
+    "ipa_static": [
+      "verification/original_page_javap.txt",
+      "verification/original_httpsource_javap.txt",
+      "verification/ipa_reference_tools_completion.json"
+    ],
+    "original_ipa_sha256_from_verified_reference": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5",
+    "native_ios_dispatch_source": "packages/tachi_runtime/ios/Classes/TachiRuntimePlugin.m uses DISPATCH_QUEUE_CONCURRENT; no native compiler/runtime acceptance claimed."
+  },
+  "unverified_or_remaining": [
+    "No iPhone/TruyenQQ live timing has been measured; the reported 9-10 seconds may include extension/CDN latency in addition to these reproduced artificial waits.",
+    "Accepted durable download jobs keep the existing background queue lifecycle; the reader cancellation callback prevents late preparation from enqueuing/starting new work, without deleting manual or already accepted queue jobs.",
+    "Already-running foreground/background source metadata/image operations remain serialized; this patch does not interrupt arbitrary extension operations.",
+    "No IPA built, CI dispatched, commit or push performed for these source changes."
+  ],
+  "source_sha256": {
+    "lib/features/sources/data/native_tachi_repository.dart": "d12d5a76c2b066e5e274d6fc4c04570ead02e04de56c71d3c014ada9f9a5126c",
+    "lib/features/reader/presentation/continuous_manga_reader.dart": "867f32d3f31a1d262607debe2badd00cb003b1d85dea7797adece2151a3b94c6",
+    "lib/features/reader/presentation/reader_screen.dart": "65647ca1b346339c0905074a1f5720391a1b7419a0f5d0f5660d9a063f9ba1e2",
+    "lib/features/library/application/library_update_scheduler.dart": "6cbc9e9a604990679ca5a80e29293b1dff63c276e67496d922a16de811d48241",
+    "tools/native_extension_engine/java/dev/tachibooks/engine/ExtensionHost.java": "87c644b07ca6700d56d3643ea975de1cd930bdb2b3616588b75815c113490537",
+    "tools/native_extension_engine/proof/CoverImageProof.java": "7be42172792c829e63693844aab2fdcbbf9a86f19f4c47e82d60ba7780af7397",
+    "test/native_cover_repository_test.dart": "c4743ed893ad6eb8613aecc7ffabf3f8866debc2714a8828b701fefc07dedce3",
+    "test/continuous_reader_test.dart": "de2e97958f5948775fa0f6f1ecb2f29906f9ee705a593d7d091bcb4024b7d06d",
+    "test/reader_download_ahead_priority_test.dart": "512b128556fc6e297532809b2166e0e63cf0128889a71b44da04b089624a1e79",
+    "test/native_image_pipeline_test.dart": "249ad1933c2e5c97729db0b7c2968ade37a9845f9bd0d511f5af66665f0d08d8"
+  }
+}

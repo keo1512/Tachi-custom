@@ -91,7 +91,13 @@ void main() {
         await tester.tap(find.text('Loại trừ nguồn đã chọn'));
         await tester.pumpAndSettle();
         expect(changed!.excludeSource, isTrue);
-        await scrollToFilter(tester, find.text('Danh mục'), step: -100);
+        await scrollToFilter(
+          tester,
+          find.byKey(const ValueKey('library-filter-scope')),
+        );
+        await tester.tap(find.text('Phạm vi và danh mục'));
+        await tester.pumpAndSettle();
+        await scrollToFilter(tester, find.text('Danh mục'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Danh mục'));
         await tester.pumpAndSettle();
@@ -130,7 +136,16 @@ void main() {
       await tester.tap(find.text('Hiển thị'));
       await tester.pumpAndSettle();
       expect(find.text('Tên nguồn'), findsNothing);
-      await tester.ensureVisible(find.text('Thông tin và nút đọc'));
+      await tester.scrollUntilVisible(
+        find.text('Thông tin và nút đọc'),
+        100,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const ValueKey('library-display-options')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Thông tin và nút đọc'));
       await tester.pumpAndSettle();
@@ -140,9 +155,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(changed!.showSource, isFalse);
       expect(changed!.unread, LibraryTriState.exclude);
-      await tester.drag(find.byType(ListView).last, const Offset(0, 800));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Danh sách'));
+      await tester.scrollUntilVisible(
+        find.text('Danh sách'),
+        -100,
+        scrollable: find
+            .descendant(
+              of: find.byKey(const ValueKey('library-display-options')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Danh sách'));
       await tester.pumpAndSettle();
@@ -161,6 +183,16 @@ void main() {
     ) async {
       await mount(tester, const Size(320, 568), (_) {}, scale: scale);
       expect(tester.takeException(), isNull);
+      expect(
+        DefaultTextStyle.of(tester.element(find.text('Chương chưa đọc')))
+            .style
+            .fontSize,
+        greaterThanOrEqualTo(16),
+      );
+      expect(
+        tester.getTopLeft(find.text('Chương chưa đọc')).dx,
+        greaterThanOrEqualTo(16),
+      );
       await tester.tap(find.text('Hiển thị'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

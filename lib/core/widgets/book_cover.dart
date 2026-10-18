@@ -13,13 +13,14 @@ class BookCover extends StatelessWidget {
     this.downloaded = 0,
     this.showDownloadedBadge = false,
     this.showTitle = true,
+    this.showPlaceholderTitle = true,
     this.local = false,
   });
   final String title, cover, kind;
   final ImageProvider<Object>? imageProvider;
   final int unread, downloaded;
   final bool showDownloadedBadge;
-  final bool showTitle, local;
+  final bool showTitle, showPlaceholderTitle, local;
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +89,7 @@ class BookCover extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (image == null && showTitle)
+              if (image == null && showTitle && showPlaceholderTitle)
                 LayoutBuilder(
                   builder: (_, constraints) => Padding(
                     padding: EdgeInsets.all(constraints.maxWidth * .12),
