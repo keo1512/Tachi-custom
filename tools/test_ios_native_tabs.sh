@@ -88,10 +88,19 @@ except subprocess.TimeoutExpired as error:
     raise SystemExit(f'Simulator boot exceeded its bounded timeout: {error.cmd}')
 PY
 
+# Generate Flutter's Xcode configuration and install Pods. The hosted XCTest
+# below builds the simulator app itself; a full Flutter build here would
+# compile the same native dependencies into a second products directory.
+printf '%s\n' '::group::Prepare Flutter simulator configuration and Pods'
+tachi_prepare_started=$SECONDS
 flutter pub get --enforce-lockfile
-flutter build ios --simulator --debug --no-pub --verbose \
+flutter build ios --simulator --debug --no-pub --config-only \
   2>&1 | tee "$tachi_root/artifacts/native-tabs-compile.log"
-xcodebuild test \
+printf 'Simulator configuration prepared in %ss.\n' "$((SECONDS - tachi_prepare_started))"
+printf '%s\n' '::endgroup::'
+printf '%s\n' '::group::Build simulator app once and run hosted native tests'
+tachi_tests_started=$SECONDS
+xcodebuild -quiet test \
   -workspace ios/Runner.xcworkspace \
   -scheme Runner \
   -configuration Debug \
@@ -101,8 +110,11 @@ xcodebuild test \
   -parallel-testing-enabled NO \
   -maximum-concurrent-test-simulator-destinations 1 \
   -resultBundlePath "$tachi_result" \
+  ONLY_ACTIVE_ARCH=YES \
   CODE_SIGNING_ALLOWED=NO \
   2>&1 | tee "$tachi_root/artifacts/native-tabs-smoke.log"
+printf 'Native build and tests completed in %ss.\n' "$((SECONDS - tachi_tests_started))"
+printf '%s\n' '::endgroup::'
 
 # Best-effort visual reference of the real running app, rather than a renderer
 # mock. The XCTest result remains the behavior evidence; this PNG needs review.

@@ -1,0 +1,23 @@
+{
+  "runId": 39093263899,
+  "sourceCommit": "e28e1ff09f6bbc3faa7f10057ae3c8f3f0639b41",
+  "conclusion": "failure",
+  "failure": "Native step timed out after60minutes",
+  "githubAnnotation": "The action 'Test native UIKit tabs on an iOS 27 iPhone simulator' has timed out after 60 minutes.",
+  "artifactId": 12125415594,
+  "artifactZipSha256": "05cb045b0fa323037ff5f324b80a1e61e39c6f1279a3d880ac24ecc3d8f10f7f",
+  "nativeTestsPassed": false,
+  "ipaCreated": false,
+  "firstSimulatorBuildExit": 0,
+  "firstSimulatorXcodeSeconds": 1823.9,
+  "podInstallSeconds": 384.8,
+  "sourceChangesForRetry": [
+    "tools/test_ios_native_tabs.sh"
+  ],
+  "retryChange": "Configure Flutter/Pods only, let XCTest compile once, ONLY_ACTIVE_ARCH=YES, quiet Xcode output; all native tests retained",
+  "retryLocallyVerified": [
+    "bash -n",
+    "git diff --check"
+  ],
+  "retryIOSValidated": false
+}
