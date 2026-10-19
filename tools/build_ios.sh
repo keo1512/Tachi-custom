@@ -50,7 +50,7 @@ else
   bash tools/prepare_ios_dependencies.sh
   python3 tools/ios_build_preflight.py --receipt "$tachi_preflight_receipt"
 fi
-tachi_flags=(--release --no-codesign --no-pub)
+tachi_flags=(--release --no-codesign --no-pub --verbose)
 if [[ $# -eq 1 ]]; then
   tachi_flags+=("--build-number=$1")
   tachi_flags+=("--dart-define=TACHI_APP_VERSION=1.0.0+$1")

@@ -1,0 +1,24 @@
+{
+  "runId": 39251954891,
+  "workflowRunNumber": 15,
+  "appBuildNumber": 14,
+  "commit": "6b2f03bfd7ace7e1dff9cd65a5f796b12e4fb549",
+  "conclusion": "failure",
+  "url": "https://github.com/keo1512/Tachi-custom/actions/runs/39251954891",
+  "nativeTestsPassed": 46,
+  "failure": {
+    "phase": "device-release",
+    "result": "wall_timeout",
+    "exitCode": 124,
+    "elapsedSeconds": 1200.695,
+    "wallLimitSeconds": 1200.0,
+    "idleLimitSeconds": 0,
+    "log": "/Users/runner/work/Tachi-custom/Tachi-custom/artifacts/device-release.log",
+    "cleanupVerified": true,
+    "cleanupWarnings": []
+  },
+  "deviceLogBytes": 537,
+  "ipaCreated": false,
+  "diagnosticsSha256": "c3f87f8fd879c6169ad5f3c9faa70bbad42f9be48bfb19824ecf54274dfda821",
+  "limit": "Quiet release log establishes wall timeout but not the slow compiler target or root cause."
+}

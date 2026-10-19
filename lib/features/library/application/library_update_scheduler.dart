@@ -43,7 +43,7 @@ class LibraryUpdateScheduler {
 
   Future<String> _run(DateTime now, {required bool force}) async {
     final gate = ref.read(libraryUpdateExecutionProvider);
-    final execution = gate.begin();
+    final execution = gate.begin(userInitiated: force);
     try {
       return await _runGuarded(
         now,
@@ -119,6 +119,7 @@ class LibraryUpdateScheduler {
         .read(libraryProvider.notifier)
         .updateBooks(
           before.map((b) => b.id),
+          userInitiated: force,
           expectedRevision: revision,
           skipReasons: {
             for (final book in before)
@@ -158,7 +159,7 @@ class LibraryUpdateScheduler {
       }
       if (enqueued && ref.mounted) {
         await gate.wait(execution);
-        await queue.start();
+        await queue.start(userInitiated: force);
         execution.check();
       }
     }
@@ -226,7 +227,7 @@ class LibraryUpdateScheduler {
     final queue = ref.read(downloadQueueProvider.notifier);
     if (!current()) return 0;
     await queue.enqueue(latest.id, ids, expectedRevision: expectedRevision);
-    if (current()) await queue.start();
+    if (current()) await queue.start(userInitiated: false);
     return ids.length;
   }
 }

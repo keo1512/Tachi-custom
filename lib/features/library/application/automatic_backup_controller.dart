@@ -82,14 +82,22 @@ class AutomaticBackupInterrupted extends StateError {
 class AutomaticBackupExecutionGate {
   int _generation = 0;
   bool _allowed = true;
+  bool _userStopped = false;
   void allow() => _allowed = true;
   void expire() {
     _allowed = false;
     _generation++;
   }
 
-  int begin() {
-    if (!_allowed) throw AutomaticBackupInterrupted();
+  int begin({bool userInitiated = false}) {
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (_userStopped &&
+        userInitiated &&
+        (lifecycle == null || lifecycle == AppLifecycleState.resumed)) {
+      _userStopped = false;
+      allow();
+    }
+    if (!_allowed || _userStopped) throw AutomaticBackupInterrupted();
     return _generation;
   }
 
@@ -97,6 +105,11 @@ class AutomaticBackupExecutionGate {
     if (!_allowed || generation != _generation) {
       throw AutomaticBackupInterrupted();
     }
+  }
+
+  void stopForUser() {
+    _userStopped = true;
+    expire();
   }
 }
 
@@ -146,7 +159,7 @@ class AutomaticBackupScheduler {
       return null;
     }
     final gate = ref.read(automaticBackupExecutionProvider);
-    final execution = gate.begin();
+    final execution = gate.begin(userInitiated: force);
     final repository = ref.read(backupServiceProvider).repository;
     final revision = repository.replacementRevision;
     final generation = preferences is CoordinatedPreferences
@@ -174,6 +187,7 @@ class AutomaticBackupScheduler {
     await status.record(
       AutomaticBackupRunStatus(
         stage: AutomaticBackupRunStage.running,
+        userInitiated: force,
         startedAt: now,
       ),
     );
@@ -212,6 +226,7 @@ class AutomaticBackupScheduler {
         await status.record(
           AutomaticBackupRunStatus(
             stage: AutomaticBackupRunStage.succeeded,
+            userInitiated: force,
             startedAt: now,
             finishedAt: DateTime.now(),
             fileName: stored.name,
@@ -225,6 +240,7 @@ class AutomaticBackupScheduler {
         try {
           await status.record(
             AutomaticBackupRunStatus(
+              userInitiated: force,
               stage: error is AutomaticBackupInterrupted
                   ? AutomaticBackupRunStage.interrupted
                   : AutomaticBackupRunStage.failed,

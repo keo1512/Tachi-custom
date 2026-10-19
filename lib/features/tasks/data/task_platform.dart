@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../deep_links/domain/app_deep_link.dart';
+import '../domain/continued_work.dart';
 
 final applicationStartsInBackgroundProvider = Provider<bool>((_) => false);
 
@@ -27,6 +28,18 @@ abstract interface class PausedTaskPlatform {
 abstract interface class ContinuedTaskPlatform {
   Stream<void> get continuedProcessingExpired;
   Future<void> downloadPageProgress(int completed, int total);
+}
+
+/// Optional system continued-processing grant and progress. The operating
+/// system owns its UI and may refuse or expire the execution window.
+abstract interface class ContinuedWorkPlatform {
+  Stream<ContinuedWorkExpiry> get continuedWorkExpired;
+  Stream<bool> get continuedWorkWindowChanged;
+  Future<ContinuedWorkResult> updateContinuedWork(ContinuedWork activity);
+  Future<ContinuedWorkResult> endContinuedWork({
+    required int sequence,
+    required bool immediate,
+  });
 }
 
 /// A local book identity is sufficient to navigate after app-lock and revision
@@ -107,6 +120,7 @@ class NativeTaskPlatform
         LibraryUpdateNotificationPlatform,
         BackgroundTaskPlatform,
         ScheduledDownloadTaskPlatform,
+        ContinuedWorkPlatform,
         BackgroundMaintenancePlatform {
   NativeTaskPlatform() {
     if (_available) {
@@ -115,6 +129,14 @@ class NativeTaskPlatform
           _expired.add(null);
         } else if (call.method == 'continuedProcessingExpired' && !_disposed) {
           _continuedExpired.add(null);
+        } else if (call.method == 'continuedWorkExpired' && !_disposed) {
+          final event = ContinuedWorkExpiry.decode(call.arguments);
+          if (event != null) _continuedWorkExpired.add(event);
+        } else if (call.method == 'continuedWorkWindowChanged' && !_disposed) {
+          final args = call.arguments;
+          if (args is Map && args.length == 1 && args['running'] is bool) {
+            _continuedWindow.add(args['running'] as bool);
+          }
         } else if (call.method == 'scheduledBackground' && !_disposed) {
           final args = call.arguments;
           final token = args is int
@@ -150,6 +172,15 @@ class NativeTaskPlatform
   static const _channel = MethodChannel('dev.tachibooks/tasks');
   final _expired = StreamController<void>.broadcast(sync: true);
   final _continuedExpired = StreamController<void>.broadcast(sync: true);
+  final _continuedWorkExpired = StreamController<ContinuedWorkExpiry>.broadcast(
+    sync: true,
+  );
+  final _continuedWindow = StreamController<bool>.broadcast(sync: true);
+  @override
+  Stream<bool> get continuedWorkWindowChanged => _continuedWindow.stream;
+  @override
+  Stream<ContinuedWorkExpiry> get continuedWorkExpired =>
+      _continuedWorkExpired.stream;
   @override
   Stream<void> get continuedProcessingExpired => _continuedExpired.stream;
   @override
@@ -172,6 +203,38 @@ class NativeTaskPlatform
       _scheduledDownloads[token] == true;
   bool _disposed = false;
   bool get _available => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  @override
+  Future<ContinuedWorkResult> updateContinuedWork(
+    ContinuedWork activity,
+  ) async {
+    if (!_available || _disposed) return const ContinuedWorkResult();
+    return ContinuedWorkResult.fromMap(
+      await _channel.invokeMethod<Object?>(
+        'updateContinuedWork',
+        activity.toMap(),
+      ),
+    );
+  }
+
+  @override
+  Future<ContinuedWorkResult> endContinuedWork({
+    required int sequence,
+    required bool immediate,
+  }) async {
+    if (sequence < 0 || sequence > 1000000) {
+      throw ArgumentError('Thứ tự hoạt động không hợp lệ.');
+    }
+    // Container teardown may dispose this platform before its presentation
+    // owner. Cleanup must still cross the channel in either disposal order.
+    if (!_available) return const ContinuedWorkResult();
+    return ContinuedWorkResult.fromMap(
+      await _channel.invokeMethod<Object?>('endContinuedWork', {
+        'sequence': sequence,
+        'immediate': immediate,
+      }),
+    );
+  }
+
   @override
   Stream<void> get backgroundExpired => _expired.stream;
   @override
@@ -381,6 +444,8 @@ class NativeTaskPlatform
     }
     unawaited(_expired.close());
     unawaited(_continuedExpired.close());
+    unawaited(_continuedWorkExpired.close());
+    unawaited(_continuedWindow.close());
     unawaited(_scheduled.close());
   }
 }

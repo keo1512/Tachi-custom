@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "recordedAtUtc": "2026-10-19T16:12:46.234701+00:00",
+  "sourceParent": "6b2f03bfd7ace7e1dff9cd65a5f796b12e4fb549",
+  "scope": "System BGContinuedProcessingTask progress/Stop for manual downloads, library updates and Back up now; scheduled background work retains BGProcessing.",
+  "checks": {
+    "continued_work_full_flutter.log": {
+      "path": "artifacts\\continued_work_full_flutter.log",
+      "passed": 1345,
+      "skipped": 7,
+      "failed": 0,
+      "sha256": "38942ae41254f9fadaa94ba57cfc98659034287b927bae4b36dc747d87c8ab0a"
+    },
+    "continued_work_focused.log": {
+      "path": "artifacts\\continued_work_focused.log",
+      "passed": 107,
+      "skipped": 1,
+      "failed": 0,
+      "sha256": "5745d146c49b3f57840df8c16e6130b8d55609af98ebd93b196c614d9ed05c79"
+    },
+    "continued_work_tmb_restore.log": {
+      "path": "artifacts\\continued_work_tmb_restore.log",
+      "passed": 10,
+      "skipped": 0,
+      "failed": 0,
+      "sha256": "4b744859c366cce5f2dea9b93d584f469deb9484ef06991a840d2aa696975854"
+    }
+  },
+  "fullSuiteUsesRealIsar": true,
+  "privateTmbTestRunSeparately": true,
+  "analyze": {
+    "path": "artifacts\\continued_work_full_analyze.log",
+    "issues": 0,
+    "sha256": "e65bc26dbef4ad7ebfcb4b20a5195bed676358705828a564703301763e540d50"
+  },
+  "buildHelpers": {
+    "tests": 85,
+    "skipped": 1,
+    "failed": 0,
+    "sha256": "927db99b84f343a533954e8db12718b5feabebc204492ee5d4ba1141265f057f"
+  },
+  "nativeTests": {
+    "addedCases": 14,
+    "executedOnWindows": false
+  },
+  "sourceSha256": {
+    "ios/Runner.xcodeproj/project.pbxproj": "59ed362ff539a66b23b52837408f04bd03e13c4871804ef69706c09a294e871e",
+    "ios/Runner/Info.plist": "dd831dafa13d8310b3df3bedc5010f8f255acbea89a1d01b754aed2ca8a98c84",
+    "ios/Runner/TaskContinuedWork.swift": "fc131dbfb0f71b44bb0b82894c7c2d949fdc94e9e59e8a8e8bfff920bcdc6a1b",
+    "ios/Runner/TaskPlatformBridge.swift": "c59c975a5efd8c25d0d563cd121941f8f0af1bdae64b88432c5d73dc90adfe8f",
+    "ios/RunnerTests/TaskContinuedWorkTests.swift": "17610d6308c7133cf87aca17ad7c3f1700d257ed8dbaf55dea86bc0a6dc7f4e6",
+    "lib/features/downloads/presentation/download_queue_controller.dart": "b874b06ca9b5ba6800cb51a8266b402b262d589a220c83ac2a2b36b45b20c660",
+    "lib/features/library/application/automatic_backup_controller.dart": "347945ee6aa4f7f54defa116263b762e06f5752109daa81066e2aa800b807832",
+    "lib/features/library/application/automatic_backup_status.dart": "e31e8170678f8afc7a4943c38a98047f868a27d4c3486a336d308699a6e6fc6c",
+    "lib/features/library/application/library_update_report.dart": "6ae1cb219f79955d878eea44fdbda56f20fe0856301fe20619d399424567f1f0",
+    "lib/features/library/application/library_update_scheduler.dart": "ea2e9a7e7a76e6cea971a514dc6eeb2b1b3eb1b171c11669f7b5b27eba00fb64",
+    "lib/features/library/data/coordinated_preferences.dart": "9b2e0bc1e7dfd6ba94d2adda44687f99b6c3335db864af42bebc7dad039ecb6f",
+    "lib/features/library/domain/library_update_result.dart": "d1d4a43cb1b1592aba4339134cdaa1a10da940c0e7a6e4c86e6fcc9f19113c59",
+    "lib/features/library/presentation/library_view_model.dart": "528250112ebf3ad3fa93db38f30e20c0f1503d8f391c96005672c37f984d1c02",
+    "lib/features/tasks/application/continued_work_coordinator.dart": "0f738be197aff1b81b954ffaef3885ba32624f01ebc26c491582cf30541a3c39",
+    "lib/features/tasks/application/task_lifecycle.dart": "874984e5b5514c1b6951557bb9bf009e16851b3687bc3febc6026a928f0cb768",
+    "lib/features/tasks/data/task_platform.dart": "6f2e8ff51d1c00b7a80a36e16f8b8c38e340b79c6f6601da18b77e871547b997",
+    "lib/features/tasks/domain/continued_work.dart": "ae57cdfb1e2c61f33698aa4eff3826dca5a47d2c1b321a278c430f7a5a2f283c",
+    "lib/features/tasks/presentation/task_settings_screen.dart": "31d6d928bfd0cdddaba370ff47f1802890b147739d803706e268ae12cb636148",
+    "test/continued_work_test.dart": "63c5c7454badd68fbc643a2cf0ca25fde10811cc7b4c30de569622e58ba68755",
+    "tools/build_ios.sh": "fa544b1034e878475f56bcdb9f01c31568f74fe8dea0bb1f46e55a2481f39a1f",
+    "tools/test_ios_build_pipeline.py": "19c17245b50591eb355f4ec596f3ba75ac3d15fb14a4ccd6ccc6191792e4ab0f",
+    "tools/test_ios_native_tabs.sh": "d87e16bc627dbc820ddc4ee73a942ee56f092a47352746298d2eea102fc5852f"
+  },
+  "referenceInputs": {
+    "C:/Users/Nosgnoh/Downloads/tinh nang phai co.md": "1d3b2026167e1a08e9bb529c93ff5be23a5a727e77b6309865f2302f0d5c019c",
+    "C:/Users/Nosgnoh/Downloads/# PHÂN TÍCH CƠ CHẾ HOẠT ĐỘNG CỦA TACHIMA.md": "f77cc84b0db1be30c45313ae23fa2c2b689ad0993eddc1c3f5871c0ccef49083",
+    "C:/Users/Nosgnoh/Downloads/TACHIMANGA_UI_UX_SPEC_DIAGRAMS_ONLY.md": "a001676d2dec3e9941b550211ce76c3f70a08fe912b0f267eabfb5de914d1aa0",
+    "C:/Users/Nosgnoh/Downloads/Tachimanga iOS Mod IPA No Jailbreak Cheats 5.0 Hacked IPA by iOSGods.com.ipa": "2bbb80719fc4054dd45d223e9478dab76816017e3cedd2f22234f70c7b2e94c5"
+  },
+  "userImages": {
+    "C:/Users/Nosgnoh/Downloads/1792424132019_194168850798072869_336301541804525886_7f1309737cf09afa93027eadb7f2dd13.jpg": "dbb573410759749b70a5abec7a28d859e738ee661509d18844fd944467f3eac2",
+    "C:/Users/Nosgnoh/Downloads/1792424193125_194168850798072869_336301541804525886_9c21b44b3efc9e1514d583de9f4f5e84.jpg": "ebc81ab7ffcf90ecff1a058ea31f214c11de65300c7f50c0965ac2e22280e67f"
+  },
+  "realBackup": {
+    "sha256": "c9b3f8856a8ac0ebefa9bd7f2b78683b2d2a3034f7c89a682758da5aaf752ea7",
+    "books": 748,
+    "chapters": 22816,
+    "nativeIsarRestoreAndReopen": true
+  },
+  "officialReference": "https://developer.apple.com/videos/play/wwdc2025/227/",
+  "limits": [
+    "Native SDK compile/XCTest and actual iPhone system progress/Stop still pending.",
+    "iOS controls execution grants and presentation; automatic schedules are not continued user tasks.",
+    "Release verbose log and owned-simulator shutdown mitigation has not yet passed CI.",
+    "No source website/Cloudflare/CDN or physical background-runtime acceptance inferred from host tests."
+  ]
+}

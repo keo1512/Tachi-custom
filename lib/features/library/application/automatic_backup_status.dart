@@ -16,14 +16,17 @@ class AutomaticBackupRunStatus {
     this.fileName,
     this.bytes,
     this.failure,
+    this.userInitiated = false,
   });
   final AutomaticBackupRunStage stage;
+  final bool userInitiated;
   final DateTime? startedAt, finishedAt;
   final String? fileName, failure;
   final int? bytes;
   String encode() => jsonEncode({
     'version': 1,
     'stage': stage.name,
+    'userInitiated': userInitiated,
     'startedAt': startedAt?.toUtc().toIso8601String(),
     'finishedAt': finishedAt?.toUtc().toIso8601String(),
     'fileName': fileName,
@@ -45,6 +48,7 @@ class AutomaticBackupRunStatus {
     }
     return AutomaticBackupRunStatus(
       stage: stage,
+      userInitiated: value['userInitiated'] == true,
       startedAt: value['startedAt'] == null
           ? null
           : DateTime.parse(value['startedAt'] as String),

@@ -28,6 +28,20 @@ class CocoaPodsSetupTests(unittest.TestCase):
         self.assertIsNotNone(scheme.find('TestAction/Testables/TestableReference'))
         self.assertIsNone(scheme.find('BuildAction/PreActions'))
 
+    def test_system_continued_task_registration_keeps_the_original_app_target(self):
+        import plistlib
+        project = (ROOT / 'ios/Runner.xcodeproj/project.pbxproj').read_text(encoding='utf-8')
+        info = plistlib.loads((ROOT / 'ios/Runner/Info.plist').read_bytes())
+        permitted = info['BGTaskSchedulerPermittedIdentifiers']
+        self.assertIn('dev.tachibooks.tachiBooks.work.continued.*', permitted)
+        self.assertIn('dev.tachibooks.tachiBooks.downloads.continued', permitted)
+        self.assertIn('dev.tachibooks.downloads.processing', permitted)
+        self.assertIn('processing', info['UIBackgroundModes'])
+        self.assertNotIn('TaskActivityWidget', project)
+        for name in ['TaskContinuedWork.swift', 'TaskContinuedWorkTests.swift']:
+            self.assertRegex(project, re.escape(name) + r' in Sources \*/ = \{isa = PBXBuildFile;')
+            self.assertRegex(project, re.escape(name) + r' in Sources \*/,')
+
     def test_workflow_integrates_dependencies_before_issuing_reusable_preflight_receipt(self):
         workflow = (ROOT / '.github/workflows/ios-build.yml').read_text(encoding='utf-8')
         steps = re.findall(r'^      - name: [^\n]+\n(.*?)(?=^      - name:|\Z)',
@@ -142,15 +156,29 @@ class NativeBuildPlanTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Missing real Flutter framework"):
             commands(self.root, self.flutter, self.sdks, swift=True, objc=False)
 
+    def test_continued_work_is_checked_on_both_targets_without_increasing_minimum_ios(self):
+        path = self.root / 'ios/Runner/TaskContinuedWork.swift'
+        self.touch(path)
+        plan = dict(commands(self.root, self.flutter, self.sdks, swift=True, objc=False))
+        for sdk in ('iphoneos', 'iphonesimulator'):
+            command = plan['swift-runner-' + sdk]
+            self.assertIn(str(path), command)
+            self.assertIn('arm64-apple-ios15.0' + ('-simulator' if sdk == 'iphonesimulator' else ''), command)
+
 
 class NativeSimulatorResourcePlanTests(unittest.TestCase):
     def setUp(self):
         self.script = (ROOT / 'tools/test_ios_native_tabs.sh').read_text(encoding='utf-8')
-        self.boot = self.script.split('python3 - "$tachi_simulator" <<\'PY\'\n', 1)[1].split('\nPY\n', 1)[0]
+        programs = self.script.split('python3 - "$tachi_simulator" "$tachi_root/artifacts/native-tabs-boot-ownership.json" <<\'PY\'\n')
+        self.boot = programs[1].split('\nPY\n', 1)[0]
+        self.cleanup = programs[2].split('\nPY\n', 1)[0]
+        temporary = tempfile.TemporaryDirectory(prefix='tachi-simulator-ownership-')
+        self.addCleanup(temporary.cleanup)
+        self.ownership = Path(temporary.name) / 'ownership.json'
 
     def test_simulator_starts_after_compile_and_before_hosted_tests(self):
         compile_position = self.script.index('-- xcodebuild build-for-testing')
-        boot_position = self.script.index('python3 - "$tachi_simulator" <<\'PY\'')
+        boot_position = self.script.index('python3 - "$tachi_simulator" "$tachi_root/artifacts/native-tabs-boot-ownership.json" <<\'PY\'')
         test_position = self.script.index('-- xcodebuild test-without-building')
         self.assertLess(compile_position, boot_position)
         self.assertLess(boot_position, test_position)
@@ -163,7 +191,7 @@ class NativeSimulatorResourcePlanTests(unittest.TestCase):
         inventory = {'devices': {'ios27': [{'udid': '15PM', 'state': state}]}}
         with mock.patch('subprocess.check_output', return_value=json.dumps(inventory)), \
                 mock.patch('subprocess.run', side_effect=side_effect) as run, \
-                mock.patch.object(sys, 'argv', ['boot', '15PM']):
+                mock.patch.object(sys, 'argv', ['boot', '15PM', str(self.ownership)]):
             exec(compile(self.boot, 'test_ios_native_tabs.sh:boot', 'exec'), {})
         return run
 
@@ -177,6 +205,31 @@ class NativeSimulatorResourcePlanTests(unittest.TestCase):
     def test_booted_device_is_not_booted_a_second_time(self):
         run = self.run_boot('Booted')
         run.assert_called_once_with(['xcrun', 'simctl', 'bootstatus', '15PM', '-b'], check=True, timeout=180)
+
+    def run_cleanup(self, started, udid='15PM', state='Booted'):
+        self.ownership.write_text(json.dumps({'udid': udid, 'startedByInvocation': started}))
+        inventory = {'devices': {'ios27': [{'udid': '15PM', 'state': state}]}}
+        with mock.patch('subprocess.check_output', return_value=json.dumps(inventory)), \
+                mock.patch('subprocess.run') as run, \
+                mock.patch.object(sys, 'argv', ['cleanup', '15PM', str(self.ownership)]), \
+                contextlib.redirect_stdout(io.StringIO()):
+            exec(compile(self.cleanup, 'test_ios_native_tabs.sh:cleanup', 'exec'), {})
+        return run
+
+    def test_cleanup_only_stops_the_simulator_started_by_this_invocation(self):
+        self.run_cleanup(True).assert_called_once_with(['xcrun', 'simctl', 'shutdown', '15PM'], check=True, timeout=60)
+        self.run_cleanup(False).assert_not_called()
+        self.run_cleanup(True, state='Shutdown').assert_not_called()
+
+    def test_cleanup_rejects_mismatched_device_ownership(self):
+        with self.assertRaisesRegex(SystemExit, 'ownership does not match'):
+            self.run_cleanup(True, udid='OTHER')
+
+    def test_cleanup_runs_after_the_screenshot_and_before_release(self):
+        self.assertLess(self.script.index("'screenshot'"), self.script.index('ownership = json.loads'))
+        release = (ROOT / 'tools/build_ios.sh').read_text(encoding='utf-8')
+        self.assertIn('--release --no-codesign --no-pub --verbose', release)
+        self.assertIn('--name device-release --timeout 1200', release)
 
     def test_boot_timeout_aborts_before_hosted_tests(self):
         import subprocess

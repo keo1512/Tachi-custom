@@ -107,6 +107,11 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
   int? _sessionRevision;
   bool _scheduling = false, _pumpRequested = false;
   int _sessionCompleted = 0, _sessionFailed = 0;
+
+  /// Numeric presentation only; successful chapters exclude explicit cancels.
+  int get completedChaptersInRun => _sessionCompleted;
+  bool _continuedWorkUserInitiated = false;
+  bool get continuedWorkUserInitiated => _continuedWorkUserInitiated;
   bool _privateSession = false;
   static const _restoredMessage =
       'Thư viện đã được thay đổi hoặc khôi phục. Hàng đợi đã tạm dừng; '
@@ -149,14 +154,16 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
   }
 
   Future<void> _change(
-    List<DownloadJob> Function(List<DownloadJob>) transform,
-  ) {
+    List<DownloadJob> Function(List<DownloadJob>) transform, {
+    void Function()? afterSave,
+  }) {
     final operation = _writes.then((_) async {
       if (!ref.mounted) return;
       if (state.storageError != null) throw StateError(state.storageError!);
       final tasks = transform(state.tasks);
       await repository.save(tasks);
       if (ref.mounted) {
+        afterSave?.call();
         state = DownloadQueueState(
           tasks: tasks,
           running: state.running,
@@ -484,9 +491,10 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
     if (found) await start();
   }
 
-  Future<void> start() async {
+  Future<void> start({bool userInitiated = true}) async {
     if (state.storageError != null) throw StateError(state.storageError!);
     if (!state.running) {
+      _continuedWorkUserInitiated = userInitiated;
       _sessionRevision = ref
           .read(libraryRepositoryProvider)
           .replacementRevision;
@@ -713,8 +721,10 @@ class DownloadQueueController extends Notifier<DownloadQueueState> {
         (tasks) => !current()
             ? tasks
             : tasks.where((task) => task.identity != job.identity).toList(),
+        afterSave: () {
+          if (current()) _sessionCompleted++;
+        },
       );
-      if (current()) _sessionCompleted++;
     } catch (error) {
       if (!current()) return;
       final stale =

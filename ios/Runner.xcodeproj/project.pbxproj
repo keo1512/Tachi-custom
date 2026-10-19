@@ -34,6 +34,8 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		FB2E415253BACDF102593FDB /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FB2E415253BACDF102593FDC /* GoogleService-Info.plist */; };
+		A671B0020000000000000001 /* TaskContinuedWork.swift in Sources */ = {isa = PBXBuildFile; fileRef = A671B0020000000000000003 /* TaskContinuedWork.swift */; };
+		A671B0020000000000000002 /* TaskContinuedWorkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A671B0020000000000000004 /* TaskContinuedWorkTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +98,8 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FB2E415253BACDF102593FDC /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		A671B0020000000000000003 /* TaskContinuedWork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskContinuedWork.swift; sourceTree = "<group>"; };
+		A671B0020000000000000004 /* TaskContinuedWorkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskContinuedWorkTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +120,7 @@
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
 				E91C2A4D27AD415AB284ABB1 /* PrivacyPlatformBridgeTests.swift */,
 				B2610739DC7A4DB891503C01 /* TaskPlatformBridgeTests.swift */,
+				A671B0020000000000000004 /* TaskContinuedWorkTests.swift */,
 				65F94491DC7A4DB891503C01 /* BackupDirectoryBridgeTests.swift */,
                 11C0A120DC7A4DB891503C01 /* LocalComicFilesBridgeTests.swift */,
                 DE71CE01DC7A4DB891503C01 /* DeviceToolsBridgeTests.swift */,
@@ -168,6 +173,7 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				E91C2A4D27AD415AB284ABA1 /* PrivacyPlatformBridge.swift */,
 				B2610739DC7A4DB891503B01 /* TaskPlatformBridge.swift */,
+				A671B0020000000000000003 /* TaskContinuedWork.swift */,
 				D311DEE1DC7A4DB891503B01 /* DeepLinkPlatformBridge.swift */,
 				581DDEE1DC7A4DB891503B01 /* SyncPlatformBridge.swift */,
 				65F94491DC7A4DB891503B01 /* BackupDirectoryBridge.swift */,
@@ -327,6 +333,7 @@
 				331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */,
 				E91C2A4D27AD415AB284ABB2 /* PrivacyPlatformBridgeTests.swift in Sources */,
 				B2610739DC7A4DB891503C02 /* TaskPlatformBridgeTests.swift in Sources */,
+				A671B0020000000000000002 /* TaskContinuedWorkTests.swift in Sources */,
 				65F94491DC7A4DB891503C02 /* BackupDirectoryBridgeTests.swift in Sources */,
                 11C0A120DC7A4DB891503C02 /* LocalComicFilesBridgeTests.swift in Sources */,
                 DE71CE01DC7A4DB891503C02 /* DeviceToolsBridgeTests.swift in Sources */,
@@ -342,6 +349,7 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				E91C2A4D27AD415AB284ABA2 /* PrivacyPlatformBridge.swift in Sources */,
 				B2610739DC7A4DB891503B02 /* TaskPlatformBridge.swift in Sources */,
+				A671B0020000000000000001 /* TaskContinuedWork.swift in Sources */,
 				D311DEE1DC7A4DB891503B02 /* DeepLinkPlatformBridge.swift in Sources */,
 				581DDEE1DC7A4DB891503B02 /* SyncPlatformBridge.swift in Sources */,
 				65F94491DC7A4DB891503B02 /* BackupDirectoryBridge.swift in Sources */,

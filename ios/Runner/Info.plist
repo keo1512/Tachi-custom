@@ -114,6 +114,7 @@
 	<array>
 		<string>dev.tachibooks.downloads.processing</string>
 		<string>dev.tachibooks.tachiBooks.downloads.continued</string>
+		<string>dev.tachibooks.tachiBooks.work.continued.*</string>
 	</array>
 </dict>
 </plist>

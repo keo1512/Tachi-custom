@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/widgets.dart';
 
 import '../domain/library_update_result.dart';
 
@@ -35,14 +36,24 @@ class LibraryUpdateExecutionGate {
   bool get hasWork => _runs.any((run) => !run._cancelled);
   Completer<void>? _permission;
   bool _allowed = true;
+  bool _userStopped = false;
   bool _closed = false;
   void _changed() {
     if (!_closed) _changes.add(null);
   }
 
-  LibraryUpdateExecution begin() {
+  LibraryUpdateExecution begin({bool userInitiated = false}) {
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (_userStopped &&
+        userInitiated &&
+        (lifecycle == null || lifecycle == AppLifecycleState.resumed)) {
+      _userStopped = false;
+      allow();
+    }
     final run = LibraryUpdateExecution();
-    if (_closed || (!_allowed && _permission == null)) run._cancelled = true;
+    if (_closed || _userStopped || (!_allowed && _permission == null)) {
+      run._cancelled = true;
+    }
     _runs.add(run);
     _changed();
     return run;
@@ -89,6 +100,11 @@ class LibraryUpdateExecutionGate {
     expire();
     _closed = true;
     unawaited(_changes.close());
+  }
+
+  void stopForUser() {
+    _userStopped = true;
+    expire();
   }
 }
 

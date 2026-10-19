@@ -15,6 +15,7 @@ import '../../privacy/application/app_lock_controller.dart';
 import '../../settings/settings_controller.dart';
 import '../data/task_platform.dart';
 import 'task_notifications.dart';
+import 'continued_work_coordinator.dart';
 import '../../../core/diagnostics/diagnostic_log.dart';
 import '../../../core/diagnostics/diagnostic_listener.dart';
 
@@ -34,6 +35,7 @@ class TaskLifecycle extends ConsumerWidget {
 /// FlutterViewController. Attaching the UI reuses this owner and its queues.
 final taskCoordinatorProvider = Provider<TaskCoordinator>((ref) {
   ref.watch(diagnosticListenerProvider);
+  ref.watch(continuedWorkCoordinatorProvider);
   final coordinator = TaskCoordinator(ref);
   ref.onDispose(coordinator.dispose);
   return coordinator;
@@ -58,9 +60,12 @@ class TaskCoordinator with WidgetsBindingObserver {
   late AutomaticBackupExecutionGate backupGate;
   StreamSubscription<void>? expiration;
   StreamSubscription<void>? continuedExpiration;
+  StreamSubscription<bool>? continuedWindows;
   StreamSubscription<int>? scheduled;
   StreamSubscription<void>? updateExecutions;
   bool background = false, leased = false, expired = false, disposed = false;
+  bool continuedWindow = false;
+  int continuedWindowGeneration = 0;
   bool stoppedNoticeSent = false, suspending = false, privateSession = false;
   int? sessionPrivacyGeneration;
   int? scheduledToken;
@@ -108,9 +113,24 @@ class TaskCoordinator with WidgetsBindingObserver {
       reconcile();
     });
     WidgetsBinding.instance.addObserver(this);
+    if (platform case final ContinuedWorkPlatform native) {
+      continuedWindows = native.continuedWorkWindowChanged.listen((running) {
+        if (!mounted || running == continuedWindow) return;
+        continuedWindow = running;
+        continuedWindowGeneration++;
+        // Native ends the finite UIApplication lease on a continued launch.
+        // When it ends, remaining work must acquire its own bounded fallback.
+        leased = false;
+        if (background) {
+          expired = false;
+          if (!running) updateGate.hold();
+        }
+        reconcile();
+      });
+    }
     if (platform case final ContinuedTaskPlatform native) {
       continuedExpiration = native.continuedProcessingExpired.listen((_) {
-        if (!mounted) return;
+        if (!mounted || continuedWindow) return;
         expired = true;
         leased = false;
         unawaited(_suspend(continued: true));
@@ -119,7 +139,7 @@ class TaskCoordinator with WidgetsBindingObserver {
     expiration = platform.backgroundExpired.listen((_) {
       // A native callback already queued before resume must not pause a new
       // foreground execution after its lease has been ended.
-      if (!background || !mounted) return;
+      if (!background || !mounted || continuedWindow) return;
       expired = true;
       leased = false;
       if (mounted) unawaited(_suspend());
@@ -235,7 +255,9 @@ class TaskCoordinator with WidgetsBindingObserver {
           await _finishScheduled(success: updatesHandled);
           return;
         }
-        await ref.read(downloadQueueProvider.notifier).start();
+        await ref
+            .read(downloadQueueProvider.notifier)
+            .start(userInitiated: false);
       } catch (_) {
         if (mounted && scheduledToken == token) {
           await _finishScheduled(success: false);
@@ -265,6 +287,7 @@ class TaskCoordinator with WidgetsBindingObserver {
 
   Future<void> _suspend({bool continued = false}) async {
     if (!mounted || suspending) return;
+    if (continuedWindow && !continued) return;
     if (!continued) {
       updateGate.expire();
       backupGate.expire();
@@ -465,12 +488,24 @@ class TaskCoordinator with WidgetsBindingObserver {
               return; // The BGProcessingTask itself owns the execution window.
             }
           }
+          if (background && working && continuedWindow) {
+            leased = false;
+            expired = false;
+            updateGate.allow();
+            backupGate.allow();
+            return;
+          }
           if (!background || !working) {
             if (leased) await platform.endBackground();
             leased = false;
             if (background && !expired) updateGate.hold();
           } else if (!leased && !expired) {
+            final windowGeneration = continuedWindowGeneration;
             final granted = await platform.beginBackground();
+            if (mounted && windowGeneration != continuedWindowGeneration) {
+              reconcile();
+              return;
+            }
             if (disposed || !mounted || !background || expired) {
               if (granted) await platform.endBackground();
               if (mounted && background && expired) await _suspend();
@@ -487,7 +522,7 @@ class TaskCoordinator with WidgetsBindingObserver {
           }
         })
         .catchError((Object _) async {
-          if (mounted && background) {
+          if (mounted && background && !continuedWindow) {
             expired = true;
             await _suspend();
           }
@@ -566,6 +601,7 @@ class TaskCoordinator with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     unawaited(expiration?.cancel());
     unawaited(continuedExpiration?.cancel());
+    unawaited(continuedWindows?.cancel());
     unawaited(scheduled?.cancel());
     unawaited(updateExecutions?.cancel());
     unawaited(_finishScheduled(success: false).catchError((Object _) {}));

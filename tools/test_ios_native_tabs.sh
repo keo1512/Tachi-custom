@@ -135,8 +135,9 @@ printf '%s\n' '::endgroup::'
 # A build-for-testing destination only needs to exist. Boot after compilation
 # so the iOS runtime does not compete with Pods and Flutter for CPU/memory.
 # Keep the selected device and all hosted tests unchanged.
-python3 - "$tachi_simulator" <<'PY'
+python3 - "$tachi_simulator" "$tachi_root/artifacts/native-tabs-boot-ownership.json" <<'PY'
 import json
+from pathlib import Path
 import subprocess
 import sys
 
@@ -144,6 +145,7 @@ udid = sys.argv[1]
 try:
     devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', '--json'], text=True, timeout=30))
     device = next(item for group in devices['devices'].values() for item in group if item['udid'] == udid)
+    Path(sys.argv[2]).write_text(json.dumps({'udid': udid, 'startedByInvocation': device['state'] != 'Booted'}) + '\n', encoding='utf-8')
     if device['state'] != 'Booted':
         subprocess.run(['xcrun', 'simctl', 'boot', udid], check=True, timeout=60)
     subprocess.run(['xcrun', 'simctl', 'bootstatus', udid, '-b'], check=True, timeout=180)
@@ -171,6 +173,28 @@ try:
     subprocess.run(['xcrun', 'simctl', 'io', sys.argv[1], 'screenshot', sys.argv[2]], check=True, timeout=30)
 except (subprocess.SubprocessError, OSError):
     print('Optional simulator screenshot could not be captured.', file=sys.stderr)
+PY
+
+# Leave a simulator that was already running alone. The device booted for this
+# smoke is no longer needed, and its app/runtime would compete with Release.
+python3 - "$tachi_simulator" "$tachi_root/artifacts/native-tabs-boot-ownership.json" <<'PY'
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+udid = sys.argv[1]
+ownership = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
+if ownership.get('udid') != udid or type(ownership.get('startedByInvocation')) is not bool:
+    raise SystemExit('Simulator ownership does not match this native test invocation.')
+if ownership['startedByInvocation']:
+    devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', '--json'], text=True, timeout=30))
+    device = next(item for group in devices['devices'].values() for item in group if item['udid'] == udid)
+    if device['state'] != 'Shutdown':
+        subprocess.run(['xcrun', 'simctl', 'shutdown', udid], check=True, timeout=60)
+    print('Stopped the simulator started for this native smoke before device compilation.')
+else:
+    print('Preserved the simulator that was already running before native smoke.')
 PY
 
 printf 'Native six-tab smoke passed. XCTest result: %s\n' "$tachi_result"

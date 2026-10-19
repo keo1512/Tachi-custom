@@ -30,6 +30,7 @@ class LibraryUpdateProgress {
     required this.skippedBooks,
     required this.failedBooks,
     this.currentTitle = '',
+    this.userInitiated = true,
   });
   final int requestedBooks,
       processedBooks,
@@ -38,6 +39,7 @@ class LibraryUpdateProgress {
       skippedBooks,
       failedBooks;
   final String currentTitle;
+  final bool userInitiated;
   double get fraction =>
       requestedBooks == 0 ? 1 : processedBooks / requestedBooks;
 }

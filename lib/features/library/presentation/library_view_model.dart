@@ -1000,6 +1000,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     int? expectedRevision,
     void Function(LibraryUpdateProgress)? onProgress,
     Map<String, String> skipReasons = const {},
+    bool userInitiated = true,
   }) async {
     final ids = bookIds.toSet();
     if (ids.any((id) => id.isEmpty)) {
@@ -1016,7 +1017,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
     final skippedDetails = <LibraryUpdateSkipped>[];
     final activity = ref.read(libraryUpdateProgressProvider.notifier);
     final executionGate = ref.read(libraryUpdateExecutionProvider);
-    final execution = executionGate.begin();
+    final execution = executionGate.begin(userInitiated: userInitiated);
     var cancelled = false;
     final run = activity.begin();
     void report(String title) {
@@ -1028,6 +1029,7 @@ class LibraryViewModel extends AsyncNotifier<List<LibraryBook>> {
         skippedBooks: skipped,
         failedBooks: failures.length,
         currentTitle: title,
+        userInitiated: userInitiated,
       );
       if (ref.mounted) activity.report(run, value);
       onProgress?.call(value);

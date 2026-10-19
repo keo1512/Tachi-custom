@@ -15,6 +15,7 @@ class CoordinatedPreferences implements SharedPreferences {
   static final _instances = Expando<CoordinatedPreferences>();
   Future<void> _pending = Future<void>.value();
   final _changes = StreamController<int>.broadcast(sync: true);
+  final _mutationChanges = StreamController<int>.broadcast(sync: true);
   int _generation = 0, _change = 0;
   bool _restoring = false, _recoveryRequired = false;
   ConfigurationRestoreFiles? _files;
@@ -43,6 +44,11 @@ class CoordinatedPreferences implements SharedPreferences {
   Stream<int> get changes => _changes.stream;
   int get changeRevision => _change;
   int get mutationGeneration => _generation;
+  bool get restoring => _restoring;
+
+  /// Restore boundaries are distinct from successful configuration publication.
+  /// Privacy-sensitive presentation must disappear as soon as restore begins.
+  Stream<int> get mutationChanges => _mutationChanges.stream;
 
   Future<T> exclusive<T>(Future<T> Function() action) {
     final result = _pending.then((_) => action());
@@ -229,6 +235,7 @@ class CoordinatedPreferences implements SharedPreferences {
     };
     _restoring = true;
     _generation++;
+    _mutationChanges.add(_generation);
     var prepared = false, committed = false;
     try {
       await _saveJournal(journal);
@@ -262,6 +269,7 @@ class CoordinatedPreferences implements SharedPreferences {
     } finally {
       _restoring = false;
       _generation++;
+      _mutationChanges.add(_generation);
       if (committed && !_recoveryRequired) _changes.add(++_change);
     }
   }
@@ -384,6 +392,7 @@ class CoordinatedPreferences implements SharedPreferences {
   @override
   Future<bool> setBool(String key, bool value) =>
       _write(key, () => _raw.setBool(key, value));
+
   @override
   Future<bool> setInt(String key, int value) =>
       _write(key, () => _raw.setInt(key, value));
