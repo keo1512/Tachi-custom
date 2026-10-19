@@ -143,6 +143,47 @@ class NativeBuildPlanTests(unittest.TestCase):
             commands(self.root, self.flutter, self.sdks, swift=True, objc=False)
 
 
+class NativeSimulatorResourcePlanTests(unittest.TestCase):
+    def setUp(self):
+        self.script = (ROOT / 'tools/test_ios_native_tabs.sh').read_text(encoding='utf-8')
+        self.boot = self.script.split('python3 - "$tachi_simulator" <<\'PY\'\n', 1)[1].split('\nPY\n', 1)[0]
+
+    def test_simulator_starts_after_compile_and_before_hosted_tests(self):
+        compile_position = self.script.index('-- xcodebuild build-for-testing')
+        boot_position = self.script.index('python3 - "$tachi_simulator" <<\'PY\'')
+        test_position = self.script.index('-- xcodebuild test-without-building')
+        self.assertLess(compile_position, boot_position)
+        self.assertLess(boot_position, test_position)
+        self.assertIn('COMPILER_INDEX_STORE_ENABLE=NO', self.script)
+        self.assertIn('-showBuildTimingSummary', self.script)
+        self.assertIn('--timeout 1500 --idle-timeout 300', self.script)
+        self.assertIn('--name native-simulator-tests --timeout 300', self.script)
+
+    def run_boot(self, state, side_effect=None):
+        inventory = {'devices': {'ios27': [{'udid': '15PM', 'state': state}]}}
+        with mock.patch('subprocess.check_output', return_value=json.dumps(inventory)), \
+                mock.patch('subprocess.run', side_effect=side_effect) as run, \
+                mock.patch.object(sys, 'argv', ['boot', '15PM']):
+            exec(compile(self.boot, 'test_ios_native_tabs.sh:boot', 'exec'), {})
+        return run
+
+    def test_shutdown_selected_device_boots_and_waits_with_existing_limits(self):
+        run = self.run_boot('Shutdown')
+        self.assertEqual(run.call_args_list, [
+            mock.call(['xcrun', 'simctl', 'boot', '15PM'], check=True, timeout=60),
+            mock.call(['xcrun', 'simctl', 'bootstatus', '15PM', '-b'], check=True, timeout=180),
+        ])
+
+    def test_booted_device_is_not_booted_a_second_time(self):
+        run = self.run_boot('Booted')
+        run.assert_called_once_with(['xcrun', 'simctl', 'bootstatus', '15PM', '-b'], check=True, timeout=180)
+
+    def test_boot_timeout_aborts_before_hosted_tests(self):
+        import subprocess
+        with self.assertRaisesRegex(SystemExit, 'bounded timeout'):
+            self.run_boot('Shutdown', subprocess.TimeoutExpired(['xcrun', 'simctl', 'boot', '15PM'], 60))
+
+
 class SimulatorSelectionTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="tachi-simulator-plan-")

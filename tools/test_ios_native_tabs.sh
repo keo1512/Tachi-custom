@@ -109,8 +109,32 @@ else
   bash tools/prepare_ios_dependencies.sh
   python3 tools/ios_build_preflight.py --receipt "$tachi_preflight_receipt"
 fi
-# Boot only after dependency resolution, so a cold simulator does not compete
-# with Flutter/CocoaPods setup for CPU and disk on the hosted runner.
+printf '%s\n' '::group::Compile simulator app and test bundle once'
+tachi_xcode_flags=(
+  -workspace ios/Runner.xcworkspace
+  -scheme Runner
+  -configuration Debug
+  -derivedDataPath "$tachi_root/build/ios/native-smoke"
+  -destination "platform=iOS Simulator,id=$tachi_simulator"
+  -destination-timeout 60
+  -only-testing:RunnerTests
+  -parallel-testing-enabled NO
+  -maximum-concurrent-test-simulator-destinations 1
+  ONLY_ACTIVE_ARCH=YES
+  CODE_SIGNING_ALLOWED=NO
+  COMPILER_INDEX_STORE_ENABLE=NO
+)
+# Keep compiler output in the file so an idle watchdog can distinguish a
+# working compiler from a silent hang. -quiet would hide that progress.
+python3 tools/run_build_phase.py --name native-simulator-build \
+  --timeout 1500 --idle-timeout 300 \
+  --log "$tachi_root/artifacts/native-tabs-build.log" \
+  --status "$tachi_root/artifacts/native-simulator-build.status.json" \
+  -- xcodebuild build-for-testing "${tachi_xcode_flags[@]}" -showBuildTimingSummary
+printf '%s\n' '::endgroup::'
+# A build-for-testing destination only needs to exist. Boot after compilation
+# so the iOS runtime does not compete with Pods and Flutter for CPU/memory.
+# Keep the selected device and all hosted tests unchanged.
 python3 - "$tachi_simulator" <<'PY'
 import json
 import subprocess
@@ -126,28 +150,6 @@ try:
 except subprocess.TimeoutExpired as error:
     raise SystemExit(f'Simulator boot exceeded its bounded timeout: {error.cmd}')
 PY
-printf '%s\n' '::group::Compile simulator app and test bundle once'
-tachi_xcode_flags=(
-  -workspace ios/Runner.xcworkspace
-  -scheme Runner
-  -configuration Debug
-  -derivedDataPath "$tachi_root/build/ios/native-smoke"
-  -destination "platform=iOS Simulator,id=$tachi_simulator"
-  -destination-timeout 60
-  -only-testing:RunnerTests
-  -parallel-testing-enabled NO
-  -maximum-concurrent-test-simulator-destinations 1
-  ONLY_ACTIVE_ARCH=YES
-  CODE_SIGNING_ALLOWED=NO
-)
-# Keep compiler output in the file so an idle watchdog can distinguish a
-# working compiler from a silent hang. -quiet would hide that progress.
-python3 tools/run_build_phase.py --name native-simulator-build \
-  --timeout 1500 --idle-timeout 300 \
-  --log "$tachi_root/artifacts/native-tabs-build.log" \
-  --status "$tachi_root/artifacts/native-simulator-build.status.json" \
-  -- xcodebuild build-for-testing "${tachi_xcode_flags[@]}"
-printf '%s\n' '::endgroup::'
 printf '%s\n' '::group::Run hosted native tests without rebuilding'
 python3 tools/run_build_phase.py --name native-simulator-tests --timeout 300 \
   --log "$tachi_root/artifacts/native-tabs-smoke.log" \

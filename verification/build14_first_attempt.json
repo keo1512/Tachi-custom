@@ -1,0 +1,28 @@
+{
+  "runId": 39177448295,
+  "commit": "e8802804c09e947017c811ae8cd5fc203222a7bb",
+  "url": "https://github.com/keo1512/Tachi-custom/actions/runs/39177448295",
+  "conclusion": "failure",
+  "jobSeconds": 2487,
+  "simulator": "iPhone 15 Pro Max / iOS 27.0",
+  "failure": {
+    "phase": "native-simulator-build",
+    "result": "wall_timeout",
+    "exitCode": 124,
+    "elapsedSeconds": 1500.829,
+    "wallLimitSeconds": 1500.0,
+    "idleLimitSeconds": 300.0,
+    "log": "/Users/runner/work/Tachi-custom/Tachi-custom/artifacts/native-tabs-build.log",
+    "cleanupVerified": true,
+    "cleanupWarnings": []
+  },
+  "flutter": {
+    "passed": 1300,
+    "skipped": 26,
+    "failed": 0
+  },
+  "nativeTestsExecuted": false,
+  "ipaCreated": false,
+  "diagnosticsSha256": "b7706440ece2c75b382d152a737f1ec1330464ee6d24ad1981531aee96f6c3b9",
+  "limit": "Compile reached its wall deadline; log does not establish why this runner needed longer than build13."
+}
